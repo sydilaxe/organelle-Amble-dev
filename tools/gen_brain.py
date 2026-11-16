@@ -17,7 +17,7 @@ GLOBALS = dict(
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
-    acmdrone=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
+    acmxq=0, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
     acfdrone=1, acfpad=1, acftex=1, acfcloud=1, acfbell=1, acfmotion=0, actex1=0, actex2=1, actexA=0, actexB=1,
     acpal1=0, acpal2=1, acpal3=3, acpartI=0, acbellI=0, acsecbright=0.8, actidef=1, acpow=1,
     acpsum=1, acfirst=1, acmodflag=0, acD=0, acp0=0, acp1=0, aci=0, acchg=0, acfade=8000,
@@ -40,7 +40,7 @@ ARRAYS = dict(acsroles=12, acslens=12, acssp=12, acsst=96, acslv=96, acscale=16,
               acmrhy=8, acmoves=12, acmods=12, acmovp=12, acmodp=12, acplfam=len(PLEASING_FAMS), acplsc=len(PLEASING_SCALES), acgrt=12, acfmrt=8, acpartt=24, acbellt=12, acdintt=5, acrhyt=5,
               acparams=4 * len(PAGES), acraw=4, acflav=4, acroles=16, acflpick=40, acbelpk=40, acmotpk=40, acfmrpick=40, acpapick=40, acscn=50,
               acscrole=24, acatmrole=8, ackeyp=16, acprog=8, acrmask=48, acrtide=8,
-              acrtempo=8, acrpulse=8, acaway=8, aceuk=10, aceun=10, acmeters=6, acmratios=6, acbreath=4, actlo=5, acthi=5)
+              acrtempo=8, acrpulse=8, acaway=8, aceuk=10, aceun=10, acmeters=6, acmratios=6, acbrper=4, actlo=5, acthi=5)
 
 # the piece tempo: its place (actpos) in the tempo range chosen in SETUP
 # (SETUP FORM Tempo: a fixed tempo instead, the same in every section)
@@ -59,6 +59,8 @@ for _m in (_L, _O, _S, _P, _LG):
     _same = set(GLOBALS) & set(_m.GLOBALS)
     assert not _same, f"{_m.__name__}: values also declared elsewhere: {sorted(_same)}"
     assert not set(ARRAYS) & set(_m.ARRAYS), f"{_m.__name__}: arrays declared twice: {set(ARRAYS) & set(_m.ARRAYS)}"
+    _va = (set(GLOBALS) | set(_m.GLOBALS)) & (set(ARRAYS) | set(_m.ARRAYS))
+    assert not _va, f"{_m.__name__}: a value and an array share a name: {sorted(_va)}"
     GLOBALS.update(_m.GLOBALS)
     ARRAYS.update(_m.ARRAYS)
 
@@ -72,7 +74,7 @@ DATA_TABLES = dict(
     acpartt=sum(PARTIAL_SETS, []), acbellt=sum(BELL_SETS, []), acdintt=DRONE_INTERVALS, acrhyt=RHYTHMS,
     acparams=[d for p in PAGES for _, _, d in p], acraw=[0.5] * 4, aclvn=[-1] * 4, acrmask=sum(ROLE_MASK, []),
     acrtide=ROLE_TIDE, acrtempo=ROLE_TEMPO, acrpulse=ROLE_PULSE, acaway=AWAY, aceuk=[k for k, n in EUCLID],
-    aceun=[n for k, n in EUCLID], acmeters=METERS, acmratios=MOTION_RATIOS, acbreath=BREATH_PERIODS,
+    aceun=[n for k, n in EUCLID], acmeters=METERS, acmratios=MOTION_RATIOS, acbrper=BREATH_PERIODS,
     actlo=[lo for _, lo, _ in TEMPOS], acthi=[hi for _, _, hi in TEMPOS],
 )
 DATA_TABLES.update(_P.DATA_TABLES)
@@ -236,7 +238,7 @@ def piece():
     ]
     for k in range(4):
         # pad breathing: cycles of 7, 9, 11, 13 half-bars, so the voices phase against each other
-        steps += [RNG, SendL(f"ac-v{k}-lfo", [f"1/(30/(acbpm0/(1 + (acbpm0 > {HALFTIME})))*acmeter*acbreath[{k}]*(0.97+acr1*0.06))",
+        steps += [RNG, SendL(f"ac-v{k}-lfo", [f"1/(30/(acbpm0/(1 + (acbpm0 > {HALFTIME})))*acmeter*acbrper[{k}]*(0.97+acr1*0.06))",
                                               "0.03+acr2*0.15", "0.04+acr3*0.25", "0.03+acr4*0.2"])]
     steps += [
         # the clock and the event players stop until the piece is set up, then start afresh (np3), so a seed
@@ -529,29 +531,31 @@ def layers():
     ]
     # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP page 12)
     steps = [V(f"ace{n}", f"if(acm{n} != 1, acm{n}, if(acsx{n} == 1, 0, if(acsx{n} == 2, 2, 1)))") for n in SEC_LAYERS]
+    # the MIX knobs as gains (data.level: even dB steps; 50 % = x1)
+    steps += [V(f"acmg{x}", level(f"acmx{x}")) for x in "dspbmtca"]
     steps += [V("acdeff", "min(1, 0.45*acswell + if(acmode==1, acenergy*(0.35+1.3*acdens), acdens*(0.8+0.4*acenergy)) + 0.35*acbreath*"
                              "(acbrto == 0 || acbrto == 2))")]
     for name, e in lay:
         steps += [V("acg" + name, e)]
         if name == "drone":
-            steps += [SendL("ac-g-drone", ["2*acmxd*acsldrone*acgdrone*(acdcur==0)", "acfade"])]
-            steps += [SendL(f"ac-g-drone{i}", [f"2*acmxd*acsldrone*acgdrone*(acdcur=={i})", "acfade"]) for i in range(1, len(DRONES))]
+            steps += [SendL("ac-g-drone", ["acmgd*acsldrone*acgdrone*(acdcur==0)", "acfade"])]
+            steps += [SendL(f"ac-g-drone{i}", [f"acmgd*acsldrone*acgdrone*(acdcur=={i})", "acfade"]) for i in range(1, len(DRONES))]
             # the sub: auto follows the drone; on plays it alone too
             steps += [V("acgsub", "(acesub>0)*(1-acended)*if(acesub==2, 1, acgdrone)"),
-                      SendL("ac-g-sub", ["2*acmxs*acslsub*acgsub", "acfade"])]
+                      SendL("ac-g-sub", ["acmgs*acslsub*acgsub", "acfade"])]
         elif name == "bell":    # the engine chosen in SETUP page 9, or the piece's (auto)
-            steps += [SendL(f"ac-g-bel{i}", [f"2*acmxb*acslbell*acgbell*(if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela)) == {i})", "acfade"])
+            steps += [SendL(f"ac-g-bel{i}", [f"acmgb*acslbell*acgbell*(if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela)) == {i})", "acfade"])
                       for i in range(len(STRIKES))]
         elif name == "motion":  # the echoes, and the engine through them
             steps += [SendL("ac-g-motion", ["acgmotion", "acfade"])]
-            steps += [SendL(f"ac-g-mot{i}", [f"2*acmxm*acslmotion*acgmotion*(if(acjmi >= 0, acjmi, if(acsmot > 0, acsmot - 1, acmota)) == {i})", "acfade"])
+            steps += [SendL(f"ac-g-mot{i}", [f"acmgm*acslmotion*acgmotion*(if(acjmi >= 0, acjmi, if(acsmot > 0, acsmot - 1, acmota)) == {i})", "acfade"])
                       for i in range(len(STRIKES))]
         elif name != "tex":
             mx = {"pad": "acmxp", "cloud": "acmxc"}[name]
-            steps += [SendL("ac-g-" + name, [f"2*{mx}*acsl{name}*acg{name}", "acfade"])]
+            steps += [SendL("ac-g-" + name, [f"acmg{mx[-1]}*acsl{name}*acg{name}", "acfade"])]
     # the atmosphere: auto = the section's, and off with the textures (as before); on = always
     steps += [V("acgatm", "(acshed < 1)*(aceatm>0)*(1-acended)*if(aceatm==2, 1, acfatm*(acetex>0))*(0.55 + 0.45*min(1, acdeff*2))")]
-    steps += [SendL(f"ac-g-atm{i}", [f"2*acmxa*acslatm*acgatm*(acatmcur=={i})", "acfade*1.5"]) for i in range(len(ATMOS_NAMES))]
+    steps += [SendL(f"ac-g-atm{i}", [f"acmga*acslatm*acgatm*(acatmcur=={i})", "acfade*1.5"]) for i in range(len(ATMOS_NAMES))]
     # the pad character: SETUP SOUNDS, else none for raw pads, else the piece's
     steps += [V("accheff", "if(acschar > 0, acschar - 1, if(acspad == 1, 0, acchar))")]
     steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 2)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)", "acfade"])
@@ -559,11 +563,12 @@ def layers():
     steps += [SendL("ac-chdry", ["1 - (acshed < 2)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt)", "acfade"])]
     for i in range(len(TEXTURES)):
         steps += [V(f"acgt{i}", f"acgtex*((actex1=={i}) || (actex2=={i}))"),
-                  SendL(f"ac-g-tex{i}", [f"2*acmxt*acsltex*acgt{i}", "acfade"])]
+                  SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
     proc(c, "ac-layers", steps)
-    # a MIX knob: the levels follow quickly (knobs send fast: one update per 40 ms at most)
-    dm = c.to(c.recv("ac-mixch"), "delay 40")
-    run_steps(c, (dm, 0), [V("acfade", "150"), Call("ac-layers")])
+    # a MIX knob: the levels follow while it turns - an update 50 ms after the first change, each gliding over 60 ms
+    # into the next (a [delay] restarted by every knob message waited for the knob to stop, then jumped)
+    proc(c, "ac-mixch", [If("acmxq == 0", [V("acmxq", "1"), Later("ac-mixgo", 50)])])
+    proc(c, "ac-mixgo", [V("acmxq", "0"), V("acfade", "60"), Call("ac-layers")])
     d = c.to(c.recv("ac-densch"), "delay 150")
     run_steps(c, (d, 0), [V("acfade", "1500"), Call("ac-layers")])
     c.col()
@@ -632,7 +637,7 @@ def verb():
         Call("ac-revupd"),
     ])
     from data import SEND_BUS
-    proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [f"2*{n}", "200"]) for n in SEND_BUS])
+    proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "200"]) for n in SEND_BUS])
     c.c(c.to(c.recv("ac-init"), "t b"), 0, c.obj("s ac-sendupd"), 0)
     proc(c, "ac-revupd", [
         # Bloom: loop gain exp(-4.2*size/T), as Conduit's; damping = the loop low-pass pole (0.5 = the unit)
@@ -665,7 +670,7 @@ def rhythm():
     proc(c, "ac-settempo", [V("acbpm0", TEMPO0), V("acbpm", "acbpm0 * if(acstempo > 0, 1, acrtempo[int(acrole)])"),
                             SendL("ac-bpm", ["acbpm"])])
     c.col()
-    proc(c, "ac-tick", [
+    proc(c, "ac-tick", shared=True, steps=[
         V("actick", "(actick + 1) % (24*acmeter*64)"),
         If("actick % 6 == 0", [
             V("acstep", "int(actick/6)"), Call("ac-step"),
@@ -674,7 +679,7 @@ def rhythm():
         ]),
     ])
     proc(c, "ac-bar", [SendL("ac-dpulse", [f"60000/{BPMH}*acmeter"]), If("acgdlock && acgcloud > 0", [Send("ac-cloud-on")])])
-    proc(c, "ac-step", [If("acgmotion > 0.01 && acrun && int(acstep) % int(acmdiv) == 0", [
+    proc(c, "ac-step", shared=True, steps=[If("acgmotion > 0.01 && acrun && int(acstep) % int(acmdiv) == 0", [
         V("acms", "int(acstep/acmdiv)"),
         If("((int(acms + acmrot) % int(acmn)) * int(acmk)) % int(acmn) < acmk", [
             RNG,

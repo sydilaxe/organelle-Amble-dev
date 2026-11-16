@@ -17,7 +17,7 @@ def midi_out():
     c.c(up, 0, no, 0)
     c.col()
     clk = "(acmout == 1 || acmout == 2) && acsync == 0"
-    proc(c, "ac-tick", [If(clk + " && acclkon", [SendL("ac-midibyte", ["248"])])])
+    proc(c, "ac-tick", shared=True, steps=[If(clk + " && acclkon", [SendL("ac-midibyte", ["248"])])])
     proc(c, "ac-clockstart", [If(clk, [SendL("ac-midibyte", ["250"]), V("acclkon", "1")])])
     proc(c, "ac-clockstop", [If("acclkon", [SendL("ac-midibyte", ["252"]), V("acclkon", "0")]), Call("ac-notesoff")])
     notes = "acmout >= 2"

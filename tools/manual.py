@@ -69,12 +69,11 @@ KNOBS.update({
 })
 for _n, _lab in (("acmxd", "drone"), ("acmxs", "sub"), ("acmxp", "pads"), ("acmxb", "bells"), ("acmxm", "motion"),
                  ("acmxt", "textures"), ("acmxc", "cloud"), ("acmxa", "atmosphere")):
-    KNOBS[_n] = ("off-+6 dB", f"Level of the {_lab}. 0 = silent, 50 % = the designed balance, 100 % = twice.")
+    KNOBS[_n] = ("off-+6 dB", f"Level of the {_lab}. 50 % = the designed balance, 100 % = +6 dB; below 50 % it turns "
+                              "down in even steps (about 0.5 dB a percent) to -24 dB at 5 %, then out.")
 
 FKEY_DESC = {
     "SHAPE page": "Knobs: Dens, Tide, Colr, In.",
-    "SENDS page (again: 1 / 2)": "Knobs: the reverb sends - SENDS 1 (drone, pads, bells, motion); pressed again, "
-                                 "SENDS 2 (textures, cloud, atmosphere, input). The screen shows the MIX view.",
     "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once.",
     "Freeze | aux: ANCHOR": "Freeze: the reverb tail and the cloud hold still; again to release. Aux + A: ANCHOR - the "
                             "first time it keeps the sound as it is now (ANC shows); then each aux + A glides every "
@@ -96,9 +95,9 @@ FKEY_DESC = {
     "chord change now": "Tap: move to the next chord (the one the screen shows) at once - the footswitch does the "
                         "same. Hold: after half a second another next chord is picked, and again every 0.7 s while "
                         "you hold; let go when line 2 shows one you like.",
-    "next section": "Jump to the next section of the form.",
-    "hold section": "Keep the section playing past its length; press again and the piece moves on within 2 s. "
-                    "HOLD shows on the screen.",
+    "next section (hold: hold section)": "A tap (on its release): jump to the next section of the form. Held "
+                                         "0.6 s: hold the section - it plays past its length (HOLD shows); hold "
+                                         "again and the piece moves on within 2 s.",
     "input mode | aux: capture": "Step through the input modes (see Audio input). Aux: record 8 s of the input "
                                  "into the cloud and keep it as a memory.",
     "Freeze": "The reverb tail and the cloud hold still; again to release.",
@@ -420,8 +419,8 @@ def story():
 
     s += [Paragraph("2  The screen", H1),
           para("The OLED has two views. The <b>play view</b> is a live score of the piece. The <b>MIX view</b> shows "
-               "the levels: it takes the screen while a MIX or SENDS page is open (low D# to F#) and gives it back "
-               "when you open SHAPE, SPACE or PIECE."),
+               "the levels: it takes the screen while a MIX or SENDS page is open (the black keys low C#, D#, F#, G#) "
+               "and gives it back when you open SHAPE, SPACE, PIECE or PERFORM (the white keys C, D, E, F)."),
           table([["Region", "What it shows"],
                  ["Top strip", "The form: one bar per section (height = energy), the current one inverted, a "
                                "playhead. In DRIFT: the energy and the section's progress."],
@@ -483,7 +482,7 @@ def story():
                  ["Footswitch", "Chord change now."]], [1.4, 5.3])]
 
     s += [Paragraph("Performing", H2),
-          para("<b>PERFORM</b> (low F#) puts the whole sound on the knobs: <b>Sink</b> takes everything under a low-pass, "
+          para("<b>PERFORM</b> (low F) puts the whole sound on the knobs: <b>Sink</b> takes everything under a low-pass, "
                "<b>Blur</b> dissolves it into the reverb, <b>Swell</b> makes it fuller and brighter, and <b>Harm</b> sets "
                "how adventurous the harmony may be: at 0 it stays in the pleasing palette (diatonic and pentatonic scales, "
                "triads, sevenths, add9, sus and open voicings, roots by fourths, fifths and thirds); turned up, other "

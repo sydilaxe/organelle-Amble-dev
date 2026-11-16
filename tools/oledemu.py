@@ -17,6 +17,8 @@ class Oled:
             txt = " ".join(a[5:]).replace("\\ ", " ")
             self.d.text((x, y - 1), txt, fill=c, font=FONT); return
         a = [int(float(v)) for v in a[1:]] if a else []
+        if cmd in ("gFillArea", "gBox", "gInvertArea") and (a[2] <= 0 or a[3] <= 0):
+            return                        # an empty area: the device draws nothing
         if cmd == "gFillArea": x, y, w, h, c = a[:5]; self.d.rectangle([x, y, x + w - 1, y + h - 1], fill=c)
         elif cmd == "gBox": x, y, w, h, c = a[:5]; self.d.rectangle([x, y, x + w - 1, y + h - 1], outline=c)
         elif cmd == "gInvertArea":

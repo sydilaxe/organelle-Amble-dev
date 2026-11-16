@@ -201,7 +201,7 @@ def perform():
     # ---- the 100 ms tick (from ac-now): the morph's step, DUCK, the journey, CC OUT, and once a second the check
     lvl = [("drone", "acmxd"), ("sub", "acmxs"), ("pad", "acmxp"), ("bell", "acmxb"), ("motion", "acmxm"),
            ("tex", "acmxt"), ("atm", "acmxa"), ("cloud", "acmxc")]
-    vals = [f"acg{n}*acsl{n}*{m}" for n, m in lvl] + [
+    vals = [f"acg{n}*acsl{n}*acmg{m[-1]}/2" for n, m in lvl] + [
         "acenergy", "acdeff", "acbright", "(acnow - acchgt)/max(1, acchsec*1000*actime)",
         "acsecel/max(1, acsecdur*actime)", "(acrvlvl - 45)/40", "(acdisp[0] - 36)/60", "max(acbreath, acheld/4)"]
     ve = "0"

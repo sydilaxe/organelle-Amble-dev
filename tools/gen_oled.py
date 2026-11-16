@@ -81,11 +81,14 @@ def oled():
     c.col()
     normal = f"acsetup == 0 && acpopt == 0 && {MIXV} == 0"
     mixv = f"acsetup == 0 && {MIXV}"
+    popup = f"acsetup == 0 && acpopt > 0 && {MIXV} == 0"
     proc(c, "ac-frame", [
         V("acfr", "acfr + 1"),
         If("acpopt > 0 && acnow >= acpopt", [V("acpopt", "0"), Call("ac-oledall")]),
         If("actoastt > 0 && acnow >= actoastt", [V("actoastt", "0"), Call("ac-scr2"), Call("ac-oledtime"),
-                                                  If(mixv, [Call("ac-oledmixhead")])]),
+                                                  If(mixv, [Call("ac-oledmixhead")]),
+                                                  # a knob page's pop-up: its name back where the toast was
+                                                  If(popup, [Fill(0, 9, 128, 10, 0), Call("ac-oledpghead")])]),
         If(mixv, [If("int(acfr) % 2 == 0", [Call("ac-oledmixbars")])]),
         # a morph (a load, ANCHOR): a line along the foot, as far as it has come
         If(normal + " && (acmph || acmtt < 1.1)", [Fill(0, 63, 128, 1, 0), If("acmph", [Fill(0, 63, "max(1, int(128*acmtt))", 1)]),
@@ -106,7 +109,7 @@ def oled():
     bar_x = "int(128*acox/acpsum)"
     bar_w = "max(1, int(128*acpdur[int(aci)]/acpsum) - 1)"
     bar_h = "(1 + int(acplan[int(aci)]*6))"
-    proc(c, "ac-oledform", [If(normal, [
+    proc(c, "ac-oledform", [If(f"acsetup == 0 && {MIXV} == 0", [
         Fill(0, 0, 128, 8, 0),
         If("acmode == 1", [
             V("acox", "0"),
@@ -173,7 +176,7 @@ def oled():
         # 3-digit tempi drop the "m" so they stay inside the screen
         X("int(acbpm + 0.5)", lambda c, src: _print_bpm(c, src)),
     ])])
-    proc(c, "ac-step", [If(normal + " && acinv == 0 && acgmotion > 0.01 && int(acstep) % int(acmdiv) == 0", [
+    proc(c, "ac-step", shared=True, steps=[If(normal + " && acinv == 0 && acgmotion > 0.01 && int(acstep) % int(acmdiv) == 0", [
         If("acmcur >= 0", [Inv(*cell("acmcur"), 3, 3)]),
         V("acmcur", "int(acstep/acmdiv) % int(acmn)"),
         Inv(*cell("acmcur"), 3, 3),
@@ -242,9 +245,12 @@ def oled():
                                [If("int(aclastk/4) == acpage", [Call("ac-oledpop")], [Send("ac-mixknob")])])])
     Line("ac-mixknob", "list $1 $2", [("s", "aclastk", [lab for p in PAGES for lab, _, _ in p]),
                                        ("f", "int(acparams[int(aclastk)]*100)")], "ac-toast")(c)
+    # (a page opened: a toast or a framed column left from the page before ends, so the header shows)
+    proc(c, "ac-oledpage", [X("0; -1", "v actoastt", "v acmixc"), Call("ac-oledpop")])
     proc(c, "ac-oledpop", [If(mixv, [V("acpopt", "0"), Call("ac-oledmix")]), If(normal.replace(" && acpopt == 0", ""), [
         V("acpopt", "acnow + 6000"),
-        Fill(0, 9, 128, 55, 0),
+        # the whole screen: the MIX view or SETUP may have been on it (their header stayed on the top rows)
+        Fill(0, 0, 128, 64, 0), Call("ac-oledform"),
         Call("ac-oledpghead"),
         Call("ac-scr4"), Call("ac-scr5"),
         Loop("4", "aci", [Box("1 + 32*aci", 50, 30, 8), Fill("2 + 32*aci", 51,
@@ -273,7 +279,7 @@ def mixview(c, mixv):
                 return "min(1, max(0, (acrvlvl - 45)/40))"
             return f"min(1, acg{n}*acsl{n}*{k})"
         knob = f"if(acpage >= 5, {mk}, {sk})"
-        lv = f"if(acpage >= 5, {live(mk, mn)}, {live(sk, sn)})"
+        lv = f"if(acpage >= 5, {live('acmg' + mk[-1] + '/2', mn)}, {live(sk, sn)})"      # (MIX: the knob's gain)
         cols += [T("acdg", str(i), f"acdg[{i}] + ({lv} - acdg[{i}])*0.3"),
                  If(f"acdg[{i}] > 0.02", [Fill(x + 3, f"52 - int(acdg[{i}]*38)", 6, f"int(acdg[{i}]*38)")]),
                  Fill(x, f"52 - int(min(1, {knob})*38)", 12, 1)]

@@ -33,14 +33,14 @@ SIDE[28] = [Call("ac-sinkupd")]              # PERFORM: Sink, Blur, Swell (Harm 
 SIDE[29] = [Call("ac-revupd")]
 SIDE[30] = [Send("ac-densch"), Call("ac-brightupd"), Call("ac-swellupd")]
 NP = len(PAGES)
-# The Organelle keys are always functions (notes come from MIDI). Low octave: the knob pages, then harmony and form;
-# top octave: the layers, then input, Freeze and the transport. Aux + a low key opens that SETUP page (C = 1).
-# The manual (tools/manual.py) documents these, in this order.
-PAGE_KEYS = [0, 1, 2, 5, 6, 3, 7]       # low C..F#: SHAPE, SPACE, PIECE, MIX 1, MIX 2, SENDS (1, again 2), PERFORM
+# The Organelle keys are always functions (notes come from MIDI). Low octave: the playing pages on the white keys
+# (SHAPE, SPACE, PIECE, PERFORM), the level pages on the black keys beside them (MIX 1, MIX 2, SENDS 1, SENDS 2),
+# then harmony and form (G Root, A chord, A# Resolve, B section); top octave: the layers, then input, Freeze and the
+# transport. Aux + a low key opens that SETUP page (C = 1). The manual (tools/manual.py) documents these, in this order.
+LOW_PAGES = {0: 0, 1: 5, 2: 1, 3: 6, 4: 2, 5: 7, 6: 3, 8: 4}     # low key -> knob page (data.PAGE_NAMES)
 SAVES_PAGE = 12                         # SETUP SAVES (aux + top B)
-LOW_KEYS = ["SHAPE page", "SPACE page", "PIECE page", "MIX 1 page", "MIX 2 page", "SENDS page (again: 1 / 2)",
-            "PERFORM page",
-            "Root (hold)", "Resolve", "chord change now", "next section", "hold section"]
+LOW_KEYS = ["SHAPE page", "MIX 1 page", "SPACE page", "MIX 2 page", "PIECE page", "PERFORM page", "SENDS 1 page",
+            "Root (hold)", "SENDS 2 page", "chord change now", "Resolve", "next section (hold: hold section)"]
 LAYER_KEYS = [("acmdrone", "drone", "acgdrone"), ("acmsub", "sub", "acgsub"), ("acmpad", "pads", "acgpad"),
               ("acmbell", "bells", "acgbell"), ("acmmotion", "motion", "acgmotion"), ("acmtex", "textures", "acgtex"),
               ("acmatm", "atmosphere", "acgatm"), ("acmcloud", "cloud", "acgcloud")]
@@ -52,6 +52,7 @@ ANCHOR_KEY = 81                         # top A: aux + tap = ANCHOR (set, then g
 FKEYS = LOW_KEYS + TOP_KEYS
 ROOT_KEY = 60 + LOW_KEYS.index("Root (hold)")
 CHORD_KEY = 60 + LOW_KEYS.index("chord change now")
+SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
 
 
 def knobs():
@@ -137,7 +138,10 @@ def keys():
          If(f"ackn == {ANCHOR_KEY} && acanp", [Send("ac-ancstop"), If("acanheld == 0", [Call("ac-anchortap")]),
                                               X("0; 0", "v acanp", "v acanheld")]),
          # low A let go: a tap changes to the next chord now; a hold already picked others (ac-reroll)
-         If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")])])])
+         If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")]),
+         # low B let go: a tap is the next section; a hold (0.6 s) already held or released the section
+         If(f"ackn == {SECTION_KEY} && acsbk >= 0", [Send("ac-sbstop"), If("acsbk == 0", [Call("ac-secnow")]),
+                                                    V("acsbk", "-1")])])])
     mo = c.ch(c.recv("ac-fkey"), "- 60", "moses 12")
     lsel = c.to((mo, 0), "sel " + " ".join(str(i) for i in range(12)))
     tsel = c.ch((mo, 1), "- 12", "sel " + " ".join(str(i) for i in range(12)))
@@ -151,20 +155,16 @@ def keys():
 
     def page(p):
         return [V("acpage", str(p)), If("acsetup", [V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")]),
-                Call("ac-oledpop")]
+                Call("ac-oledpage")]
 
-    low = [page(p) for p in PAGE_KEYS]
-    # low F: SENDS 1, and again SENDS 2
-    low[5] = [V("acpage", "if(acpage == 3 && acsetup == 0, 4, 3)"),
-              If("acsetup", [V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")]), Call("ac-oledpop")]
-    low += [
-        [V("acroothold", "1"), Toast("root: play a note or turn knob 1")],
-        [Call("ac-resolvetoggle")],
-        [V("acrr", "0"), Arm("ac-reroll", "500", stop="ac-rrstop")],
-        [V("acsec", "acsec+1"), Call("ac-section"), Toast("next section")],
-        [V("acsecfz", "1 - acsecfz"), If("acsecfz", [Toast("section held")], [Toast("section moves on")]),
-         Call("ac-oledbottom")],
-    ]
+    low = [page(LOW_PAGES[k]) if k in LOW_PAGES else None for k in range(12)]
+    low[7] = [V("acroothold", "1"), Toast("root: play a note or turn knob 1")]
+    low[9] = [V("acrr", "0"), Arm("ac-reroll", "500", stop="ac-rrstop")]
+    low[10] = [Call("ac-resolvetoggle")]
+    low[11] = [V("acsbk", "0"), Arm("ac-sbhold", "600", stop="ac-sbstop")]      # (its release: above)
+    proc(c, "ac-secnow", [V("acsec", "acsec+1"), Call("ac-section"), Toast("next section")])
+    proc(c, "ac-sbhold", [V("acsbk", "1"), V("acsecfz", "1 - acsecfz"),
+                          If("acsecfz", [Toast("section held")], [Toast("section moves on")]), Call("ac-oledbottom")])
     for i, lk in enumerate(LAYER_KEYS):
         proc(c, f"ac-laykey{i}", layer(*lk))
     top = [[Call(f"ac-laykey{i}")] for i in range(len(LAYER_KEYS))] + [
@@ -209,7 +209,7 @@ def keys():
     run_steps(c, (b, 0), [X("1; 0; acnow", "v acauxheld", "v acauxused", "v acauxt")])
     run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxused == 0", [If("acsetup", [
         V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")], [
-        V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpop")])])])
+        V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])
     f = c.ch(c.recv("fs"), "sel 0")
     c.c(c.to((f, 1), "t b"), 0, c.obj("s ac-change"), 0)
     return c

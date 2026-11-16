@@ -9,7 +9,7 @@ NV = 4                                    # live voices
 
 GLOBALS = dict(
     acmcix=-1, acmck=0, acmcb=0, acpgn=0,
-    acnow=0, acforce=-1, acroothold=0, acrr=-1, acanx=0, acjx=0, acbdown=0, acbused=0, acbcmp=0, acanp=0, acanheld=0, acrootn=0, acsecfz=0, acauxheld=0, acauxused=0, acauxt=0,
+    acnow=0, acforce=-1, acroothold=0, acrr=-1, acsbk=-1, acanx=0, acjx=0, acbdown=0, acbused=0, acbcmp=0, acanp=0, acanheld=0, acrootn=0, acsecfz=0, acauxheld=0, acauxused=0, acauxt=0,
     aclch=0, aclnote=0, aclvel=0, aclage=0, acvi=0, acheld=0, acfocus=-1, acfocust=0, acfkdone=0,
     acbreath=0, acbreatht=-1e+06, acbrmode=0, acbrt=-1e+06, acbrlast=0, acsechold=0, acfollow=0.7,
     acgbr=2, acnbr=48, aclbv=0, aclbs=0,
@@ -209,7 +209,7 @@ def live():
     proc(c, "ac-noteoff", off)
     # hold (a CC mapped to hold, e.g. 64): a released note keeps sounding until hold lets go
     held_i = V("acvi", " + ".join(f"if(aclvn[{i}]==aclnote && aclvc[{i}]==aclch, {i + 1}, 0)" for i in range(NV)) + " - 1")
-    # while the Root key (low C#) is held, a note picks the next key instead of playing
+    # while the Root key (low G) is held, a note picks the next key instead of playing
     run_steps(c, (tb, 0), [If("aclvel > 0 && acroothold", [V("acrootn", "int(aclnote) % 12"), Call("ac-rootset")],
                               [If("aclvel > 0", on, [If("achold", [held_i, If("acvi >= 0", [T("aclsus", "acvi", "1")])],
                                                      [Call("ac-noteoff")])])])])

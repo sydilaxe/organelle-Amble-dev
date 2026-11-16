@@ -11,7 +11,7 @@ Start a piece, then build up to the heaviest case, one step at a time, and watch
 1. Plain piece, Dens 80 %, Rhy 80 %. Note the load.
 2. SETUP 5 SOUNDS: Pads `beat`, Drone `frost`.
 3. SETUP 19 JOURNEY: Speed `fast`, Pads `all`, Drone `on`, Bells `both`.
-4. PERFORM (low F#): Sink 50 %, Blur 50 %, Swell 50 %.
+4. PERFORM (low F): Sink 50 %, Blur 50 %, Swell 50 %.
 5. SETUP 16 GROOVE: Pump `beat`, depth 50 %, Duck 50 %.
 6. SETUP 20 COLOUR: Sparkle 100 %.
 7. SETUP 21 CC OUT: on.
@@ -32,9 +32,12 @@ session, turn SETUP 4's CPU knob fully up once and leave it about 7 minutes (sil
 - **Top B**: tap = new piece (on release); hold 0.6 s = COMPARE; hold + a key = load that slot; aux + hold + key =
   save. Does a tap ever turn into COMPARE by accident? Is 0.6 s right?
 - **Aux + top A** (ANCHOR): set, change a few knobs, glide back. Is 8 s (SETUP 15) a good default?
-- **Low F** twice: SENDS 1, then SENDS 2. **Low F#**: PERFORM.
+- **The pages**: white keys C D E F = SHAPE, SPACE, PIECE, PERFORM; black keys C# D# F# G# = MIX 1, MIX 2, SENDS 1,
+  SENDS 2. Step through all eight in any order: does anything stay behind on the screen from the page before?
+- **Low B**: tap = next section; hold 0.6 s = hold section.
+- **A MIX knob** turned slowly from 50 % to 0: does the level follow smoothly, without jumps, all the way down?
 - **Root**: hold low G and play a note on the keyboard: does the next key arrive at the next chord?
-- The MIX view (low D#): is the framed column with its value readable at arm's length?
+- The MIX view (low C#): is the framed column with its value readable at arm's length?
 
 ## 3. The sound
 

@@ -10,6 +10,7 @@ import re
 import sys
 import numpy as np
 import gen_setup as GS
+import gen_ui as U
 from harness import run, errors, rms_db, SR, build_tmp
 from data import FLAVOURS
 
@@ -108,11 +109,11 @@ check(rms_db(a[2 * SR:12 * SR]) > -40, "the composition plays")
 # 5. controls: knob pickup, pages, keys
 ev = [(50, "ac-setseed 11"), (200, "knob4 0.5"), (210, "knob1 0.5"), (400, "knob4 0.8"), (500, "aux 1"), (550, "aux 0"),
       (600, "knob1 0.1"), (800, "aux 1"), (850, "aux 0"), (900, "aux 1"), (950, "aux 0")]
-# root: hold low G and press E; then chord now (A), next section (A#), drone (top C), input (G#), stop (A#), new
+# root: hold low G and press E; then chord now (A), next section (B tap), drone (top C), input (G#), stop (A#), new
 T = 1500
 ev += [(T, "notesRaw 67 100"), (T + 20, "notesRaw 64 100"), (T + 40, "notesRaw 64 0"), (T + 60, "notesRaw 67 0")]
 T += 2000
-for n in (69, 70, 72, 80, 82, 83):
+for n in (69, 71, 72, 80, 82, 83):
     ev += [(T, f"notesRaw {n} 100"), (T + 50, f"notesRaw {n} 0")]
     T += 2000
 log, _ = run(ev, T / 1000 + 2)
@@ -820,15 +821,15 @@ def chord_pcs(log, after, before=None):
         if l.startswith("ac-v") and "-pitch:" in l:
             out.append(int(float(l.split()[1]) + 0.5))
     return out
-ev = [(45, "actime 0.15"), (50, "ac-setseed 7"), (2990, "h-mark bang"), (3000, "notesRaw 68 100"),
-      (3020, "notesRaw 68 0"),
+ev = [(45, "actime 0.15"), (50, "ac-setseed 7"), (2990, "h-mark bang"), (3000, "notesRaw 70 100"),
+      (3020, "notesRaw 70 0"),
       (8000, "ac-change bang"), (15000, "h-mark2 bang")]
 log, _ = run(ev, 16, prints=tuple(f"ac-v{k}-pitch" for k in range(4)) + ("ac-dronep", "h-mark", "h-mark2", "ac-toast"))
 ton = [int(float(l.split()[1])) for l in log.split("h-mark: bang")[1].splitlines() if l.startswith("ac-dronep")]
 held = chord_pcs(log, "h-mark: bang", "h-mark2")
 iv = sorted({(p - ton[-1]) % 12 for p in held}) if ton else []
 check("resolve - open fifths" in log and len(held) >= 8 and iv == [0, 7],
-      f"Resolve (low G#): the chord is the tonic in open fifths and stays ({len(held)} notes, intervals {iv})")
+      f"Resolve (low A#): the chord is the tonic in open fifths and stays ({len(held)} notes, intervals {iv})")
 ev2 = [(45, "actime 0.15"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 7"),
        (400, f"ac-setknob 0 {(GS.CCS.index(64) + 0.5) / len(GS.CCS)}"),
        (450, f"ac-setknob 1 {(GS.TARGETS.index('resolve') + 0.5) / len(GS.TARGETS)}"), (500, "acsetup 0"),
@@ -925,10 +926,10 @@ first_on = next((i for i, g in enumerate(gp) if float(g[0]) > 0), None)
 check("ac-sett1: 1 Section 1 now" in log and first_on is not None and first_on > 2
       and all(float(g[0]) == 0 for g in gp[:first_on]) and gp[first_on][1] == str(GS.SSFADE[2][1]),
       f"SECTION MIX: Section now, pads in at 1/2 then swell in ({gp[:first_on + 1]})")
-log, _ = run([(45, "actime 0.03"), (50, "ac-setseed 7"), (1000, "notesRaw 71 100"), (1050, "notesRaw 71 0")], 30)
+log, _ = run([(45, "actime 0.03"), (50, "ac-setseed 7"), (1000, "notesRaw 71 100"), (1800, "notesRaw 71 0")], 30)
 t1 = {l for l in log.splitlines() if l.startswith("ac-txt1")}
 check("ac-toast: list section held" in log and not any("COMP 2 of" in l for l in t1),
-      f"hold section (low B): the section stays ({sorted(t1)})")
+      f"hold section (low B held): the section stays ({sorted(t1)})")
 
 # 52. SAVES: a piece saved to a slot comes back after another piece (and after a restart)
 d = build_tmp()
@@ -942,7 +943,7 @@ check("ac-toast: list saved to slot 3" in log1 and "ac-toast: list loaded slot 3
       f"SAVES: slot 3 saved, then loaded after a restart and another piece ({seeds})")
 
 # 53. the OLED: a MIX or SENDS page shows the MIX view (bars, two-letter labels); back on SHAPE, the play view
-log, _ = run([(50, "ac-setseed 7"), (2000, "notesRaw 63 100"), (2050, "notesRaw 63 0"),
+log, _ = run([(50, "ac-setseed 7"), (2000, "notesRaw 61 100"), (2050, "notesRaw 61 0"),
               (4000, "notesRaw 60 100"), (4050, "notesRaw 60 0")], 6, prints=("oscOut",))
 o = [l for l in log.splitlines() if l.startswith("oscOut")]
 check(any("gPrintln 3 2 54 8 1 Dr" in l for l in o) and any("gPrintln 3 114 54 8 1 At" in l for l in o)
@@ -1040,14 +1041,14 @@ log, _ = run([(50, "ac-setseed 555"), (100, "acrecall 1"), (1000, "notesRaw 83 1
 check("loaded slot 3" in toasts_of(log) and pv(log)[-1] == [555.0],
       f"Recall sound only keeps the piece playing ({pv(log)[-1:]})")
 
-# 61. PERFORM (low F#) and SENDS (low F, again: SENDS 2) pages; SINK takes the highs away
-log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 66 100"), (1050, "notesRaw 66 0"), (2000, "notesRaw 65 100"),
-              (2050, "notesRaw 65 0"), (3000, "notesRaw 65 100"), (3050, "notesRaw 65 0")], 4, prints=("ac-oledpg2", "ac-oledmixh"))
+# 61. PERFORM (low F), SENDS 1 (low F#) and SENDS 2 (low G#) pages; SINK takes the highs away
+log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 65 100"), (1050, "notesRaw 65 0"), (2000, "notesRaw 66 100"),
+              (2050, "notesRaw 66 0"), (3000, "notesRaw 68 100"), (3050, "notesRaw 68 0")], 4, prints=("ac-oledpg2", "ac-oledmixh"))
 pages = [l.split("list ", 1)[-1].split(" - ")[0].replace("page ", "").replace("\\ ", " ") for l in log.splitlines()
          if l.startswith(("ac-oledpg2", "ac-oledmixh"))]
 pages = [x for i, x in enumerate(pages) if i == 0 or x != pages[i - 1]]
 check(pages == ["PERFORM", "SENDS 1", "SENDS 2"] and "ac-txt4: list Sink 0 Blur 0" in log,
-      f"low F# opens PERFORM, low F SENDS 1 then SENDS 2 ({pages})")
+      f"low F opens PERFORM, F# SENDS 1, G# SENDS 2 ({pages})")
 def hfdb(x):
     S = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f = np.fft.rfftfreq(len(x), 1 / SR)
     return 10 * np.log10((S[f > 1000] ** 2).sum() / (S ** 2).sum())
@@ -1155,6 +1156,32 @@ log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"), (400
               (500, "ac-setknob 2 1"), (600, "ac-setknob 2 0.95")], 12, prints=("ac-toast",))
 starts = sum("profile 1/" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
 check(starts == 1, f"SETUP 4 knob 3 fully up starts the profile once ({starts})")
+
+# 70. MIX knobs: the level follows while the knob turns, in even steps (about 1.5 dB per 50 ms here), 50 % = x1;
+#     a text page after the MIX view clears the whole screen (the MIX header stayed on its top rows);
+#     the white keys are the playing pages, the black keys beside them the level pages
+import math
+ev = [(50, "ac-setseed 7"), (100, "acmpad 2"), (110, "ac-layers bang"), (3000, "notesRaw 61 100"), (3050, "notesRaw 61 0"),
+      (3200, "knob3 0.5"), (3300, "knob3 0.5")] + [(4000 + 20 * i, f"knob3 {0.5 - 0.48 * i / 50:.4f}") for i in range(51)]
+ev += [(6000, "notesRaw 60 100"), (6050, "notesRaw 60 0")]
+log, _ = run(ev, 7, prints=("ac-g-pad", "oscOut", "ac-oledpg2", "ac-oledmixh"))
+g, during = [], 0
+for l in log.splitlines():
+    if l.startswith("ac-g-pad:"):
+        g.append(float(l.split()[1]))
+db = [20 * math.log10(x) for x in g if x > 0]
+steps = [db[i] - db[i + 1] for i in range(len(db) - 1) if db[i] < -0.5 and db[i] > -24]
+check(len(steps) >= 10 and max(steps) < 2.5 and any(abs(x) < 0.05 for x in db) and min(db) < -24,
+      f"MIX knob: {len(db)} updates while turning, steps <= {max(steps or [0]):.1f} dB, 0 dB at 50 %, down to {min(db or [0]):.0f}")
+after = log.split("ac-oledpg2:")[-1] if "ac-oledpg2:" in log else ""
+before = log[:log.rfind("ac-oledpg2:")].splitlines()
+fills = [l for l in before[-60:] if "gFillArea" in l]
+check("ac-oledpg2: list page SHAPE" in log and any("gFillArea 3 0 0 128 64 0" in l for l in fills),
+      "a text page after the MIX view clears the whole screen")
+names = [U.LOW_KEYS[k] for k in range(12)]
+check([names[k] for k in (1, 3, 6, 8)] == ["MIX 1 page", "MIX 2 page", "SENDS 1 page", "SENDS 2 page"]
+      and [names[k] for k in (0, 2, 4, 5)] == ["SHAPE page", "SPACE page", "PIECE page", "PERFORM page"],
+      "low keys: the playing pages on C D E F, the level pages on C# D# F# G#")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

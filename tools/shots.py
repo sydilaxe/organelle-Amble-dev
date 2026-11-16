@@ -32,8 +32,8 @@ def main():
     ev += [(t, "aux 1"), (t + 1300, "aux 0")]
     ev += [(52000, "notesRaw 81 100"), (52050, "notesRaw 81 0"), (52300, "h-snap toast")] if False else []
     ev += [(t + 2000, "ac-toast list input reso"), (t + 2300, "h-snap toast")]
-    # the MIX view (low D#), then a knob on it
-    ev += [(t + 4000, "notesRaw 63 100"), (t + 4050, "notesRaw 63 0"), (t + 5000, "h-snap mix"),
+    # the MIX view (low C#), then a knob on it
+    ev += [(t + 4000, "notesRaw 61 100"), (t + 4050, "notesRaw 61 0"), (t + 5000, "h-snap mix"),
            (t + 5500, "knob3 0.5"), (t + 5600, "knob3 0.7"), (t + 5800, "h-snap mix_knob")]
     log, _ = run(ev, 90, prints=("oscOut",), extra=snap)
     saved = oledemu.render(log, OUT)
