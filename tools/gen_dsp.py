@@ -741,6 +741,7 @@ def master():
         s.c(fin, 0, dif, 1)
         out = add(s, fin, mul(s, dif, sg))
         s.c(s.ch(out, "clip~ -0.98 0.98"), 0, s.obj("throw~ " + bus), 0)
+        s.c(out, 0, s.obj(f"throw~ ac-mtr{'LR'[j]}"), 0)      # (to the log's audio meter, gen_log)
     return s
 
 def motion_fm():

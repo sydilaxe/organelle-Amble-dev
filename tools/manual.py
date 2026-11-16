@@ -647,8 +647,10 @@ def story():
                "(the Organelle starts Pd with 6 ms)."),
           para("<b>Logs.</b> To find what costs what on your Organelle, set the CPU guard to <i>on, log</i> and "
                "play as usual: every 5 s a line goes into <b>logs/perf-NNNNPP.txt</b> in the patch folder - the "
-               "average and the worst 100 ms of the load, and what was on (layers, pad types, engines, journey, "
-               "effects, the page). A file holds 10 minutes; it is written each minute and when the piece stops. "
+               "average and the worst 100 ms of the load, what was on (layers, pad types, engines, journey, "
+               "effects, the page), and the sound: its level, loudest sample, bass, treble and sub-bass, any DC "
+               "offset, samples the output had to cut, near-silence while playing, and how far Pd fell behind "
+               "real time (a dropout risk). A file holds 10 minutes; it is written each minute and when the piece stops. "
                "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 7 minutes, "
                "silent) writes <b>logs/profile-NNNN.txt</b>, then the piece is back as it was, stopped. Copy the "
                "logs folder off the card; tools/perf_report.py reads it and says what is cheap enough to make "

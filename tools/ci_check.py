@@ -1183,5 +1183,28 @@ check([names[k] for k in (1, 3, 6, 8)] == ["MIX 1 page", "MIX 2 page", "SENDS 1 
       and [names[k] for k in (0, 2, 4, 5)] == ["SHAPE page", "SPACE page", "PIECE page", "PERFORM page"],
       "low keys: the playing pages on C D E F, the level pages on C# D# F# G#")
 
+# 71. the sound in the performance log: a piece's level and peak with nothing cut; a tone over full scale into the
+#     meter (30-40 s) shows as cut samples and a peak over 0 dBFS; the line holds the values of its own 5 s (the sums
+#     were once reset before the line was written, logging zeros)
+import glob, os
+def hot(c):
+    o, g = c.obj("osc~ 100", 1200, 700), c.obj("*~ 0", 1200, 730)
+    c.c(o, 0, g, 0)
+    c.c(c.obj("r h-hot", 1300, 700), 0, g, 1)
+    c.c(g, 0, c.obj("throw~ ac-mtest", 1200, 760), 0)
+d = build_tmp()
+run([(50, "ac-setseed 7"), (100, "acguard 3"), (110, "ac-logupd bang"), (30000, "h-hot 1.6"), (40000, "h-hot 0"),
+     (63000, "ac-stop bang")], 66, d=d, extra=hot)
+pf = glob.glob(os.path.join(d, "logs", "perf-*.txt"))
+L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
+H = L[0]
+col = lambda n, r: float(r[H.index(n)]) if n in H else None
+calm = [r for r in L[2:6]]
+loud = [r for r in L[1:] if 35 <= float(r[0]) <= 40]
+check(calm and loud and all(-45 < col("rms", r) < -8 and col("pk", r) < 0 and col("clip", r) == 0 for r in calm)
+      and all(col("clip", r) > 1000 and col("pk", r) > 0 for r in loud),
+      f"audio log: a piece at {[col('rms', r) for r in calm]} dBFS, nothing cut; over full scale: cut "
+      f"{[col('clip', r) for r in loud]}, peak {[col('pk', r) for r in loud]} dBFS")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
