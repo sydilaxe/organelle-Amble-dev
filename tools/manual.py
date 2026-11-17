@@ -85,10 +85,13 @@ FKEY_DESC = {
     "new piece | hold: COMPARE | + key: load | aux: SAVES": "A tap (on its release): a new piece. Held 0.6 s: COMPARE - "
         "the slot as loaded or saved, while you hold it. Held, then a key: that slot loads (low C-B = slots 1-12, top "
         "C-D# = 13-16); with aux held too, the piece is saved to that slot. Aux + a tap: the SAVES page.",
-    "SPACE page": "Knobs: reverb Mix, Verb, Time, Tone.",
-    "PIECE page": "Knobs: Len, Weird, Mot, Rhy.",
+    "SPACE page": "Knobs: reverb Mix, Verb, Time, Tone. Held half a second: the COLOUR page as a quick page "
+                  "(pre-delay, era, sparkle - SETUP COLOUR's rows); aux leaves.",
+    "PIECE page": "Knobs: Len, Weird, Mot, Rhy. Held half a second: the FORM page as a quick page (form, tempo, "
+                  "meter, atmosphere - SETUP FORM's rows); aux leaves.",
     "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view.",
-    "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view.",
+    "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view. Held "
+                  "half a second: the GROOVE page as a quick page (pump, duck - SETUP GROOVE's rows); aux leaves.",
     "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view).",
     "SENDS 2 page": "Knobs: the reverb sends of textures, cloud, atmosphere, input (MIX view).",
     "Root (hold)": "Hold it and press an Organelle key, play a MIDI note or turn knob 1: that note is the next key "
@@ -221,6 +224,17 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
                "section comes again - the piece replayed, or loaded from its slot - those knobs glide back to where you "
                "left them (the others stay as they are). Saved with the piece; a new piece starts with an empty memory."),
     "Glide": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
+    "Hints": ("off, on", "A key that does something when held says so: a quarter second into the hold, the line "
+              "under the form shows what holding it does (hold: CHORD page, hold: compare / load...). A tap shows "
+              "nothing."),
+    "Scope": ("off, on", "The play view's middle shows the sound instead of the pitch ladder: 24 points of the "
+              "output, side (left minus right) across and mid (left plus right) up. A mono sound is a vertical "
+              "line, a wide one a cloud; pure intervals draw still figures. It computes only while it is shown."),
+    "Scope gain": (", ".join(n for n, _ in S.SSCOPEG), "How large the scope draws: Amble plays quietly, so x4 "
+                   "fills the middle for most pieces."),
+    "LED": (", ".join(S.SLEDM), "state: the LED shows the piece (green drifting, blue composing, white on a chord "
+            "change). beat: it blinks with the beating of the drone and sub, lit while they swell above their "
+            "average."),
     "Clear sec": ("turn up", "Fully up: forget what the playing section kept."),
     "Clear all - turn up": ("turn up", "Fully up: forget every section's knobs."),
     "Compare": ("yours, saved", "Up: the slot as loaded or saved; down: yours again (as holding top B)."),

@@ -15,8 +15,10 @@ Loop: [f] -> [+ 1] -> [f]'s right inlet, and [f] -> the loop body).
 
 Branches that cannot affect each other are skipped too: each target's branch is followed downstream (through
 control connections, up to signal objects and the canvas's edges), and the fan-out counts only when two branches
-meet again, or one branch writes shared state (a send, a [v], a table, a message with ";", an outlet, a
-subpatch) while another writes or reads it ([v], [expr] on an ac... value, a table read).
+meet again, or one branch does something whose reach can't be seen from the canvas (a send, an outlet, a
+subpatch) while another does anything, or one stores into a name ([v], a table, a message to an array) that
+another reads ([v], [expr] on an ac... value, a table read) or stores into. Stores into different names, with
+nothing reading between them, are left alone (the defaults at start-up).
 
 A fan-out is named by its canvas path, the source box and the target boxes (indices change with every build,
 these don't), and counted, since many canvases are built alike."""
@@ -92,27 +94,33 @@ def _signal_out(box):
     return box[0] == "obj" and c.endswith("~") and c not in CONTROL_TILDE
 
 
-WRITES = {"s", "send", "v", "value", "tabwrite", "array", "text", "soundfiler", "outlet", "table", "writesf~",
-          "s~", "throw~", "tabsend~", "delwrite~"}
-READS = {"v", "value", "tabread", "tabread4", "array", "text", "list"}
+ACTIVE = {"s", "send", "outlet", "s~", "throw~", "tabsend~", "writesf~", "soundfiler", "text"}
 
 
-def _effect(box):
+def _touches(box):
+    """(writes, reads, active) of one box: the names it stores into, the names it reads, and whether it does
+    something whose reach can't be seen from here (a send, an outlet, a subpatch, a message to a receiver)"""
     kind, txt = box
     if kind in ("sub", "abs"):
-        return True
+        return set(), set(), True
     if kind == "msg":
-        return txt.lstrip().startswith("\\;") or " \\; " in txt and not txt.startswith(("set ", "add"))
-    c = _cls(box)
-    return c in WRITES and not (c == "array" and txt.split(" ")[1:2] in (["get"], ["size"]))
-
-
-def _reads(box):
-    kind, txt = box
-    c = _cls(box)
-    if kind in ("sub", "abs") or c in READS:
-        return True
-    return c.startswith("expr") and re.search(r"(?<![$\\w])ac\w", txt) is not None
+        if "\\;" not in txt and not txt.lstrip().startswith(";"):
+            return set(), set(), False
+        names = set(re.findall(r"\\;\s*([\w$-]+)", txt))
+        return names, set(), False            # (a message to arrays or values: stores into those names)
+    c, args = _cls(box), txt.split(" ")[1:]
+    if c in ("v", "value") and args:
+        return {args[0]}, {args[0]}, False
+    if c in ("array", "tabwrite") and args:
+        name = args[1] if c == "array" and len(args) > 1 else args[0]
+        if c == "array" and args[0] in ("get", "size"):
+            return set(), {name}, False
+        return {name}, set(), False
+    if c in ("tabread", "tabread4") and args:
+        return set(), {args[0]}, False
+    if c.startswith("expr"):
+        return set(), set(re.findall(r"(?<![$\\\w])(ac\w+)", txt)), False
+    return set(), set(), c in ACTIVE
 
 
 def _branch(boxes, out, start):
@@ -132,17 +140,31 @@ def _branch(boxes, out, start):
 
 
 def _entangled(boxes, out, targets):
-    """True if the branches from these targets can see each other's order"""
+    """True if the branches from these targets can see each other's order: they meet again; one does something
+    whose reach can't be seen (a send, an outlet, a subpatch) while another does anything; or one stores into a
+    name another reads or stores"""
     branches = [_branch(boxes, out, t) for t in targets]
+    info = []
+    for br in branches:
+        w, r, act = set(), set(), False
+        for b in br:
+            bw, brd, ba = _touches(boxes[b])
+            w |= bw
+            r |= brd
+            act = act or ba
+        info.append((w, r, act))
     for i in range(len(branches)):
-        for j in range(i + 1, len(branches)):
+        for j in range(len(branches)):
+            if i >= j:
+                continue
             if branches[i] & branches[j]:
                 return True
-    writes = [any(_effect(boxes[b]) for b in br) for br in branches]
-    reads = [any(_reads(boxes[b]) for b in br) for br in branches]
-    if sum(writes) >= 2:
-        return True
-    return any(w and any(r for k, r in enumerate(reads) if k != i) for i, w in enumerate(writes))
+            (wi, ri, ai), (wj, rj, aj) = info[i], info[j]
+            if (ai and (aj or wj or rj)) or (aj and (wi or ri)):
+                return True
+            if wi & (wj | rj) or wj & ri:
+                return True
+    return False
 
 
 def _short(box):

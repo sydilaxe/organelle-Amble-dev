@@ -1343,7 +1343,7 @@ check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet
       f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
-#     what is there. SETUP's 22 pages, the quick pages (CHORD, the layers'), the 8 knob pages, keys and toasts,
+#     what is there. SETUP's 23 pages, the quick pages (CHORD, the layers', GLIDE, the hold pages), the 8 knob pages, keys and toasts,
 #     the profile's parts
 import re
 ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
@@ -1353,9 +1353,9 @@ for pg in range(GS.NSET):
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
 t += 2000
-for k in [None, 80] + list(range(72, 80)) + [-k for k in range(72, 80)]:   # CHORD (low A held), INPUT (top G#
-    # held), aux + each layer key, each layer key held (its SHAPE page)
-    ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80) else \
+for k in [None, 80, 62, 63, 64, 65] + list(range(72, 80)) + [-k for k in range(72, 80)]:   # CHORD (low A held),
+    # INPUT (top G# held), the hold pages (low D, D#, E) and GLIDE (low F), aux + each layer key, each layer key held
+    ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80, 62, 63, 64, 65) else \
         [(t, f"notesRaw {-k} 100"), (t + 700, f"notesRaw {-k} 0")] if k < 0 else \
         [(t, "aux 1"), (t + 50, f"notesRaw {k} 100"), (t + 100, f"notesRaw {k} 0"), (t + 150, "aux 0")]
     for j in range(4):
@@ -1437,6 +1437,27 @@ fo = fanout.scan(fd)
 check(len(fo) == 1 and "[r x]:0 -> expr acq*2:0 | v acq:0" in next(iter(fo)),
       f"fan-out check: the built patch adds none; a [v] write beside its read is found, a trigger, a counter and "
       f"two separate branches are not ({list(fo)})")
+
+# 76. DISPLAY (SETUP 23): a held key's hint (not on a tap); low D held opens COLOUR as a quick page, whose knobs
+#     do what they do in SETUP; the scope draws the output in the middle; LED beat blinks the LED with the bed
+log, _ = run([(50, "ac-setseed 7"), (300, "acscope 1"),
+              (3000, "h-mark bang"), (4000, "notesRaw 69 100"), (4400, "notesRaw 69 0"), (5000, "notesRaw 62 100"),
+              (5100, "notesRaw 62 0"), (5600, "h-mark bang"), (6000, "notesRaw 62 100"), (6700, "notesRaw 62 0"),
+              (7000, "knob1 0.95"), (7400, "aux 1"), (7450, "aux 0"), (7600, "h-mark bang"),
+              (8000, "acledm 1"), (8010, "ac-led bang"), (11000, "h-mark bang")], 12,
+             prints=("oscOut", "ac-toast", "ac-sett0", "ac-sett1", "led", "h-mark"))
+seg = log.replace("\\ ", " ").split("h-mark: bang")
+pre, hint, mir, led = (seg + [""] * 5)[:4]
+dots = [l for l in pre.splitlines() if re.search(r"gFillArea 3 \d+ (2[1-9]|3\d) 1 1 1$", l)]
+toasts = [l.split("list ", 1)[1] for l in hint.splitlines() if l.startswith("ac-toast")]
+leds = [l for l in led.splitlines() if l.startswith("led:")]
+check(len(dots) > 100, f"scope: the output drawn in the middle ({len(dots)} points in 2.7 s)")
+check("hold: CHORD page" in toasts and "hold: COLOUR page" not in toasts,
+      f"hints: a held key says what holding does, a tap does not ({toasts})")
+pd_ = sorted({l.split("Pre-delay ")[1] for l in mir.splitlines() if "Pre-delay" in l})
+check("list COLOUR aux: back" in mir and "200 ms" in pd_,
+      f"low D held: the COLOUR page as a quick page, knob 1 sets its Pre-delay ({pd_})")
+check(len(leds) >= 6 and {l.split()[1] for l in leds} >= {"0"}, f"LED beat: the LED blinks with the bed ({len(leds)} changes in 3 s)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

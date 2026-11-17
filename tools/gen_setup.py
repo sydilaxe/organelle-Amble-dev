@@ -1,4 +1,4 @@
-"""SETUP (hold aux 1 s, or aux + a low key for that page): 22 pages of 4 rows, each row set by its knob.
+"""SETUP (hold aux 1 s, or aux + a low key for that page): 23 pages of 4 rows, each row set by its knob.
 
 Where things are:
   the choices of each row        constants below (SPADS, SFORMS, SMORPH ...), next to a comment naming the page
@@ -19,7 +19,8 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                acmap0=2, acmap1=1, acmap2=1, acmap3=1, acmap4=6, acmap5=0, acmap6=3, acsbell=0, acsmot=0, acglide=5, acmodesel=0, acssub=0, acsform=0, acstempo=0, acsmeter=0, acsatm=0, acnsx=0, acchx=0, acslot=0, acslotfull=0, acsvp49=1, acsvp50=1, acsvpp=1, acsetpgl=-1, acmixcc=0, acpgm=0, aclfd=1, acsfd=2,
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
-               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0)
+               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0,
+               achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0)
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
@@ -33,17 +34,23 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            ["acmorph", "acrecall", "acancg", "acpump", "acpumpd", "acduck", "acduckr"] + \
            [f"acmc{m}{f}" for m in range(4) for f in ("mode", "ta", "da", "tb", "db")] + \
            ["acjour", "acjpad", "acjdrone", "acjstrike", "acrvpre", "acrvera", "acccout", "acccch", "acccbase", "acccrate"] + \
-           ["acspark", "acsparko", "acchpick"]
+           ["acspark", "acsparko", "acchpick"] + \
+           ["achints", "acscope", "acscopeg", "acledm"]          # (DISPLAY; append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
 PARTS = ["all", "harmony", "arp only"]
 # SETUP page 4, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
 SGUARD = ["off", "on", "off + log", "on + log"]
 OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everything else right (mono stems)
-NSET = 22                                  # SETUP pages
 SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
                "SECTIONS", "SECTION MIX", "SAVES", "LIVE", "RECALL", "GROOVE", "MACRO A", "MACRO B", "JOURNEY",
-               "COLOUR", "CC OUT", "MEMORY"]
+               "COLOUR", "CC OUT", "MEMORY", "DISPLAY"]
+NSET = len(SETUP_NAMES)                    # SETUP pages
+# SETUP page 23, DISPLAY: hints (a held key's toast, 0.25 s in, says what holding it does), the scope (the play
+# view's middle shows the output, left against right) and its gain, the LED (the piece's state, or pulsing with the
+# drone's beating). Settings, not saved with a piece.
+SSCOPEG = [("x1", 1), ("x2", 2), ("x4", 4), ("x8", 8), ("x16", 16)]
+SLEDM = ["state", "beat"]
 # SETUP page 22, MEMORY: with Memory on, the knobs you turn in a section are kept for it (acsnapt / acsnapv, a
 # value per section and knob); when that section comes again they glide back over Glide. Saved with the piece.
 SMEMG = [("cut", 0), ("2 s", 2000), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000)]
@@ -65,7 +72,16 @@ QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
 # Glide, RECALL Morph and Anchor glide, MEMORY Glide); nothing new is saved
 GLIDE_PAGE = SHAPE_PAGE0 + len(LAYER_PAGES)
 QUICK_NAMES += ["GLIDE"]
+# hold pages (a knob-page key held 0.5 s): a SETUP page as a quick page - its rows, and its knobs do what they do
+# there; aux leaves. (SETUP page, the low key: D, D#, E)
+MIRRORS = [("COLOUR", 2), ("GROOVE", 3), ("FORM", 4)]
+MIRROR0 = GLIDE_PAGE + 1
+QUICK_NAMES += [n for n, _ in MIRRORS]
 NALL = NSET + len(QUICK_NAMES)
+# the SETUP page whose rows and knobs a page shows (a mirror shows its SETUP page's)
+SETPG_OF = ("if(acsetpg >= %d, " % MIRROR0 + "".join(f"if(acsetpg == {MIRROR0 + j}, {SETUP_NAMES.index(n)}, "
+                                                    for j, (n, _) in enumerate(MIRRORS)) + "0" + ")" * len(MIRRORS)
+            + ", acsetpg)")
 SCHPICK = ["next change", "now"]
 SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
 # a saved slot's name: a word, or auto (its key and scale, kept when it was saved)
@@ -235,9 +251,9 @@ def settings():
     c.c(c.m((t, 1), "read settings.txt"), 0, td, 0)
     mo = c.ch((t, 0), "text size acsettings", "moses 1")
     got = c.ch(c.m((mo, 1), "0"), "text get acsettings")
-    ln = c.to(got, "t l l")
-    c.c(c.ch((ln, 1), "list split 12"), 0, c.obj("array set acparams"), 0)
-    sp = c.ch((ln, 0), "list split 12")
+    ln = c.to(got, "t b l l")           # (right to left: the knobs, the SETUP values, then apply them)
+    c.c(c.ch((ln, 2), "list split 12"), 0, c.obj("array set acparams"), 0)
+    sp = c.ch((ln, 1), "list split 12")
     up = c.to((sp, 1), "unpack " + " ".join(["f"] * (len(SETTINGS) - 12)))
     for i, n in enumerate(SETTINGS[12:]):     # SETUP values, then the knobs after the first 12 (older files lack them)
         c.c(up, i, c.obj("v " + n), 0)
@@ -411,6 +427,12 @@ def setup_pages():
             ("list 3 Clear sec $1 - up", [("f", f"int(acsec) % {NSNAP} + 1")]),
             ("list 4 Clear all - turn up", None),
         ]),
+        ("DISPLAY", [
+            ("list 1 Hints $1", [("s", "achints", ["off", "on"])]),
+            ("list 2 Scope $1", [("s", "acscope", ["off", "on"])]),
+            ("list 3 Scope gain $1", [("s", "acscopeg", [n for n, _ in SSCOPEG])]),
+            ("list 4 LED $1", [("s", "acledm", SLEDM)]),
+        ]),
     ]
 
 
@@ -460,6 +482,8 @@ def quick_pages():
         ("list 3 Anchor $1", [("s", "acancg", [n for n, _ in SANCG])]),
         ("list 4 Memory $1", [("s", "acmemg", [n for n, _ in SMEMG])]),
     ]))
+    setup = dict(setup_pages())
+    pages += [(n, setup[n]) for n, _ in MIRRORS]
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -541,7 +565,7 @@ def setup():
     c.c(up, 1, c.obj("v acsv"), 0)
     tb = c.to(up, "t b f")
     c.c(tb, 1, c.obj("v acsk"), 0)
-    item = "acsetpg*4 + acsk"           # the knob turned: page (0..) x 4 + knob (0..3)
+    item = f"{SETPG_OF}*4 + acsk"        # the knob turned: page (0..) x 4 + knob (0..3) (a mirror: its SETUP page's)
 
     def at(page, row):
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
@@ -671,6 +695,10 @@ def setup():
         If(at("MEMORY", 2), [V("acmemg", f"int(acsv*{len(SMEMG) - 0.01})")]),
         If(at("MEMORY", 3), [If("acsv > 0.9 && acsvpm3 <= 0.9", [Call("ac-memclear")]), V("acsvpm3", "acsv")]),
         If(at("MEMORY", 4), [If("acsv > 0.9 && acsvpm4 <= 0.9", [Call("ac-memclearall")]), V("acsvpm4", "acsv")]),
+        If(at("DISPLAY", 1), [V("achints", "acsv > 0.5")]),
+        If(at("DISPLAY", 2), [V("acscope", "acsv > 0.5"), Call("ac-oledall")]),
+        If(at("DISPLAY", 3), [V("acscopeg", f"int(acsv*{len(SSCOPEG) - 0.01})")]),
+        If(at("DISPLAY", 4), [V("acledm", "acsv > 0.5"), Send("ac-led")]),
         If(at("CC OUT", 1), [V("acccout", "acsv > 0.5")]),
         If(at("CC OUT", 2), [V("acccch", "1 + int(acsv*15.99)")]),
         If(at("CC OUT", 3), [V("acccbase", "int(acsv*3.99)")]),
@@ -687,14 +715,15 @@ def setup():
     # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
     proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
         If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [
-            If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
-                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])
+            If(f"acsetpg >= {MIRROR0}", [Send("ac-setl0m")], [If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
+                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])])
     Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
     Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
                                                 ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
     Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
          "ac-sett0")(c)
     c.c(c.m(c.recv("ac-setl0g"), "list GLIDE  aux: back"), 0, c.obj("s ac-sett0"), 0)
+    Line("ac-setl0m", "list $1  aux: back", [("s", f"acsetpg - {MIRROR0}", [n for n, _ in MIRRORS])], "ac-sett0")(c)
     Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()

@@ -78,38 +78,80 @@ def LAYER_OF(gain):
 
 
 def shaped(c, L, R, x):
-    """layer x's SHAPE stage: [r ac-shp-x] 'lop-hz hip-hz drive width' -> (L, R)"""
+    """layer x's SHAPE stage: [r ac-shp-x] 'lop-hz hip-hz drive width' -> (L, R). The tone filters are always in;
+    drive and width are in a subpatch (shape_drive) that computes only while either is off neutral and adds just
+    their difference from the filtered signal - so at neutral it switches off and the layer is the same, cheaper"""
     up = c.to(c.recv(f"ac-shp-{x}"), "unpack f f f f")
-    dr = c.to((up, 2), "line~")
-    wd = c.to(c.m((up, 3), "$1 30"), "line~")
-    c.c(c.m(c.obj("loadbang"), "1"), 0, wd, 0)
-    pre = c.ch(dr, "*~ 40", "+~ 1")      # (the layers sit low: it takes a lot of gain to reach the knee)
-    outs = []
+    hps = []
     for x0 in (L, R):
         lp, hp = c.obj("lop~ 20000"), c.obj("hip~ 5")
         c.c(x0, 0, lp, 0)
         c.c(lp, 0, hp, 0)
         c.c((up, 0), 0, lp, 1)
         c.c((up, 1), 0, hp, 1)
-        # drive: x pre / (1 + |x pre|), scaled back by pre^0.72 (a little louder as it saturates), mixed in
-        xp = mul(c, hp, pre)
-        sat = c.obj("/~")
-        c.c(xp, 0, sat, 0)
-        c.c(c.ch(xp, "abs~", "+~ 1"), 0, sat, 1)
-        back = c.obj("/~")
-        c.c(sat, 0, back, 0)
-        c.c(c.ch(pre, "log~", "*~ 0.72", "exp~"), 0, back, 1)
-        outs.append(add(c, mul(c, hp, c.ch(dr, "*~ -1", "+~ 1")), mul(c, back, dr)))
-    # width: mid + side x w
-    df = c.obj("-~")
-    c.c(outs[0], 0, df, 0)
-    c.c(outs[1], 0, df, 1)
-    side = mul(c, c.to(df, "*~ 0.5"), wd)
-    mid = c.to(add(c, outs[0], outs[1]), "*~ 0.5")
-    Ro = c.obj("-~")
-    c.c(mid, 0, Ro, 0)
-    c.c(side, 0, Ro, 1)
-    return add(c, mid, side), Ro
+        hps.append(hp)
+    dw = c.obj("pack f f")
+    c.c((up, 3), 0, dw, 1)
+    c.c((up, 2), 0, dw, 0)
+    sd = c.sub(shape_drive(x))
+    c.c(hps[0], 0, sd, 0)
+    c.c(hps[1], 0, sd, 1)
+    c.c(dw, 0, sd, 2)
+    return add(c, hps[0], (sd, 0)), add(c, hps[1], (sd, 1))
+
+
+def shape_drive(x):
+    """SHAPE's drive and width as a difference from the filtered signal (inlets: L~, R~, 'drive width'; outlets:
+    the L and R differences). Drive: x pre / (1 + |x pre|), scaled back by pre^0.72, mixed in by drive; width: the
+    side x width. On while drive > 0 or width != 1; off 40 ms after both are back (width glides 30 ms), when the
+    difference is 0 again."""
+    s = Canvas(f"shape-{x}", w=900, h=700)
+    iL, iR, ic = s.obj("inlet~", 20, 10), s.obj("inlet~", 160, 10), s.obj("inlet", 300, 10)
+    oL, oR = s.obj("outlet~", 20, 660), s.obj("outlet~", 160, 660)
+    s.cx, s.cy = 300, 40
+    t = s.to(ic, "t l l")                     # (right to left: on or off, then the values)
+    sw = s.obj("switch~")
+    s.c(s.m(s.obj("loadbang"), "0"), 0, sw, 0)
+    off = s.obj("delay 40")
+    s.c(s.m(off, "0"), 0, sw, 0)
+    onq = s.ch((t, 1), "expr $f1 > 0 || $f2 != 1", "sel 0")
+    s.c(onq, 0, off, 0)
+    on = s.to((onq, 1), "t b b")
+    s.c(s.m((on, 1), "stop"), 0, off, 0)
+    s.c(s.m((on, 0), "1"), 0, sw, 0)
+    vals = s.to((t, 0), "unpack f f")
+    dr = s.to((vals, 0), "line~")
+    wd = s.to(s.m((vals, 1), "$1 30"), "line~")
+    s.c(s.m(s.obj("loadbang"), "1"), 0, wd, 0)
+    s.cx, s.cy = 20, 60
+    pre = s.ch(dr, "*~ 40", "+~ 1")           # (the layers sit low: it takes a lot of gain to reach the knee)
+    preb = s.ch(pre, "log~", "*~ 0.72", "exp~")
+    dd, o = [], []
+    for x0 in (iL, iR):
+        xp = mul(s, x0, pre)
+        sat = s.obj("/~")
+        s.c(xp, 0, sat, 0)
+        s.c(s.ch(xp, "abs~", "+~ 1"), 0, sat, 1)
+        back = s.obj("/~")
+        s.c(sat, 0, back, 0)
+        s.c(preb, 0, back, 1)
+        diff = s.obj("-~")
+        s.c(back, 0, diff, 0)
+        s.c(x0, 0, diff, 1)
+        d = mul(s, diff, dr)                  # drive's difference: drive x (saturated - plain)
+        dd.append(d)
+        o.append(add(s, x0, d))
+    # width: L' = L + side (w - 1), R' = R - side (w - 1), side = (L - R) / 2
+    df = s.obj("-~")
+    s.c(o[0], 0, df, 0)
+    s.c(o[1], 0, df, 1)
+    sw1 = mul(s, s.to(df, "*~ 0.5"), s.to(wd, "-~ 1"))
+    s.c(add(s, dd[0], sw1), 0, oL, 0)
+    dR = s.obj("-~")
+    s.c(dd[1], 0, dR, 0)
+    s.c(sw1, 0, dR, 1)
+    s.c(dR, 0, oR, 0)
+    return s
 
 
 def throws(c, L, R, mix=1.0, send=0.0, src=0.0, bus="mix", sbus="ac-send"):
@@ -732,6 +774,7 @@ def master():
     # notes and the dry input) comes in after DUCK, so the piece dips under you and you don't
     cmL, cmR = s.obj("catch~ ac-mixL"), s.obj("catch~ ac-mixR")
     cbL, cbR = s.obj("catch~ ac-bedL"), s.obj("catch~ ac-bedR")
+    s.c(cbL, 0, s.obj("s~ ac-bedmono"), 0)           # (to the LED's beat, gen_ui.led_beat)
     clL, clR = s.obj("catch~ ac-liveL"), s.obj("catch~ ac-liveR")
     # PUMP: the bed (drone, sub, pads) ducked on its grid; DUCK and SWELL: the whole piece
     pump = s.obj("vline~")
@@ -793,6 +836,7 @@ def master():
         out = add(s, fin, mul(s, dif, sg))
         s.c(s.ch(out, "clip~ -0.98 0.98"), 0, s.obj("throw~ " + bus), 0)
         s.c(out, 0, s.obj(f"throw~ ac-mtr{'LR'[j]}"), 0)      # (to the log's audio meter, gen_log)
+        s.c(out, 0, s.obj(f"s~ ac-scp{'LR'[j]}"), 0)         # (to the OLED scope, gen_oled.scope)
     return s
 
 def motion_fm():
@@ -947,23 +991,26 @@ def live_voice():
         v.c(v.m(v.to((st, i), f"== {i}"), "$1 10"), 0, v.obj(f"s $0-fw{i}"), 0)
     d = v.obj("delay 1600")
     v.c(off, 0, d, 0)
-    v.c(v.m(c_vel, "stop"), 0, d, 0)
-    tb = v.to((c_vel, 0), "t b b")
+    tv = v.to((c_vel, 0), "t b b")          # (right to left: cancel the switch-off, then sound)
+    v.c(v.m((tv, 1), "stop"), 0, d, 0)
+    tb = v.to((tv, 0), "t b b")
     v.c(tb, 0, ty, 0)
+    dt = v.to(d, "t " + " ".join(["b"] * (nf + 1)))   # (the types fade out, type 0 first, then the switch-off waits)
     for i in range(nf):
-        v.c(v.m(d, "0 50"), 0, v.obj(f"s $0-fw{i}"), 0)
+        v.c(v.m((dt, nf - i), "0 50"), 0, v.obj(f"s $0-fw{i}"), 0)
     # the whole voice computes only while it sounds: on at a note-on, off 1.75 s after the release
     vsw = v.obj("switch~")
     v.c(v.m(v.obj("loadbang"), "0"), 0, vsw, 0)
-    v.c(v.m((tb, 1), "1"), 0, vsw, 0)
-    v.c((tb, 1), 0, brlast, 0)
+    t3 = v.to((tb, 1), "t b b b")           # (right to left: switch on, the level, cancel the switch-off)
+    v.c(v.m((t3, 2), "1"), 0, vsw, 0)
+    v.c((t3, 1), 0, brlast, 0)
     d2 = v.obj("delay 150")
-    v.c(d, 0, d2, 0)
-    v.c(v.m((tb, 1), "stop"), 0, d2, 0)
+    v.c((dt, 0), 0, d2, 0)
+    v.c(v.m((t3, 0), "stop"), 0, d2, 0)
     v.c(v.m(d2, "0"), 0, vsw, 0)
-    lb = v.ch(v.obj("loadbang"), "f $1")
-    v.c(v.to(lb, "expr 0.11 + 0.03*$f1"), 0, v.obj("s $0-la"), 0)
-    v.c(v.to(lb, "expr 0.07 + 0.02*$f1"), 0, v.obj("s $0-lb"), 0)
+    lb = v.ch(v.obj("loadbang"), "f $1", "t f f")
+    v.c(v.to((lb, 1), "expr 0.11 + 0.03*$f1"), 0, v.obj("s $0-la"), 0)
+    v.c(v.to((lb, 0), "expr 0.07 + 0.02*$f1"), 0, v.obj("s $0-lb"), 0)
     v.col()
     bodyL, bodyR = v.obj("*~"), v.obj("*~")
     v.c(amp, 0, bodyL, 1)
@@ -1082,8 +1129,9 @@ def inp():
     s.c(ons, 0, sp, 0)
     tb = s.to(sp, "t b b")
     s.c(tb, 0, s.obj("s ac-inonset"), 0)
-    s.c(s.m((tb, 1), "0"), 0, sp, 1)
-    s.c(s.m(s.to((tb, 1), "delay 150"), "1"), 0, sp, 1)
+    tg = s.to((tb, 1), "t b b")             # (right to left: close the gate, then reopen it 150 ms on)
+    s.c(s.m((tg, 1), "0"), 0, sp, 1)
+    s.c(s.m(s.to((tg, 0), "delay 150"), "1"), 0, sp, 1)
     return s
 
 

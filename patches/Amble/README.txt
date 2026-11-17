@@ -107,6 +107,7 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   G#  SENDS 2 page (textures, cloud, atmosphere, input)
   F held: the GLIDE page - knob 1 chord glide, 2 Morph, 3 Anchor glide,
       4 Memory glide (the same settings as in SETUP); aux leaves
+  D / D# / E held: SETUP COLOUR / GROOVE / FORM as a quick page; aux leaves
   A   tap: chord change now (to the next chord shown); hold: the CHORD
       page - knob 1 picks the next chord from the key's chords, knob 3 up:
       the piece picks another, knob 4 On pick: next change / now; aux leaves
@@ -297,6 +298,9 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   when the section comes again (the piece replayed, or loaded from its
   slot) they glide back over Glide; Clear sec / Clear all (turn up).
   Saved with the piece; a new piece starts with an empty memory
+  page 23, DISPLAY: Hints (a held key says what holding does), Scope
+  (the play view's middle draws the output), Scope gain, LED (state /
+  beat: blinks with the drone's beating)
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
 lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,

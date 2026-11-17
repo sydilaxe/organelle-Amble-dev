@@ -64,10 +64,10 @@ The layers and their rhythms:
 - **Performing:** a PERFORM knob page (low F) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
   other relationships drift in); ANCHOR (aux + top A) to come back to a sound; quick save and recall (hold top B
   and press a key), COMPARE (hold top B), loads that morph in; factory pieces in empty slots 1-6; JOURNEY (the
-  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP 22): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again.
+  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP 22): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again. Holding a knob-page key opens the settings you change while playing: low F the GLIDE page (all the glide times), low D / D# / E the COLOUR, GROOVE and FORM pages; with SETUP DISPLAY Hints on, a held key says what holding it does.
 - **Two screens:** the play view (the chord now and the next one coming, a live score, the voices that sound) and
   the MIX view (levels and sends, the column you turn framed with its value), which takes over while a MIX or
-  SENDS page is open.
+  SENDS page is open. SETUP DISPLAY can turn the play view's middle into a scope of the output, and the LED into a light that blinks with the drone's beating.
 - **Listening:**
   - A held or sung pitch pulls the next chord to contain it.
   - A note held for 6 s becomes the key centre.

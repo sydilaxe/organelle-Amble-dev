@@ -57,6 +57,14 @@ INPUT_KEY = 72 + len(LAYER_KEYS)                                     # top G#
 CHORD_KEY = 60 + LOW_KEYS.index("chord change now (hold: CHORD page)")
 SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
 GLIDE_KEY = 60 + LOW_KEYS.index("PERFORM page")    # low F: held 0.5 s, the GLIDE page
+# what holding a key does, said in a toast 0.25 s into the hold (SETUP DISPLAY Hints) - 21 characters at most
+HINTS = {GLIDE_KEY: "hold: GLIDE page", CHORD_KEY: "hold: CHORD page", SECTION_KEY: "hold: hold section",
+         INPUT_KEY: "hold: INPUT page", SAVE_KEY: "hold: compare / load",
+         **{60 + k: f"hold: {n} page" for n, k in _S.MIRRORS},
+         **{72 + i: ("hold: SHAPE or rhythm" if 72 + i in (MOTION_KEY, BELLS_KEY) else
+                     f"hold: {('ATMOS' if n == 'atmosphere' else n.upper())} SHAPE")
+            for i, (_, n, _) in enumerate(LAYER_KEYS)}}
+assert all(len(t) <= 21 for t in HINTS.values()), HINTS
 
 
 def knobs():
@@ -66,8 +74,10 @@ def knobs():
     for k in range(4):
         kr = c.recv(f"knob{k + 1}")
         if k == 0:     # while Root (low G) is held, knob 1 picks the next key
+            k1 = c.to(kr, "t f f")              # (right to left: the Root pick, then the knob)
+            kr = (k1, 0)
             rs = c.obj("spigot")
-            kt = c.to(kr, "t f b")
+            kt = c.to((k1, 1), "t f b")
             c.c(c.to((kt, 1), "expr acroothold"), 0, rs, 1)
             c.c(kt, 0, rs, 0)
             rt_ = c.to(rs, "t b f")
@@ -124,7 +134,10 @@ def keys():
     c.c(up, 1, c.obj("v ackv"), 0)
     kb = c.to(up, "t b f")
     c.c(kb, 1, c.obj("v ackn"), 0)
-    run_steps(c, (kb, 0), [If("ackv > 0", [
+    run_steps(c, (kb, 0), [Send("ac-hintstop"), If("ackv > 0", [
+        # a key that does something when held: its hint, 0.25 s in, if it is still held alone
+        If("acauxheld == 0 && acrkey == 0 && acbdown == 0 && acroothold == 0",
+           [V("achk", "ackn"), Arm("ac-hint", "250", stop="ac-hintstop")]),
         V("acauxused", "acauxheld || acauxused"),
         # top E (motion) / D# (bells) held: a low key picks its rhythm
         If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", f"1 + (ackn == {BELLS_KEY})")]),
@@ -155,6 +168,7 @@ def keys():
                                               X("0; 0", "v acanp", "v acanheld")]),
          # low F let go: (a hold already opened the GLIDE page)
          If(f"ackn == {GLIDE_KEY}", [Send("ac-glstop")]),
+         If(" || ".join(f"ackn == {60 + k}" for _, k in _S.MIRRORS), [Send("ac-mhstop")]),
          # low A let go: a tap changes to the next chord now; a hold already opened the CHORD page
          If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")]),
          # low B let go: a tap is the next section; a hold (0.6 s) already held or released the section
@@ -178,6 +192,9 @@ def keys():
                 Call("ac-oledpage")]
 
     low = [page(LOW_PAGES[k]) if k in LOW_PAGES else None for k in range(12)]
+    # low D, D#, E: their page at once; held 0.5 s, a SETUP page as a quick page (gen_setup.MIRRORS)
+    for j, (_, k) in enumerate(_S.MIRRORS):
+        low[k] = page(LOW_PAGES[k]) + [V("acmirk", str(j)), Arm("ac-mhold", "500", stop="ac-mhstop")]
     # low F: the PERFORM page at once (as every page key); held 0.5 s, the GLIDE page too
     low[GLIDE_KEY - 60] = page(LOW_PAGES[GLIDE_KEY - 60]) + [Arm("ac-glhold", "500", stop="ac-glstop")]
     low[7] = [V("acroothold", "1"), Toast("root: note or knob 1")]
@@ -224,6 +241,8 @@ def keys():
     # top G# held 0.5 s: the INPUT page (gen_setup)
     proc(c, "ac-inhold", [V("acinkh", "1"), V("acsetup", "1"), V("acsetpg", str(_S.INPUT_PAGE)), Call("ac-oledsetup")])
     # low F held 0.5 s: the GLIDE page (the glide times; gen_setup)
+    proc(c, "ac-mhold", [V("acsetup", "1"), V("acsetpg", f"{_S.MIRROR0} + acmirk"), Call("ac-oledsetup")])
+    proc(c, "ac-hint", [If("achints && acsetup == 0", [If(f"achk == {n}", [Toast(t)]) for n, t in sorted(HINTS.items())])])
     proc(c, "ac-glhold", [V("acsetup", "1"), V("acsetpg", str(_S.GLIDE_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordhold", [V("acrr", "1"), V("acsetup", "1"), V("acsetpg", str(_S.CHORD_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordnow", [Call("ac-change"), Toast("chord change")])
@@ -252,6 +271,9 @@ def keys():
 def screen():
     c = Canvas("screen", w=3600)
     c.comment("Line 1 state, 2 key/scale/voicing, 3 pad timbres + texture (and toasts), 4-5 the knob page")
+    # (ac-txt1-3 reach no screen on the Organelle (only lines 4-5 are drawn, gen_oled), but they are the checks'
+    # readout of the piece's state - form, key, scale, pad types: tools/ci_check.py reads them. They compute on a
+    # section or chord change only, so they cost next to nothing; keep them.)
     proc(c, "ac-scr", [Call(f"ac-scr{i}") for i in range(1, 6)])
     # line 1
     s1 = c.ch(c.recv("ac-scr1"), "expr if(acready && acstopped, 4, if(acstopped, 3, if(acended || acrun==0, 2, acmode)))",
@@ -305,4 +327,24 @@ def screen():
     fl = c.to(c.recv("ac-flash"), "t b b")
     c.c(c.to((fl, 0), "delay 150"), 0, c.obj("s ac-led"), 0)
     c.c(c.m((fl, 1), "7"), 0, led, 0)
+    c.sub(led_beat())
+    return c
+
+
+def led_beat():
+    """SETUP DISPLAY LED beat: the LED lights while the harmony bed (drone, sub) is louder than its own running
+    average, so it blinks at the bed's beating; computes only while chosen and a piece plays (each ac-led - a state
+    change or a flash's end - turns it on or off; off, the LED shows the state as before)"""
+    c = Canvas("led-beat", w=900, h=500)
+    sw = c.obj("switch~")
+    c.c(c.m(c.obj("loadbang"), "0"), 0, sw, 0)
+    on = c.ch(c.recv("ac-led"), "expr acledm && acrun && acended == 0 && acstopped == 0", "change")
+    c.c(on, 0, sw, 0)
+    e = c.ch(c.obj("r~ ac-bedmono"), "env~ 1024 256", "t b f")    # (dB every 5.8 ms)
+    c.c(e, 1, c.obj("v acledin"), 0)
+    run_steps(c, (e, 0), [
+        V("aclbavg", "if(aclbavg < 1, acledin, aclbavg*0.97 + acledin*0.03)"),
+        V("aclbnew", "if(acledin > aclbavg + 0.4, 1, if(acledin < aclbavg - 0.2, 0, aclbon))"),
+        If("aclbnew != aclbon", [V("aclbon", "aclbnew"), SendL("led", ["if(aclbon, if(acmode, 5, 3), 0)"])]),
+    ])
     return c

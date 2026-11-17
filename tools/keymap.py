@@ -41,7 +41,8 @@ def knobs(page):
 def page_key(key):
     p = U.LOW_PAGES[key]
     kind = "level" if PAGE_NAMES[p].startswith(("MIX", "SENDS")) else "play"
-    hold = ["hold: GLIDE page"] if key == U.GLIDE_KEY - 60 else []
+    hold = ["hold: GLIDE page"] if key == U.GLIDE_KEY - 60 else \
+        [f"hold: {n} page" for n, k in S.MIRRORS if k == key]
     return (PAGE_NAMES[p], ["knobs: " + knobs(p)] + hold, kind)
 
 
