@@ -995,7 +995,114 @@ def ch_crush():
     return s
 
 
-CHARS = (ch_chorus, ch_tape, ch_ring, ch_crush)
+def ch_rotor():
+    s, ln, L, R = _char("rotor", 5)
+    s.comment("Rotor: a rotary speaker, slow (chorale) - the pads split at 800 Hz; the horn (above) turns at 0.83 "
+              "Hz, the drum (below) at 0.68 Hz the other way, each a moving delay (Doppler) and a swelling level, "
+              "the two sides a quarter turn apart")
+    mono = s.to(add(s, L, R), "*~ 0.5")
+    hi, lo = s.to(mono, "hip~ 800"), s.to(mono, "lop~ 800")
+    s.to(hi, "delwrite~ $0-rh 20")
+    s.to(lo, "delwrite~ $0-rl 20")
+    outs = []
+    for side, ph in ((0, 0), (1, 0.25)):
+        o = s.obj("*~ 1")
+        for nm, rate, dly, dep, am in (("$0-rh", 0.83, 2.0, 0.45, 0.4), ("$0-rl", -0.68, 3.0, 0.3, 0.2)):
+            ang = s.to(s.obj(f"phasor~ {rate}"), f"+~ {ph}")
+            cs = s.to(ang, "cos~")
+            vd = s.obj(f"vd~ {nm}")
+            s.c(s.ch(cs, f"*~ {dep}", f"+~ {dly}"), 0, vd, 0)
+            s.c(mul(s, vd, s.ch(cs, f"*~ {am}", f"+~ {1 - am}")), 0, o, 0)
+        outs.append(o)
+    _char_out(s, ln, *outs)
+    return s
+
+
+def ch_dim():
+    s, ln, L, R = _char("dimension", 6)
+    s.comment("Dimension: the Roland Dimension D's gentle width - two short delays (about 6 ms) swept very slowly and "
+              "shallowly in opposite directions, each side its own minus a little of the other's, so the pads open "
+              "out without the chorus's wobble")
+    mono = s.to(add(s, L, R), "*~ 0.5")
+    s.to(mono, "delwrite~ $0-dm 20")
+    lfo = s.ch(s.obj("phasor~ 0.25"), "-~ 0.5", "abs~", "*~ 4", "-~ 1")           # a triangle
+    d = []
+    for sign in (1, -1):
+        vd = s.obj("vd~ $0-dm")
+        s.c(s.ch(lfo, f"*~ {0.35 * sign}", "+~ 6"), 0, vd, 0)
+        d.append(vd)
+    oL = add(s, d[0], s.to(d[1], "*~ -0.35"))
+    oR = add(s, d[1], s.to(d[0], "*~ -0.35"))
+    _char_out(s, ln, s.to(oL, "*~ 0.7"), s.to(oR, "*~ 0.7"))
+    return s
+
+
+CHARS = (ch_chorus, ch_tape, ch_ring, ch_crush, ch_rotor, ch_dim)
+
+
+def input_octave():
+    s, ln = switched("in-octave", "ac-g-oct")
+    s.comment("Input mode octave: the input with its octave above (full-wave rectified, its DC removed) and its "
+              "octave below (ring-modulated at half its tracked pitch, which also gives the fifth above - an "
+              "organ-like doubling); the dry input stays as in the other modes")
+    x = s.ch(s.obj("r~ ac-in"), "hip~ 40")
+    up = s.ch(x, "abs~", "hip~ 60", "*~ 1.2")
+    met = s.obj("metro 50")
+    s.c(s.obj("loadbang"), 0, met, 0)
+    hz = s.ch(met, "v acinp", "moses 1")
+    sub = s.ch(s.m(s.ch((hz, 1), "mtof", "/ 2"), "$1 60"), "line~", "osc~")
+    dn = mul(s, x, sub)
+    throws_to("ac-sendi")(s, mul(s, add(s, up, s.to(dn, "*~ 1.3")), ln),
+                          mul(s, add(s, s.to(up, "*~ 0.8"), s.to(dn, "*~ 1.5")), ln), mix=1.0, send=0.5)
+    return s
+
+
+FMT_BANDS = [300, 450, 650, 850, 1100, 1500, 1950, 2500]
+
+
+def input_formant():
+    s, ln = switched("in-formant", "ac-g-fmt")
+    s.comment("Input mode formant: the chord sings your vowel - the input's two formants found from 8 bands (the "
+              "weighted centre of 300-850 Hz and of 1100-2500 Hz, 25 times a second), set on a glottal choir on the "
+              "chord's four tones, which follows the input's level")
+    x = s.obj("r~ ac-in")
+    snaps = []
+    for fc in FMT_BANDS:
+        v = s.obj("vcf~ 4")
+        s.c(x, 0, v, 0)
+        s.c(s.obj(f"sig~ {fc}"), 0, v, 1)
+        snaps.append(s.ch(v, "abs~", "lop~ 12", "snapshot~"))
+    met = s.obj("metro 40")
+    s.c(s.obj("loadbang"), 0, met, 0)
+    n = len(FMT_BANDS)
+    tb = s.to(met, "t " + " ".join(["b"] * n))
+    pk = s.obj("pack " + " ".join(["f"] * n))
+    for i in range(n - 1, -1, -1):             # (right to left: the last band first, the first into the hot inlet)
+        s.c(tb, i, snaps[i], 0)
+        s.c(snaps[i], 0, pk, i)
+    lo = " + ".join(f"$f{i + 1}" for i in range(4))
+    hi = " + ".join(f"$f{i + 1}" for i in range(4, 8))
+    ex = s.obj("expr (" + " + ".join(f"{FMT_BANDS[i]}*$f{i + 1}" for i in range(4)) + f")/max(1e-06, {lo}); ("
+               + " + ".join(f"{FMT_BANDS[i]}*$f{i + 1}" for i in range(4, 8)) + f")/max(1e-06, {hi})")
+    s.c(pk, 0, ex, 0)
+    f1 = s.ch(s.m((ex, 0), "$1 40"), "line~")
+    f2 = s.ch(s.m((ex, 1), "$1 40"), "line~")
+    env = s.ch(x, "abs~", "lop~ 15", "*~ 6", "clip~ 0 1")
+    src = s.obj("*~ 0.3")
+    for k in range(4):
+        hz = s.ch(s.recv(f"ac-voccar{k}"), "line~")
+        s.c(s.ch(hz, "phasor~", "-~ 0.5", "*~ 2", "abs~", "pow~ 8"), 0, src, 0)
+    outs = []
+    for side, (a1, a2) in enumerate(((1.0, 0.6), (0.8, 0.75))):
+        sm = s.obj("*~ 1")
+        for fm, q, a in ((f1, 7, a1), (f2, 10, a2)):
+            v = s.obj(f"vcf~ {q}")
+            s.c(s.to(src, "hip~ 60"), 0, v, 0)
+            s.c(fm, 0, v, 1)
+            s.c(s.to(v, f"*~ {a}"), 0, sm, 0)
+        outs.append(mul(s, s.to(sm, "*~ 3"), env))
+    throws_to("ac-sendi")(s, mul(s, outs[0], ln), mul(s, outs[1], ln), mix=1.0, send=0.6)
+    return s
 
 
 # ---------------------------------------------------------------- vocoder

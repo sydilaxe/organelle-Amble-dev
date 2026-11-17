@@ -354,6 +354,10 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
 }
 
 INMODE_DESC = {
+    "octave": "your sound with its octave above and its octave below (and the fifth between), an organ-like "
+              "doubling that follows your pitch.",
+    "formant": "the chord sings your vowel: a choir on the chord's tones takes the two formants of what you sing "
+               "(a, e, i, o, u and between) and follows your level.",
     "auto": "Amble decides from what it hears: pitched sound rings chord strings and retunes the grains, and your "
             "pitch steers the harmony; plucked sound rings bells; texture plays tuned bands.",
     "reso": "4 comb strings tuned to the chord ring with your sound.",
@@ -433,7 +437,10 @@ DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "gendy": "Xenakis' stochastic synthesis, gently: a wave of 12 breakpoints, each taking small random "
                        "steps, so the tone breathes and never repeats while the pitch holds"}
 CHAR_DESC = {"clean": "no effect", "chorus": "a wide chorus", "tape": "wow, flutter, saturation and a little hiss",
-             "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush"}
+             "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush",
+             "rotor": "a slow rotary speaker: horn and drum turning apart, Doppler and swell, the sides a quarter "
+                      "turn apart", "dim": "the Dimension D's gentle width: two short, very slowly swept delays, "
+                                         "opposite on the two sides - wider without wobble"}
 ATMOS_DESC = {"haze": "air shimmering on the chord", "deep": "low rumble with distant thunder",
               "space": "air ringing in combs tuned to the chord", "night": "distant insects",
               "tides": "waves washing across the stereo field"}

@@ -48,7 +48,7 @@ def main_patch():
     for i, sub in enumerate((D.drone(), D.tex_rain(), D.tex_wind(), D.tex_ember(), D.tex_chirp(), D.cloud(),
                              D.cloud_write(), D.bells(), D.motion(), D.motion_fm(), D.inp(), D.reso(), D.tape(), D.bands(),
                              D.mem_rec(), D.mem_play(), D.master())
-                             + tuple(f() for f in SN.NEW_DRONES + SN.NEW_TEXTURES + SN.ATMOS) + (SN.sub(), SN.vocoder())
+                             + tuple(f() for f in SN.NEW_DRONES + SN.NEW_TEXTURES + SN.ATMOS) + (SN.sub(), SN.vocoder(), SN.input_octave(), SN.input_formant())
                              + tuple(ST.engines()) + (ST.wavetables(), P.glint())):
         m.sub(sub, 20 + (i % 4) * 110, 400 + (i // 4) * 30)
     m.obj(f"array define acbuf {D.CLOUD_LEN}", 20, 900)

@@ -689,7 +689,8 @@ def layers():
     steps += [V("accheff", "if(acschar > 0, acschar - 1, if(acspad == 1, 0, acchar))")]
     steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 2)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)*(1 - acsleep)", "acfade"])
               for i in range(1, len(CHARACTERS))]
-    steps += [SendL("ac-chdry", ["1 - (acshed < 2)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt)", "acfade"])]
+    # (tape, crush and the rotor take the dry pads' place; chorus, ring and dimension add to them)
+    steps += [SendL("ac-chdry", ["1 - (acshed < 2)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt + (accheff==5)*0.9*acchamt)", "acfade"])]
     for i in range(len(TEXTURES)):
         steps += [V(f"acgt{i}", f"acgtex*((actex1=={i}) || (actex2=={i}))"),
                   SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
@@ -730,6 +731,7 @@ def layers():
         SendL("ac-g-res", ["acgres", "1500"]),
         SendL("ac-g-bands", ["acgbands", "1500"]),
         SendL("ac-g-tape", ["(acinmode==3)*acinput", "1500"]),
+        SendL("ac-g-oct", ["(acinmode==8)*acinput", "1500"]), SendL("ac-g-fmt", ["(acinmode==9)*acinput", "1500"]),
         SendL("ac-g-dry", ["acgdry", "300"]),
         SendL("ac-incl", [f"if(accapt, 1, ((acinmode==2) || {A}*(acinclass>=1))*min(1, acinput*3))", "500"]),
         SendL("ac-inclr", [f"1 - if(accapt, 1, ((acinmode==2) || {A}*(acinclass>=1))*min(1, acinput*3))", "500"]),

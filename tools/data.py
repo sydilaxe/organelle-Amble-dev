@@ -65,12 +65,12 @@ DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral"
 DRONE_AUTO = 5             # (a piece picks among the first 5; the later ones by hand)
 # the sub's sound (its SHAPE page): sine as always, or warm, pulse, fm
 SUBTYPES = ["sine", "warm", "pulse", "fm"]
-CHARACTERS = ["clean", "chorus", "tape", "ring", "crush"]
+CHARACTERS = ["clean", "chorus", "tape", "ring", "crush", "rotor", "dim"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect
 RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr")]
 RAW_EXPR = "if(acr1<0.25, %d, if(acr1<0.5, %d, if(acr1<0.75, %d, %d)))" % tuple(RAW_FLAVOURS)
 SUBMODES = ["pedal", "bassline", "both"]
-INMODES = ["auto", "reso", "cloud", "tape", "ghost", "bands", "vocode", "morph"]
+INMODES = ["auto", "reso", "cloud", "tape", "ghost", "bands", "vocode", "morph", "octave", "formant"]
 NOTE_NAMES = "C Db D Eb E F Gb G Ab A Bb B".split()
 # chord names on the screen: the root and the triad the scale gives it (+ = augmented, 5 = Resolve's open fifths)
 CHORD_SUFFIXES = ["", "m", "dim", "+", "sus", "5"]

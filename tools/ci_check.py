@@ -408,6 +408,8 @@ for ch in range(len(CHARACTERS)):
     cents.append(((S * fr).sum() / S.sum(), np.corrcoef(seg[:, 0], seg[:, 1])[0, 1], rms_db(seg)))
 check(all(c[2] > -45 for c in cents), "every character keeps the pads audible")
 check(cents[1][1] < 0.9, f"chorus widens the pads (L/R {cents[1][1]:.2f})")
+rot, dim_ = cents[CHARACTERS.index("rotor")], cents[CHARACTERS.index("dim")]
+check(rot[1] < 0.95 and dim_[1] < 0.95, f"rotor and dimension widen the pads (L/R {rot[1]:.2f}, {dim_[1]:.2f})")
 check(min(abs(c[0] - cents[0][0]) for c in cents[2:]) > 50, "tape, ring and crush change the colour " +
       str([int(c[0]) for c in cents]))
 
@@ -1612,6 +1614,25 @@ pre, mid, post = (log.split("h-mark: bang") + ["", ""])[:3]
 cnt = lambda t, w: sum(1 for l in t.splitlines() if l.startswith(w))
 check(cnt(mid, "ac-mnote:") == 0 and cnt(mid, "ac-bell:") > 0 and cnt(post, "ac-bell:") == 0,
       f"Ending by phrase: the motion stops, the bells play on, then stop ({cnt(mid, 'ac-bell:')} bells in 9 s)")
+
+# 78. input modes octave (the octave below and above around your pitch) and formant (the chord sings your vowel)
+ALL = ["acmdrone", "acmpad", "acmtex", "acmcloud", "acmbell", "acmmotion", "acmsub", "acmatm"]
+def inmode(mode, inp, In=0.9):
+    ev = [(50, "ac-setseed 99"), (55, "acwrite 0")] + [(310, f"{m} 0") for m in ALL] + [(311, "ac-layers bang"),
+          (1000, f"acinmode {mode}"), (1000, f"acinput {In}"), (1001, "ac-inputupd bang")]
+    log, a = run(ev, 10, inp=inp)
+    return log, a[4 * SR:10 * SR]
+oct_ = __import__("data").INMODES.index("octave")
+fmt_ = __import__("data").INMODES.index("formant")
+log, seg = inmode(oct_, "saw")
+S = np.abs(np.fft.rfft(seg[:, 0] * np.hanning(len(seg))))
+fr = np.fft.rfftfreq(len(seg), 1 / SR)
+band = lambda f: S[(fr > f * 0.97) & (fr < f * 1.03)].max()
+check(not errors(log) and band(82.4) > 3 * np.median(S[(fr > 60) & (fr < 120)]) and rms_db(seg) > -40,
+      f"input octave: the octave below sounds ({20 * np.log10(band(82.4) / np.median(S[(fr > 60) & (fr < 120)])):.0f} dB "
+      f"over its neighbours), {rms_db(seg):.1f} dB")
+log, seg = inmode(fmt_, "voice")
+check(not errors(log) and rms_db(seg) > -45, f"input formant: the chord sings with the voice ({rms_db(seg):.1f} dB)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
