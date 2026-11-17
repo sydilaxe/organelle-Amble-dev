@@ -170,6 +170,61 @@ def text_block(c, x, y, w, rows, size=8.2):
     return y
 
 
+def aux_top():
+    """aux + each top key, read from gen_ui.TOP_KEYS ('... | aux: X'): the layers' shared one, then the others"""
+    out, layers = [], []
+    for k, name in enumerate(U.TOP_KEYS):
+        aux = [p.split("aux:", 1)[1].strip() for p in name.split("|") if "aux:" in p]
+        if not aux:
+            continue
+        if name in LAYERS:
+            layers.append(NAMES[k])
+        else:
+            out.append((f"top {NAMES[k]}", aux[0]))
+    return layers, out
+
+
+AUX_MORE = {     # what the short aux names in TOP_KEYS mean
+    "auto": "the layer back to auto (the piece decides)",
+    "capture": "record 8 s of the input into the cloud, kept as a memory",
+    "ANCHOR": "set the anchor, then glide every knob back to it; held 0.8 s: anchor here anew",
+    "COMPOSE / DRIFT": "switch the mode (COMPOSE: a form of sections; DRIFT: endless)",
+    "SAVES": "tap: the SAVES page (SETUP 13); held with a key: save to that slot",
+}
+
+
+def aux_panel(c, x, y, w):
+    """the aux button and everything it does: alone, with a low key, with a top key"""
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(INK)
+    c.drawString(x, y, "THE AUX BUTTON")
+    cy = y - 34
+    c.setFillColor(INK)
+    c.circle(x + 22, cy, 18, fill=1, stroke=0)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(x + 22, cy - 3, "AUX")
+    col = (w - 56) / 3
+    x0 = x + 56
+    # alone
+    yy = text_block(c, x0, y - 16, col - 10, [
+        ("Tap:", "the next knob page (in SETUP: the next SETUP page)."),
+        ("Hold 1 s:", "SETUP; hold again to leave (settings are saved)."),
+    ])
+    # with a low key
+    text_block(c, x0 + col, y - 16, col - 10, [
+        ("+ low key:", "that SETUP page, C = 1 to B = 12 (keyboard above)."),
+        ("+ top B, + key:", "save to that slot (low C-B = 1-12, top C-D# = 13-16)."),
+    ])
+    # with a top key
+    layers, others = aux_top()
+    rows = [(f"+ top {layers[0]}-{layers[-1]}:", AUX_MORE.get("auto", "auto"))] if layers else []
+    for key, what in others:
+        rows.append((f"+ {key}:", f"{what} - {AUX_MORE[what]}" if what in AUX_MORE else what))
+    text_block(c, x0 + 2 * col, y - 16, col - 10, rows, size=7.6)
+    return yy
+
+
 def build(out, version="dev"):
     check()
     W, H = landscape(letter)
@@ -202,7 +257,7 @@ def build(out, version="dev"):
     c.showPage()
 
     # ---- page 2: aux + key (SETUP pages), the slots, the knob pages, the other controls
-    header(c, W, H, "Amble - aux + key, slots and knobs",
+    header(c, W, H, "Amble - aux, slots and knobs",
            "Hold aux and press a low key: that SETUP page. Hold top B and press a key: a save slot.", version)
     setup = {k: (f"SETUP {k + 1}", [S.SETUP_NAMES[k]], "setup") for k in range(12)}
     yk = H - 80 - 120
@@ -246,11 +301,12 @@ def build(out, version="dev"):
         c.setFont("Helvetica", 8)
         c.drawString(cx, cy - 11, "  ".join(f"{j + 1} {lab}" for j, (lab, _, _) in enumerate(PAGES[p])))
     y -= 30 * ((len(PAGES) + 3) // 4) + 4
-    text_block(c, 36, y, kw, [
+    y = text_block(c, 36, y, kw, [
         ("Pickup:", "after a page change a knob moves its value towards the end it turns to, so nothing jumps."),
         ("Levels:", "MIX and SENDS - 50 % is the designed balance, 100 % +6 dB; below 50 % even steps to -24 dB at 5 %, "
                     "then off."),
     ])
+    aux_panel(c, 36, y - 8, kw)
     c.showPage()
     c.save()
     return out
