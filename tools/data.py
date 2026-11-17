@@ -48,13 +48,21 @@ PLEASING_SCALES = ["lydian", "dorian", "aeolian", "mixolyd", "ionian", "majpent"
 MOVES_P = [3, -3, 4, -4, 3, -4, 2, -2, 2, -2, 5, -1]
 MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 
-FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat"]          # pad synthesis types
+FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat",
+            "reed", "organ", "air"]
+FLAV_AUTO = 14             # (a piece picks among the first 14; the later ones by hand)          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,
-            LEAVES_G=0.2, BROOK_G=0.5)
+            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18)
 TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur", "echoes", "whisper",
-            "leaves", "brook"]
-DRONES = ["pure", "analog", "organ", "fm", "frost"]
+            "leaves", "brook", "bubbles", "crickets", "harp", "song"]
+# a piece picks its textures among the first 12 (so a seed, and a saved piece, plays what it always did); the
+# later ones are chosen by hand (SETUP SOUNDS, the textures' page)
+TEX_AUTO = 12
+DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral"]
+DRONE_AUTO = 5             # (a piece picks among the first 5; the later ones by hand)
+# the sub's sound (its SHAPE page): sine as always, or warm, pulse, fm
+SUBTYPES = ["sine", "warm", "pulse", "fm"]
 CHARACTERS = ["clean", "chorus", "tape", "ring", "crush"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect
 RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr")]
@@ -140,7 +148,15 @@ ROLE_TIDE = [1.6, 1.2, 1.0, 0.75, 0.6, 1.5, 1.0, 2.0]      # x the time between 
 ROLE_TEMPO = [0.92, 1.0, 1.0, 1.06, 1.1, 0.95, 1.0, 0.85]  # x the piece tempo
 ROLE_PULSE = [0.0, 0.1, 0.15, 0.3, 0.35, 0.1, 0.15, 0.0]   # drone pulse depth on the bar
 AWAY = [5, 7, -3, 2, 4, -4, -5, 3]                         # key areas away from home (semitones)
-EUCLID = [(3, 8), (5, 8), (5, 12), (7, 16), (5, 13), (4, 11), (7, 12), (3, 7), (5, 16), (9, 16)]
+EUCLID = [(3, 8), (5, 8), (5, 12), (7, 16), (5, 13), (4, 11), (7, 12), (3, 7), (5, 16), (9, 16), (4, 9), (11, 16)]
+# (a piece picks among the first 10; aux + top E + a low key picks any of the 12, C..B)
+EUCLID_AUTO = 10
+# the bells' phrase rhythms (aux + top D# + a low key, C..B): each step's length, x a beat (a piece picks RHYTHMS)
+BELL_RHYTHMS = [("even", [1, 1, 1, 1, 1]), ("long-short", [1.5, 0.5, 1.5, 0.5, 1]),
+                ("short-long", [0.5, 1.5, 0.5, 1.5, 1]), ("gallop", [0.5, 0.5, 1, 0.5, 0.5]),
+                ("waltz", [1, 0.5, 0.5, 1, 1]), ("dotted", [1.5, 0.5, 1, 1, 1]), ("clave", [1.5, 1.5, 1, 1, 1]),
+                ("triplet", [0.67, 0.67, 0.67, 1, 1]), ("sparse", [2, 2, 1, 2, 3]), ("rush", [0.5, 0.5, 0.5, 0.5, 2]),
+                ("swing", [1.33, 0.67, 1.33, 0.67, 1]), ("slow", [2, 2, 2, 2, 2])]
 METERS = [4, 4, 3, 5, 6, 7]
 # tempo ranges (SETUP page 3): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
 # (pad breathing, bells, the drone's bar swell) feel the beat at half speed and the arpeggio counts in 8ths.
@@ -178,17 +194,21 @@ FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1
 # the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
-STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal"]
+STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck"]
+# (a piece's own pick, Auto, is among the first 6 - the weights below - so a seed plays what it did; the later
+# engines are chosen by hand: SETUP VOICES, the layer's page)
 # auto: what a piece picks (bells lean to bars and metal, motion to the FM pings and blips)
 BELL_ENGINE_WEIGHTS = [2.2, 0.4, 0.5, 0.8, 0.9, 1.4]
 MOTION_ENGINE_WEIGHTS = [0.4, 2.0, 1.5, 0.9, 0.9, 0.5]
 # per engine and layer: output gain, calibrated against the layer's own engine (bars, fm) halfway between equal
 # level and equal peaks (the short, spiky wood and blip would be too loud at equal level) - see tools/ci_check.py;
 # then the decay in ms on the bells, and the motion's decay as a factor of its piece decay (250-950 ms)
-STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2),
-                   motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0))
-STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600)
-STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4)
+STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2, kalimba=0.7, steel=0.9,
+                             pluck=0.85),
+                   motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0, kalimba=8.0, steel=8.0,
+                               pluck=8.0))
+STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000)
+STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0)
 # the glassy wavetables (harmonic number: amplitude), shared by the glass pad and the wave engine
 WAVETABLES = dict(acwtA={1: 1, 2: 0.25, 3: 0.4, 4: 0.08, 5: 0.22, 7: 0.15, 9: 0.1},
                   acwtB={1: 0.6, 3: 0.15, 4: 0.35, 6: 0.3, 8: 0.38, 11: 0.25, 13: 0.2, 16: 0.12})

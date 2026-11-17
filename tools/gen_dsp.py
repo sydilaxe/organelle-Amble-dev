@@ -14,6 +14,7 @@ def switched(name, gain, block=None, hook=None):
     """Subpatch switched on while [r gain] ('target ms') is above 0, off 100 ms after it fades to 0.
     Returns (canvas, line~) - multiply your output by the line~."""
     s = Canvas(name, w=1600, h=1000)
+    s.layer = LAYER_OF(gain)          # (its layer's SHAPE stage goes in at throws())
     s.comment(f"on while {gain} > 0")
     tl = s.to(s.recv(gain), "t l l")
     ln = s.to((tl, 1), "line~")
@@ -62,9 +63,60 @@ def ctl(c, dest, recv, expr=None, inlet=1, first=False):
     return src
 
 
+# a layer's SHAPE (its page: hold the layer key): tone (50 % open; down a low-pass closes, up a high-pass opens),
+# drive (soft saturation, mixed in) and width (50 % as designed), on everything the layer sends - the mix, the
+# reverb, the cloud. Each sounding layer subpatch carries the stage (the pads one, on their bus)
+SHAPE_LAYERS = "dspbmtac"          # drone, sub, pads, bells, motion, textures, atmosphere, cloud
+
+
+def LAYER_OF(gain):
+    for pre, x in (("ac-g-drone", "d"), ("ac-g-sub", "s"), ("ac-g-bel", "b"), ("ac-g-mot", "m"), ("ac-g-tex", "t"),
+                   ("ac-g-atm", "a"), ("ac-g-cloud", "c")):
+        if gain.startswith(pre):
+            return x
+    return None
+
+
+def shaped(c, L, R, x):
+    """layer x's SHAPE stage: [r ac-shp-x] 'lop-hz hip-hz drive width' -> (L, R)"""
+    up = c.to(c.recv(f"ac-shp-{x}"), "unpack f f f f")
+    dr = c.to((up, 2), "line~")
+    wd = c.to(c.m((up, 3), "$1 30"), "line~")
+    c.c(c.m(c.obj("loadbang"), "1"), 0, wd, 0)
+    pre = c.ch(dr, "*~ 40", "+~ 1")      # (the layers sit low: it takes a lot of gain to reach the knee)
+    outs = []
+    for x0 in (L, R):
+        lp, hp = c.obj("lop~ 20000"), c.obj("hip~ 5")
+        c.c(x0, 0, lp, 0)
+        c.c(lp, 0, hp, 0)
+        c.c((up, 0), 0, lp, 1)
+        c.c((up, 1), 0, hp, 1)
+        # drive: x pre / (1 + |x pre|), scaled back by pre^0.72 (a little louder as it saturates), mixed in
+        xp = mul(c, hp, pre)
+        sat = c.obj("/~")
+        c.c(xp, 0, sat, 0)
+        c.c(c.ch(xp, "abs~", "+~ 1"), 0, sat, 1)
+        back = c.obj("/~")
+        c.c(sat, 0, back, 0)
+        c.c(c.ch(pre, "log~", "*~ 0.72", "exp~"), 0, back, 1)
+        outs.append(add(c, mul(c, hp, c.ch(dr, "*~ -1", "+~ 1")), mul(c, back, dr)))
+    # width: mid + side x w
+    df = c.obj("-~")
+    c.c(outs[0], 0, df, 0)
+    c.c(outs[1], 0, df, 1)
+    side = mul(c, c.to(df, "*~ 0.5"), wd)
+    mid = c.to(add(c, outs[0], outs[1]), "*~ 0.5")
+    Ro = c.obj("-~")
+    c.c(mid, 0, Ro, 0)
+    c.c(side, 0, Ro, 1)
+    return add(c, mid, side), Ro
+
+
 def throws(c, L, R, mix=1.0, send=0.0, src=0.0, bus="mix", sbus="ac-send"):
     """to the mix (bus "mix") or the harmony bed (bus "bed": drone and sub, kept apart for SETUP Output split),
     plus the reverb send and the cloud source"""
+    if getattr(c, "layer", None):
+        L, R = shaped(c, L, R, c.layer)
     for sig, bus in ((L, f"ac-{bus}L"), (R, f"ac-{bus}R")):
         c.c(c.to(sig, f"*~ {mix}"), 0, c.obj("throw~ " + bus), 0)
     if send or src:
@@ -604,8 +656,7 @@ def master():
     s.comment("Pad bus, 4-line FDN reverb (Householder feedback, two modulated lines), master fade, "
               "compressor, clip")
     pg = s.ch(s.recv("ac-g-pad"), "line~")
-    pL = mul(s, s.obj("catch~ ac-padL"), pg)
-    pR = mul(s, s.obj("catch~ ac-padR"), pg)
+    pL, pR = shaped(s, mul(s, s.obj("catch~ ac-padL"), pg), mul(s, s.obj("catch~ ac-padR"), pg), "p")
     # the piece's character on the pads (chorus, tape, ring, crush) - dry scaled by ac-chdry
     from gen_sounds import CHARS
     cd = s.ch(s.recv("ac-chdry"), "line~")

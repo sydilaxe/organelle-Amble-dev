@@ -189,7 +189,59 @@ def flav_beat():
     return s
 
 
-NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat)
+def flav_reed():
+    s, ln = switched("reed", "$0-fw14")
+    s.comment("Reed: a clarinet-like tone - a sine driven into soft clipping (odd harmonics, more with brightness), "
+              "a slow breathy vibrato, a gentle low-pass; the right side a hair sharp")
+    f, b = _flav_inlets(s, 2)
+    drive = s.ch(b, "*~ 5", "+~ 1.5")
+    outs = []
+    for d, rate in ((1.0, 4.3), (1.0012, 4.7)):
+        vib = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.003", f"+~ {d}")
+        x = mul(s, s.ch(mul(s, f, vib), "osc~"), drive)
+        clip = s.obj("/~")                       # x / (1 + |x|): odd harmonics
+        s.c(x, 0, clip, 0)
+        s.c(s.ch(x, "abs~", "+~ 1"), 0, clip, 1)
+        outs.append(s.ch(clip, "lop~ 2600", "*~ 0.42"))
+    _out(s, outs[0], ln, add(s, s.to(outs[0], "*~ 0.5"), s.to(outs[1], "*~ 0.65")))
+    return s
+
+
+def flav_organ():
+    s, ln = switched("organ", "$0-fw15")
+    s.comment("Organ: drawbars 16' 8' 5 1/3' 4' 2' (harmonics 1 2 3 4 8, the upper ones drawn out with brightness) "
+              "and a slow rotary swell, opposite on the two sides")
+    f, b = _flav_inlets(s, 2)
+    sm = s.obj("*~ 0.3")
+    for h, a, br in ((1, 0.5, 0), (2, 0.45, 0), (3, 0.3, 0.5), (4, 0.25, 0.8), (8, 0.12, 1)):
+        o = s.ch(s.to(f, f"*~ {h}"), "osc~", f"*~ {a}")
+        s.c(mul(s, o, s.ch(b, f"*~ {br}", f"+~ {1 - br * 0.7:.2f}")) if br else o, 0, sm, 0)
+    rot = s.ch(s.obj("osc~ 0.7"), "*~ 0.25")
+    _out(s, mul(s, sm, s.to(rot, "+~ 0.75")), ln, mul(s, sm, s.ch(rot, "*~ -1", "+~ 0.75")))
+    return s
+
+
+def flav_air():
+    s, ln = switched("air", "$0-fw16")
+    s.comment("Air: a flute - a pure tone with breath around it (noise through a narrow band on the note, more "
+              "with brightness) and a slow vibrato that grows in; each side its own breath")
+    f, b = _flav_inlets(s, 2)
+    vib = s.ch(s.obj("osc~ 5.1"), "*~ 0.004", "+~ 1")
+    fv = mul(s, f, vib)
+    tone = s.ch(fv, "osc~", "*~ 0.35")
+    outs = []
+    for side in range(2):
+        v = s.obj("vcf~ 9")
+        s.c(s.obj("noise~"), 0, v, 0)
+        s.c(fv, 0, v, 1)
+        br = mul(s, v, s.ch(b, "*~ 0.6", "+~ 0.25"))
+        outs.append(add(s, tone, s.to(br, "*~ 0.9")))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
+NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat,
+             flav_reed, flav_organ, flav_air)
 
 
 # ---------------------------------------------------------------- drone designs 1..3 (0 is the original)
@@ -286,7 +338,70 @@ def drone_frost():
     return s
 
 
-NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost)
+def drone_choir():
+    s, ln = switched("drone-choir", "ac-g-drone5")
+    s.comment("Choir drone: three voices (the note, a hair sharp, and the fifth) - narrow glottal pulses through "
+              "two vowel formants that move slowly between ah, oh and oo")
+    f = _drone_freq(s)
+    # the vowel: F1 450-750 Hz and F2 800-1150 Hz, wandering together
+    vw = s.ch(s.obj("osc~ 0.023"), "*~ 0.5", "+~ 0.5")
+    f1, f2 = s.ch(vw, "*~ 300", "+~ 450"), s.ch(vw, "*~ 350", "+~ 800")
+    outs = []
+    for side, voices in enumerate((((1.0, 4.9), (1.5, 5.3)), ((1.003, 5.1), (1.5, 5.6)))):
+        src = s.obj("*~ 1")
+        for ratio, vr in voices:
+            vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.004", f"+~ {ratio}")
+            pulse = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~", "pow~ 8")
+            s.c(pulse, 0, src, 0)
+        sm = s.obj("+~")
+        for fm, q in ((f1, 6), (f2, 9)):
+            v = s.obj(f"vcf~ {q}")
+            s.c(src, 0, v, 0)
+            s.c(fm, 0, v, 1)
+            s.c(v, 0, sm, 0)
+        outs.append(s.to(sm, "*~ 1.1"))
+    _drone_out(s, outs[0], ln, outs[1])
+    return s
+
+
+def drone_bowed():
+    s, ln = switched("drone-bowed", "ac-g-drone6")
+    s.comment("Bowed drone: a cello on the note - a saw with a slow bow-pressure swell and a light vibrato, through "
+              "the body's resonances (about 200, 500 and 1300 Hz) and a soft low-pass")
+    f = _drone_freq(s)
+    outs = []
+    for d, vr, pr in ((1.0, 4.7, 0.11), (0.9985, 5.2, 0.09)):
+        vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.003", f"+~ {d}")
+        saw = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5")
+        press = s.ch(s.obj(f"osc~ {pr}"), "*~ 0.25", "+~ 0.75")
+        x = mul(s, saw, press)
+        sm = s.obj("*~ 1")
+        s.c(s.to(x, "lop~ 1600"), 0, sm, 0)
+        for hz, q, a in ((200, 4, 0.6), (500, 5, 0.5), (1300, 6, 0.3)):
+            bp = s.obj(f"bp~ {hz} {q}")
+            s.c(x, 0, bp, 0)
+            s.c(s.to(bp, f"*~ {a}"), 0, sm, 0)
+        outs.append(s.to(sm, "*~ 0.35"))
+    _drone_out(s, outs[0], ln, outs[1])
+    return s
+
+
+def drone_spectral():
+    s, ln = switched("drone-spectral", "ac-g-drone7")
+    s.comment("Spectral drone: eight harmonics, each swelling on its own slow cycle, so the spectrum keeps "
+              "shifting while the note holds; odd harmonics lean left, even right")
+    f = _drone_freq(s)
+    L, R = s.obj("*~ 0.32"), s.obj("*~ 0.32")
+    for n in range(1, 9):
+        sw = s.ch(s.obj(f"osc~ {0.013 * (1 + 0.37 * n):.4f}"), "*~ 0.5", "+~ 0.5")
+        p = mul(s, s.ch(s.to(f, f"*~ {n}"), "osc~"), s.to(sw, f"*~ {1 / n ** 0.7:.3f}"))
+        s.c(s.to(p, f"*~ {1.0 if n % 2 else 0.45}"), 0, L, 0)
+        s.c(s.to(p, f"*~ {0.45 if n % 2 else 1.0}"), 0, R, 0)
+    _drone_out(s, L, ln, R)
+    return s
+
+
+NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost, drone_choir, drone_bowed, drone_spectral)
 
 
 def sub():
@@ -296,7 +411,19 @@ def sub():
     f = s.ch(s.recv("ac-subp"), "line~")
     x = s.to(f, "osc~")
     sat = s.ch(x, "*~ 1.8", "clip~ -1 1")
-    y = add(s, s.to(x, "*~ 0.6"), s.to(sat, "*~ 0.25"))
+    y0 = add(s, s.to(x, "*~ 0.6"), s.to(sat, "*~ 0.25"))
+    # its sound (the sub's SHAPE page): sine (above), warm (a rounder saturation and the octave), pulse (a narrow
+    # pulse, low-passed), fm (a slow growl); each crossfaded in by its own gain
+    warm = add(s, s.ch(x, "*~ 3", "clip~ -1 1", "*~ 0.55"), s.ch(s.to(f, "*~ 2"), "osc~", "*~ 0.18"))
+    pulse = s.ch(f, "phasor~", "-~ 0.75", "*~ 1000", "clip~ -0.5 0.5", "lop~ 220", "lop~ 220", "*~ 1.6")
+    idx = s.ch(s.obj("osc~ 0.07"), "*~ 0.5", "+~ 1")
+    fm = s.ch(add(s, f, mul(s, mul(s, x, idx), f)), "osc~", "*~ 0.7")
+    y = s.obj("+~")
+    for k, sig in enumerate((y0, warm, pulse, fm)):
+        g = s.ch(s.recv("ac-subt"), f"expr $f1 == {k}", "pack f 200", "line~")
+        if k == 0:
+            s.c(s.m(s.obj("loadbang"), "1"), 0, g, 0)
+        s.c(mul(s, sig, g), 0, y, 0)
     env = s.ch(s.m(s.to(s.recv("ac-dpulse"), "expr max(100, $f1-450)"), "1 450, 0 $1 450"), "vline~")
     dep = s.to(env, "*~ 0")
     pu = s.to(s.recv("ac-pulse"), "t f f")
@@ -490,7 +617,122 @@ def tex_brook():
     return s
 
 
-NEW_TEXTURES = (tex_radio, tex_data, tex_buzz, tex_murmur, tex_echoes, tex_whisper, tex_leaves, tex_brook)
+# ---------------------------------------------------------------- textures 12..15: oscillators and models
+def tex_bubbles():
+    s, ln = switched("bubbles", "ac-g-tex12")
+    s.comment("Bubbles: water drops tuned to the chord - a sine whose pitch rises as it dies (the bubble model: a "
+              "small bubble rings high and short), three at a time, each placed in the stereo field")
+    r = s.ch(s.recv("ac-bub"), "route 0 1 2")       # voice, hz, ms, amp, pan
+    L, R = s.obj("+~"), s.obj("+~")
+    for v in range(3):
+        up = s.to((r, v), "unpack f f f f")
+        # the pitch: f, then 1.9 f over the life; the level: amp, then a fast decay (squared)
+        pk = s.obj("pack f f f")
+        tf = s.to((up, 0), "t f f")
+        s.c(s.to((tf, 1), "* 1.9"), 0, pk, 1)
+        s.c(tf, 0, pk, 0)
+        s.c((up, 1), 0, pk, 2)
+        fq = s.ch(s.m(pk, "$1, $2 $3"), "vline~")
+        ep = s.obj("pack f f")              # (ms, amp: the amp arrives first, into the cold inlet)
+        s.c((up, 2), 0, ep, 1)
+        s.c((up, 1), 0, ep, 0)
+        env = s.ch(s.m(ep, "$2, 0 $1"), "vline~")
+        sig = mul(s, s.to(fq, "osc~"), mul(s, env, env))
+        pn = s.to((up, 3), "expr cos($f1*1.5708); sin($f1*1.5708)")
+        gl, gr = s.obj("*~"), s.obj("*~")
+        s.c(sig, 0, gl, 0)
+        s.c(sig, 0, gr, 0)
+        s.c(pn, 0, gl, 1)
+        s.c(pn, 1, gr, 1)
+        s.c(gl, 0, L, 0)
+        s.c(gr, 0, R, 0)
+        s.col(240)
+    hp = lambda x: s.ch(x, "hip~ 150", f"*~ {TEXG['BUBBLE_G']}")
+    throws(s, mul(s, hp(L), ln), mul(s, hp(R), ln), mix=0.7, send=0.45)
+    return s
+
+
+def tex_crickets():
+    s, ln = switched("crickets", "ac-g-tex13")
+    s.comment("Crickets: three of them, each a sine (high, on a chord tone) pulsed into chirps of three or four "
+              "pulses; each its own pace, drifting - one near each side, one far off in the reverb")
+    hz = s.ch(s.recv("ac-cric"), "line~")              # a chord tone, 3-5.5 kHz
+    outs = []
+    for k, (pulse, chirp, ratio, drift) in enumerate(((31, 1.7, 1.0, 0.07), (27, 1.25, 1.12, 0.05), (35, 2.3, 0.89, 0.09))):
+        # the chirp gate: on for the first 0.22 of each chirp cycle, smoothed; its pace drifts slowly
+        rate = s.ch(s.obj(f"osc~ {drift}"), f"*~ {chirp * 0.15}", f"+~ {chirp}")
+        gate = s.ch(s.to(rate, "phasor~"), "-~ 0.22", "*~ -100", "clip~ 0 1", "lop~ 60")
+        # the pulses inside: a raised cosine of each pulse, sharpened
+        pl = s.ch(s.obj(f"phasor~ {pulse}"), "cos~", "*~ -0.5", "+~ 0.5", "pow~ 3")
+        car = s.ch(mul(s, hz, s.ch(pl, "*~ 0.006", f"+~ {ratio}")), "osc~")        # (a little pitch drop per pulse)
+        outs.append(mul(s, car, mul(s, gate, pl)))
+        s.col(240)
+    far = s.to(outs[2], "*~ 0.35")
+    L = add(s, s.to(outs[0], "*~ 0.8"), add(s, s.to(outs[1], "*~ 0.25"), far))
+    R = add(s, s.to(outs[1], "*~ 0.8"), add(s, s.to(outs[0], "*~ 0.25"), far))
+    g = f"*~ {TEXG['CRICKET_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.6, send=0.5)
+    return s
+
+
+def tex_harp():
+    s, ln = switched("harp", "ac-g-tex14")
+    s.comment("Aeolian harp: three strings tuned to the chord (delay lines fed back through a gentle low-pass - "
+              "a plucked-string model), sung by the wind: a soft breath of band-passed air, gusting, sweeps "
+              "through their overtones")
+    gust = s.ch(add(s, s.obj("osc~ 0.037"), s.ch(s.obj("osc~ 0.061"), "*~ 0.6")), "*~ 0.5", "+~ 0.5", "max~ 0")
+    outs = []
+    for k in range(3):
+        per = s.ch(s.recv(f"ac-harp{k}"), "line~")       # the string's period, ms (below 690 Hz: a block's delay)
+        air = s.obj("vcf~ 3")
+        s.c(s.ch(s.obj("noise~"), "*~ 0.4"), 0, air, 0)
+        s.c(s.ch(s.obj(f"osc~ {0.05 + 0.02 * k}"), "*~ 900", f"+~ {1400 + 500 * k}"), 0, air, 1)
+        exc = mul(s, air, s.ch(gust, f"pow~ {1.5 + 0.5 * k}"))
+        name = f"$0-harp{k}"
+        rd = s.obj(f"vd~ {name}")
+        s.c(per, 0, rd, 0)
+        fb = s.ch(rd, "lop~ 2500", "*~ 0.994")
+        s.to(add(s, exc, fb), f"delwrite~ {name} 30")
+        outs.append(s.ch(rd, "hip~ 80"))
+        s.col(240)
+    L = add(s, outs[0], s.to(outs[1], "*~ 0.5"))
+    R = add(s, outs[2], s.to(outs[1], "*~ 0.5"))
+    g = f"*~ {TEXG['HARP_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.6, send=0.5)
+    return s
+
+
+def tex_song():
+    s, ln = switched("song", "ac-g-tex15")
+    s.comment("Song: a distant voice of pure FM singing slow phrases on chord tones - each note glides from the "
+              "last, its vibrato and brightness growing as it is held; it wanders across the stereo field")
+    up = s.to(s.recv("ac-song"), "unpack f f f")       # hz, glide ms, note ms
+    pf = s.obj("pack f f")
+    s.c((up, 1), 0, pf, 1)
+    s.c((up, 0), 0, pf, 0)
+    fq = s.ch(s.m(pf, "$1 $2"), "vline~")
+    # the note's swell: up over a third of it, down at its end; the brightness and the vibrato follow it
+    ex = s.to((up, 2), "expr $f1*0.33; $f1*0.67")
+    ep = s.obj("pack f f")
+    s.c(ex, 1, ep, 1)
+    s.c(ex, 0, ep, 0)
+    env = s.ch(s.m(ep, "1 $1, 0 $1 $2"), "vline~")
+    vd = mul(s, s.ch(s.obj("osc~ 4.6"), "*~ 0.012"), env)
+    f2 = mul(s, fq, s.to(vd, "+~ 1"))
+    mod = mul(s, s.to(f2, "osc~"), s.ch(env, "*~ 1.6"))
+    car = s.obj("osc~")
+    s.c(add(s, f2, mul(s, mod, f2)), 0, car, 0)
+    voice = s.ch(mul(s, car, mul(s, env, env)), "lop~ 3000")
+    pos = s.ch(s.obj("osc~ 0.021"), "*~ 0.35", "+~ 0.5")
+    from gen_dsp import span
+    L, R = span(s, voice, pos)
+    g = f"*~ {TEXG['SONG_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.5, send=0.8)
+    return s
+
+
+NEW_TEXTURES = (tex_radio, tex_data, tex_buzz, tex_murmur, tex_echoes, tex_whisper, tex_leaves, tex_brook,
+                tex_bubbles, tex_crickets, tex_harp, tex_song)
 
 
 # ---------------------------------------------------------------- character on the pads (inlet 0 L, 1 R)

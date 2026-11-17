@@ -93,7 +93,13 @@ def engine(layer, kind):
                "wave": "Wave: a glassy wavetable - it strikes bright (acwtB) and settles to its body (acwtA), "
                        "with a faint octave shimmer",
                "metal": "Metal: a metallophone - vibraphone modes (1 : 4 : 10), a beating twin, the motor's "
-                        "tremolo"}[kind])
+                        "tremolo",
+               "kalimba": "Kalimba: a thumb piano - a warm tine (the note and its far, quickly fading overtones "
+                          "5.9 and 13.6) and the click of the thumb",
+               "steel": "Steel: a steel pan - the note, its octave and twelfth tuned in, a hair of pitch bend up "
+                        "at the strike",
+               "pluck": "Pluck: a plucked string - harmonics 1-6 at 1/n, the higher ones dying sooner, a short "
+                        "bright attack"}[kind])
     # the length of the layer's notes: the bells ring their full decay; the motion follows the piece's ping
     # decay (250-950 ms) times the engine's own factor
     # (a value per engine: [v] names are global)
@@ -168,6 +174,26 @@ def engine(layer, kind):
             body = add(s, ta, mul(s, dif, mo))
             sh = s.ch(s.to(fs, "*~ 2.003"), "tabosc4~ acwtB", "*~ 0.15")
             sig = mul(s, add(s, body, sh), _env(s, vel, hz, 0.45, 3, dec, slen))
+        elif kind == "kalimba":
+            sig = _partials(s, vel, hz, [(1, 0.55, 1.0), (5.9, 0.12, 0.12), (13.6, 0.05, 0.05)], dec, slen)
+            ck = mul(s, s.obj("noise~"), _env(s, vel, hz, 0.35, 0.3, 4, 1))
+            bp = s.obj("bp~ 3000 3")
+            s.c(ck, 0, bp, 0)
+            s.c(bp, 0, sig, 0)
+        elif kind == "steel":
+            # a bend: the note a quarter-tone sharp at the strike, settling in 60 ms
+            bx = s.obj("expr $f1*1.015; $f1")
+            s.c(hz, 0, bx, 0)
+            pk = s.obj("pack f f")
+            s.c(bx, 1, pk, 1)
+            s.c(bx, 0, pk, 0)
+            fv = s.ch(s.m(pk, "$1, $2 60"), "vline~")
+            sig = s.obj("*~ 1")
+            for ratio, amp, df in ((1, 0.45, 1.0), (2, 0.3, 0.6), (3, 0.16, 0.35)):
+                e = _env(s, vel, hz, amp, 2, int(dec * df), slen)
+                s.c(mul(s, s.ch(fv, f"*~ {ratio}", "osc~"), e), 0, sig, 0)
+        elif kind == "pluck":
+            sig = _partials(s, vel, hz, [(n, 0.5 / n, 1.0 / n ** 0.8) for n in range(1, 7)], dec, slen)
         else:   # metal
             sig = _partials(s, vel, hz, [(1, 0.4, 1.0), (4.0, 0.12, 0.3), (10.0, 0.05, 0.08)], dec, slen)
             # a beating twin of the fundamental, 0.8 Hz up

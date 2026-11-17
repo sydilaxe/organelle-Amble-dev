@@ -37,7 +37,7 @@ The layers and their rhythms:
 | Pads | breathing cycles of 7, 9, 11 and 13 half-bars, which phase against each other |
 | Motion | Euclidean patterns, with swing and tempo echoes |
 | Bells | free phrasing, in beats |
-| Textures | rain, wind, embers, chirps, radio, data, buzz, murmurs, alien echoes, whispers, leaves, a brook |
+| Textures | rain, wind, embers, chirps, radio, data, buzz, murmurs, alien echoes, whispers, leaves, a brook, bubbles, crickets, an aeolian harp, a song |
 | Cloud | grains, locked to the beat in intense sections |
 
 ## Live input
@@ -52,9 +52,9 @@ The layers and their rhythms:
   - low white keys C, D, E, F: the knob pages SHAPE, SPACE, PIECE, PERFORM; the black keys beside them: MIX 1
     (C#), MIX 2 (D#), SENDS 1 (F#), SENDS 2 (G#);
   - low G: hold for **Root** and press a key, play a MIDI note or turn knob 1;
-  - low A chord change now (hold it to pick another next chord), A# **Resolve** (the tonic as open fifths, held),
+  - low A chord change now (hold it: the **CHORD** page, to pick the next chord), A# **Resolve** (the tonic as open fifths, held),
     B next section (hold it: hold section);
-  - top C to G: the layers in or out (aux: back to auto); G# input mode (aux: capture), A **Freeze** (aux:
+  - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, drive, width; aux: the layer's page - its sound, in / out / auto, level and reverb send; aux and E (motion) or D# (bells) held, a low key picks one of 12 rhythms); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
   - aux + a low key opens that SETUP page.
 - **Your own form:** SETUP FORM, SECTIONS and SECTION MIX build a piece section by section: roles, lengths, pad
@@ -97,8 +97,8 @@ emulator, so the font only approximates the Organelle's.
 
 **SOUNDS** (SETUP page 5) lets you choose the sounds yourself, mid-piece, to audition them. Each item is **auto** (the piece chooses, as before) or your choice, applied at once (crossfaded) and kept for every later section:
 - **Pads:** auto; **raw** (the dry, buzzy types of the first demos: vox, partials, fold and pulsar, with no character effect); or one type for all four pad voices (fm, vox, bow, part, fold, pulsr, saws, pwm, digi, sync, tine).
-- **Drone:** auto, pure, analog, organ, fm.
-- **Texture:** auto, rain, wind, ember, chirp, radio, data, buzz, murmur, echoes, whisper, leaves, brook.
+- **Drone:** auto, pure, analog, organ, fm, frost, choir, bowed, spectral.
+- **Texture:** auto, rain, wind, ember, chirp, radio, data, buzz, murmur, echoes, whisper, leaves, brook, bubbles, crickets, harp, song.
 - **Character:** auto, clean, chorus, tape, ring, crush.
 
 **MUSIC** (SETUP page 6): **Key** (auto or C to B), **Scale** (auto or one of the 16) and **Chords** (auto or one voicing) apply at once with a chord change; a fixed choice stays (no modulation or scale change). **Pulse** (off, gentle, normal, strong) sets how much the drone and sub swell on every bar.
@@ -142,13 +142,13 @@ Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 ho
 
 | | Choices (each piece picks its own) |
 |---|---|
-| **Pads** | 13 types (most stereo inside): fm, vox formants, bowed string, drifting partials, wavefolder, pulsar, **saws** (detuned analog ensemble through a tracking resonant low-pass), **pwm** (Juno-like), **digi** (ring mod, bit crush, sample-rate reduction), **sync** (hard-sync sweep), **tine** (an electric-piano bell that strikes itself), **sine** (a harmonic sine pad), **glass** (glassy wavetables morphing between a soft body and sparse high harmonics). A piece uses a palette of 3, per voice and per section, weighted towards the electronic and bell-like types (about 80 % of picks). |
-| **Drone** | 4 designs: pure, analog (saws and a square through a slow resonant sweep), organ (drawbars with a rotary shimmer), fm (an electric growl). The break may switch to the piece's second design. |
-| **Sub** | A dedicated layer: the pedal an octave under the tonic, the chord root as a bass line, or both. Softly saturated, so small speakers still hear it. |
+| **Pads** | 13 types (most stereo inside): fm, vox formants, bowed string, drifting partials, wavefolder, pulsar, **saws** (detuned analog ensemble through a tracking resonant low-pass), **pwm** (Juno-like), **digi** (ring mod, bit crush, sample-rate reduction), **sync** (hard-sync sweep), **tine** (an electric-piano bell that strikes itself), **sine** (a harmonic sine pad), **glass** (glassy wavetables morphing between a soft body and sparse high harmonics), beat; and **reed** (a clarinet-like reed), **organ** (drawbars with a rotary swell), **air** (a breathy flute) (the last three are chosen by hand: a piece's own picks stay among the others, so a seed plays what it did). A piece uses a palette of 3, per voice and per section, weighted towards the electronic and bell-like types (about 80 % of picks). |
+| **Drone** | 4 designs: pure, analog (saws and a square through a slow resonant sweep), organ (drawbars with a rotary shimmer), fm (an electric growl), frost; and **choir** (vowel formants on three voices), **bowed** (a cello through its body's resonances), **spectral** (eight harmonics each swelling on its own cycle) (the last three are chosen by hand: a piece's own picks stay among the others, so a seed plays what it did). The break may switch to the piece's second design. |
+| **Sub** | A dedicated layer: the pedal an octave under the tonic, the chord root as a bass line, or both. Softly saturated, so small speakers still hear it. Its sound (its SHAPE page, the sub key held): **sine**, **warm** (rounder, with the octave), **pulse** (a narrow pulse, low-passed), **fm** (a slow growl). |
 | **Character** | On the pads: clean, chorus, tape (wow, saturation, hiss that follows the music), ring modulation, or crush. |
 | **Atmospheres** | In about half the pieces, mostly in the emerge, break and dissolve sections: haze (air shimmering on the chord), deep (rumble with distant thunder), space (air ringing in combs tuned to the chord), night (distant insects), tides (waves washing across the field). All stereo. |
-| **Textures** | 12: rain (hiss, patter, plops), wind, embers, chirps, radio (static and a tuning whistle), data (blip bursts), buzz (electric hum on the tonic), murmur (ghostly distant voices), echoes (alien blips in bending echoes), whisper, leaves (rustling trees), brook (babbling water). |
-| **Bells and motion** | 6 engines each, chosen per piece or in SETUP page 9 (VOICES): **bars** (struck 3-partial bars tuned per piece; the bells' own), **fm** (FM pings; the motion's own), **blip** (a filtered analog blip: saw and sub, a pitch flick, a resonant low-pass closing fast), **wood** (a mallet knock and short marimba modes), **wave** (a glassy wavetable that strikes bright and settles), **metal** (a metallophone: vibraphone modes, a beating twin, the motor's tremolo). Auto leans the bells to bars and metal, the motion to fm and blip. |
+| **Textures** | 16: rain (hiss, patter, plops), wind, embers, chirps, radio (static and a tuning whistle), data (blip bursts), buzz (electric hum on the tonic), murmur (ghostly distant voices), echoes (alien blips in bending echoes), whisper, leaves (rustling trees), brook (babbling water); and four of oscillators and models, tuned to the chord: bubbles (rising drops), crickets, harp (an aeolian harp: strings sung by the wind), song (a gliding FM voice). |
+| **Bells and motion** | 9 engines each, chosen per piece or in SETUP page 9 (VOICES): **bars** (struck 3-partial bars tuned per piece; the bells' own), **fm** (FM pings; the motion's own), **blip** (a filtered analog blip: saw and sub, a pitch flick, a resonant low-pass closing fast), **wood** (a mallet knock and short marimba modes), **wave** (a glassy wavetable that strikes bright and settles), **metal** (a metallophone: vibraphone modes, a beating twin, the motor's tremolo), **kalimba** (a thumb piano), **steel** (a steel pan), **pluck** (a plucked string) (the last three are chosen by hand: a piece's own picks stay among the others, so a seed plays what it did). Auto leans the bells to bars and metal, the motion to fm and blip. |
 | **Input** | Besides chord strings, cloud, tape, ghost and tuned bands: **vocode** (a 10-band vocoder; your sound speaks through a synth choir singing the chord) and **morph** (it speaks through the pads themselves). Auto mode vocodes pitched input in some pieces. |
 
 The four random streams are seeded through a hash, so nearby seeds don't share their sound choices. The
@@ -270,7 +270,7 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
 - **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
   cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
-  every part alone for 6 s (about 7 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
+  every part alone for 6 s (about 9 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
   `python3 tools/perf_report.py path/to/logs`: the spikes and what caused them, what each thing costs while playing,
   and what is cheap enough to make richer or worth optimising.
 

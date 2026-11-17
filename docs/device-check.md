@@ -23,14 +23,15 @@ any crackle. If it crackles below 78 %, raise `-audiobuf` in `pd-opts.txt` (25 n
 ### Logs to upload
 
 Before step 1, set SETUP 4's CPU guard to `on + log`; the steps then land in `logs/perf-*.txt` as you go. After the
-session, turn SETUP 4's CPU knob fully up once and leave it about 7 minutes (silent; the toast counts the parts) for
+session, turn SETUP 4's CPU knob fully up once and leave it about 9 minutes (silent; the toast counts the parts) for
 `logs/profile-*.txt`. Copy the `logs` folder off the card and send it: `tools/perf_report.py` reads it. The log
 also meters the sound, so if you hear a crackle, note roughly when: the report lists cut samples and moments the
 scheduler fell behind, with what had just changed.
 
 ## 2. Feel (one hand, while playing a MIDI keyboard with the other)
 
-- **Low A**: tap = the next chord now; hold = another next chord every 0.7 s. Is 0.5 s before the first re-pick right?
+- **Low A**: tap = the next chord now; hold 0.5 s = the CHORD page. Does knob 1 pick from the key's chords, and does a
+  tap on low A then play the pick? Aux + a top layer key: the layer's page (sound, play, level, send); aux leaves.
 - **Top B**: tap = new piece (on release); hold 0.6 s = COMPARE; hold + a key = load that slot; aux + hold + key =
   save. Does a tap ever turn into COMPARE by accident? Is 0.6 s right?
 - **Aux + top A** (ANCHOR): set, change a few knobs, glide back. Is 8 s (SETUP 15) a good default?

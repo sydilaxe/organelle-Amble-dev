@@ -47,16 +47,20 @@ def page_key(key):
 # low octave: (title, lines, kind) for each name in gen_ui.LOW_KEYS
 LOW = {
     "Root (hold)": ("ROOT", ["hold, then a key, a MIDI note or knob 1:", "the next key (at the next chord)"], "music"),
-    "chord change now": ("CHORD", ["tap: change now", "hold: pick another next chord (every 0.7 s)"], "music"),
+    "chord change now (hold: CHORD page)": ("CHORD", ["tap: change now", "hold: CHORD page -", "knob 1 picks the next chord"],
+                                            "music"),
     "Resolve": ("RESOLVE", ["tonic in open fifths, held", "again: release"], "music"),
     "next section (hold: hold section)": ("SECTION", ["tap: next section", "hold 0.6 s: hold section", "(again: move on)"],
                                           "music"),
 }
 # top octave, for each name in gen_ui.TOP_KEYS
-LAYERS = {f"{n} in/out | aux: auto": n for _, n, _ in U.LAYER_KEYS}
-TOP = {k: (n.upper(), ["tap: in / out", "aux + tap: back to auto"], "layer") for k, n in LAYERS.items()}
+LAYERS = {f"{n} in/out | hold: {n} SHAPE | aux: {n} page": n for _, n, _ in U.LAYER_KEYS}
+TOP = {k: (n.upper(), ["tap: in / out", "hold: SHAPE page", "aux + tap: its page"]
+           + (["aux + held + low key:", "its rhythm (C-B)"] if n in ("motion", "bells") else []), "layer")
+       for k, n in LAYERS.items()}
 TOP.update({
-    "input mode | aux: capture": ("INPUT", ["tap: next input mode", "aux + tap: capture", "8 s into the cloud"], "control"),
+    "input mode | hold: INPUT page | aux: capture": ("INPUT", ["tap: next input mode", "hold: INPUT page", "aux + tap: capture",
+                                                               "8 s into the cloud"], "control"),
     "Freeze | aux: ANCHOR": ("FREEZE", ["tap: freeze reverb + cloud", "aux + tap: ANCHOR (set,", "then glide back)",
                                         "aux + hold 0.8 s: anchor here"], "control"),
     "start / stop | aux: COMPOSE / DRIFT": ("START / STOP", ["tap: start or stop", "aux + tap: COMPOSE / DRIFT"],
@@ -185,7 +189,8 @@ def aux_top():
 
 
 AUX_MORE = {     # what the short aux names in TOP_KEYS mean
-    "auto": "the layer back to auto (the piece decides)",
+    "page": "the layer's page: knob 1 its sound (or auto), 2 in / out / auto, 3 its level, 4 its reverb send; "
+            "aux leaves",
     "capture": "record 8 s of the input into the cloud, kept as a memory",
     "ANCHOR": "set the anchor, then glide every knob back to it; held 0.8 s: anchor here anew",
     "COMPOSE / DRIFT": "switch the mode (COMPOSE: a form of sections; DRIFT: endless)",
@@ -215,10 +220,11 @@ def aux_panel(c, x, y, w):
     text_block(c, x0 + col, y - 16, col - 10, [
         ("+ low key:", "that SETUP page, C = 1 to B = 12 (keyboard above)."),
         ("+ top B, + key:", "save to that slot (low C-B = 1-12, top C-D# = 13-16)."),
+        ("+ top E / D#, + low key:", "the motion's Euclidean rhythm / the bells' phrase rhythm (C-B; again: auto)."),
     ])
     # with a top key
     layers, others = aux_top()
-    rows = [(f"+ top {layers[0]}-{layers[-1]}:", AUX_MORE.get("auto", "auto"))] if layers else []
+    rows = [(f"+ top {layers[0]}-{layers[-1]}:", AUX_MORE["page"])] if layers else []
     for key, what in others:
         rows.append((f"+ {key}:", f"{what} - {AUX_MORE[what]}" if what in AUX_MORE else what))
     text_block(c, x0 + 2 * col, y - 16, col - 10, rows, size=7.6)

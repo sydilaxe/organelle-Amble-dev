@@ -92,13 +92,20 @@ FKEY_DESC = {
                    "(it arrives with the next chord change). While it is not held, MIDI notes play as usual.",
     "Resolve": "The harmony moves to the tonic as open fifths (root, 5th, octave, 12th) and stays there - no "
                "modulation, no dissonant chords - until you press it again. A CC mapped to resolve does it too.",
-    "chord change now": "Tap: move to the next chord (the one the screen shows) at once - the footswitch does the "
-                        "same. Hold: after half a second another next chord is picked, and again every 0.7 s while "
-                        "you hold; let go when line 2 shows one you like.",
+    "chord change now (hold: CHORD page)": "Tap: move to the next chord (the one the screen shows) at once - the "
+                        "footswitch does the same. Hold half a second: the CHORD page (the key and scale on top). "
+                        "Knob 1 picks the next chord from the key's chords, row 2 shows the chord now, knob 3 turned "
+                        "fully up lets the piece pick another, knob 4 sets On pick: next change (the pick waits for "
+                        "the next change, or a tap on low A) or now (it plays at once). Aux leaves the page.",
     "next section (hold: hold section)": "A tap (on its release): jump to the next section of the form. Held "
                                          "0.6 s: hold the section - it plays past its length (HOLD shows); hold "
                                          "again and the piece moves on within 2 s.",
-    "input mode | aux: capture": "Step through the input modes (see Audio input). Aux: record 8 s of the input "
+    "input mode | hold: INPUT page | aux: capture": "A tap (on its release): step through the input modes (see "
+                                  "Audio input). Held half a second: the INPUT page - knob 1 the mode (what the "
+                                  "input does: resonators, grains, tape, ghost bells, bands, the vocoder and morph "
+                                  "cross-synthesis with the pads), knob 2 In (its level), knob 3 Follow you (how much "
+                                  "what you play or sing steers the chords), knob 4 its reverb send; aux leaves. "
+                                  "Aux: record 8 s of the input "
                                  "into the cloud and keep it as a memory.",
     "Freeze": "The reverb tail and the cloud hold still; again to release.",
     "start / stop | aux: COMPOSE / DRIFT": "Start a ready piece, or stop: an 8 s fade that freezes the piece where "
@@ -109,9 +116,23 @@ FKEY_DESC = {
     "new piece | aux: SAVES": "A new piece with a new seed (ready, if stopped). Aux: the SAVES page.",
 }
 for _var, _name, _g in U.LAYER_KEYS:
-    FKEY_DESC[f"{_name} in/out | aux: auto"] = (
-        f"Bring the {_name} in (on at its MIX level, whatever the piece does) if it is silent, or take it out if "
-        "it plays. Aux: back to auto - the piece and its sections decide. The fade takes SETUP LIVE Key fade.")
+    FKEY_DESC[f"{_name} in/out | hold: {_name} SHAPE | aux: {_name} page"] = (
+        f"A tap (on its release): bring the {_name} in (on at its MIX level, whatever the piece does) if it is "
+        "silent, or take it out if it plays. The fade takes SETUP LIVE Key fade. Held half a second: its SHAPE "
+        "page - knob 1 its sound, knob 2 Tone (50 % open; down darkens with a low-pass, up thins with a "
+        "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider); "
+        "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
+        "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
+        "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (
+            " Aux and this key held, a low key picks the motion's rhythm, C-B: the Euclidean patterns 3/8, 5/8, 5/12, "
+            "7/16, 5/13, 4/11, 7/12, 3/7, 5/16, 9/16, 4/9, 11/16 (the same key again: the piece's own; kept in a saved "
+            "piece)." if _name == "motion" else
+            " Aux and this key held, a low key picks the bells' phrase rhythm, C-B: even, long-short, short-long, "
+            "gallop, waltz, dotted, clave, triplet, sparse, rush, swing, slow (the same key again: the piece's own; "
+            "kept in a saved piece)." if _name == "bells" else
+            " On its SHAPE page knob 1 is the sub's sound: sine (as always), warm (rounder, with the octave), pulse "
+            "(a narrow pulse, low-passed) or fm (a slow growl); on its page, the mode (pedal, bass line, both)."
+            if _name == "sub" else ""))
 
 SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "MIDI out": (", ".join(S.MOUT), "Tempo = MIDI clock (24 per beat) following the piece's tempo, with Start and "
@@ -139,7 +160,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Arp octave": ("C1-C5", "Where the arp chord starts (MIDI out, base channel + 5)."),
     "CPU": ("shown; knob fully up = profile", "Amble's CPU load now, and the CPU guard's level (lite 0-3). Turning "
             "its knob fully up runs the profile: the piece stops and every part plays alone for 6 s, silently, about "
-            "7 minutes in all; each part's load goes into logs/profile-NNNN.txt (see CPU)."),
+            "about 9 minutes in all; each part's load goes into logs/profile-NNNN.txt (see CPU)."),
     "CPU guard": ("off, on, off + log, on + log", "When on, Amble gets lighter under overload (see CPU). With log, "
                   "a line every 5 s goes into logs/perf-NNNNPP.txt: the load, the worst moment, what was playing."),
     "Pads": ("auto, raw, " + ", ".join(DT.FLAVOURS), "The pad types. auto: the piece's palette, new picks each "
@@ -276,6 +297,10 @@ FLAV_DESC = {
              "between them",
     "beat": "five partials, a touch stretched toward a bell, each pulsing at its own pace, a formant wandering "
             "across them (after Frasil's PARTIALS)",
+    "reed": "a clarinet-like reed: a sine driven into soft clipping (odd harmonics, more with brightness), a breathy "
+            "vibrato",
+    "organ": "drawbars 16' 8' 5 1/3' 4' 2', the upper ones drawn out with brightness, a slow rotary swell",
+    "air": "a flute: a pure tone with breath around it (more with brightness) and a slow vibrato",
 }
 TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few heavier plops",
             "wind": "filtered air", "ember": "crackling embers", "chirp": "bird-like chirps",
@@ -285,19 +310,30 @@ TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few h
             "echoes": "alien blips on chord tones in ping-pong echoes that bend in pitch as they repeat",
             "whisper": "whispers: breath shaped into fast syllables, one each side",
             "leaves": "leaves rustling in the trees, swelling with gusts",
-            "brook": "a rippling, babbling brook"}
+            "brook": "a rippling, babbling brook",
+            "bubbles": "water drops tuned to the chord - sines rising in pitch as they die (a bubble model)",
+            "crickets": "three crickets chirping on a high chord tone, each its own pace, one far off",
+            "harp": "an aeolian harp: three strings tuned to the chord, sung by gusts of wind (a string model)",
+            "song": "a distant FM voice singing slow gliding phrases on chord tones"}
 STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)",
                "fm": "FM pings: a carrier and a modulator at the piece's ratio, the index falling fast "
                      "(the motion's own)",
                "blip": "a filtered analog blip: a saw and a sub, a pitch flick, a resonant low-pass closing fast",
                "wood": "a wooden bar: a mallet knock and three short marimba modes",
                "wave": "a glassy wavetable that strikes bright and settles to its body",
-               "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo"}
+               "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo",
+               "kalimba": "a thumb piano: a warm tine, far overtones that fade quickly, the click of the thumb",
+               "steel": "a steel pan: the note, its octave and twelfth, a hair of pitch bend at the strike",
+               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner"}
 DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "analog": "saws and a square through a slow resonant sweep",
               "organ": "drawbars with a rotary shimmer", "fm": "an electric growl",
               "frost": "three drifting detuned saws through a note-tracking resonant low-pass, over noise through "
-                       "three glassy resonators on the note (after Frasil's CHOIR and BREATH)"}
+                       "three glassy resonators on the note (after Frasil's CHOIR and BREATH)",
+              "choir": "three voices (the note, a hair sharp, the fifth) through vowel formants moving between ah, "
+                       "oh and oo",
+              "bowed": "a cello: a bowed saw with a slow pressure swell and vibrato through the body's resonances",
+              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting"}
 CHAR_DESC = {"clean": "no effect", "chorus": "a wide chorus", "tape": "wow, flutter, saturation and a little hiss",
              "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush"}
 ATMOS_DESC = {"haze": "air shimmering on the chord", "deep": "low rumble with distant thunder",
@@ -425,7 +461,7 @@ def story():
                  ["Top strip", "The form: one bar per section (height = energy), the current one inverted, a "
                                "playhead. In DRIFT: the energy and the section's progress."],
                  ["Line 2", "The chord now > the next chord (picked ahead, so you see what is coming; hold low A "
-                            "for another). Under it a bar shrinks to the change. Messages take the line briefly."],
+                            "to pick it on the CHORD page). Under it a bar shrinks to the change. Messages take the line briefly."],
                  ["Left", "The 4 pad voices as dots on a pitch ladder (they glide between chords); your held notes "
                           "as boxes; tonic ticks; a breath bar. A pitch heard on the input is a line across it."],
                  ["Right", "The motion layer's Euclidean pattern with its cursor, and the tempo. While audio comes in: "
@@ -651,7 +687,7 @@ def story():
                "effects, the page), and the sound: its level, loudest sample, bass, treble and sub-bass, any DC "
                "offset, samples the output had to cut, near-silence while playing, and how far Pd fell behind "
                "real time (a dropout risk). A file holds 10 minutes; it is written each minute and when the piece stops. "
-               "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 7 minutes, "
+               "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 9 minutes, "
                "silent) writes <b>logs/profile-NNNN.txt</b>, then the piece is back as it was, stopped. Copy the "
                "logs folder off the card; tools/perf_report.py reads it and says what is cheap enough to make "
                "richer and what is worth optimising. Logging itself is light: a sum every 100 ms and a small file "
@@ -670,7 +706,7 @@ def story():
                                                    "page 4; lower Dens or choose Bloom instead of Shimmer."],
                  ["The Organelle keys play no notes", "They are functions; play from a MIDI controller."],
                  ["Silence and READY on the screen", "A piece waits: top A# starts it."],
-                 ["A layer never comes in", "Check its layer key (aux + key = back to auto), its MIX level and, "
+                 ["A layer never comes in", "Check its layer key (aux + key: its page, Play auto), its MIX level and, "
                                             "with Form custom, its Play in SECTION MIX."],
                  ["Nothing happens at the end", "COMPOSE ended (FIN): press top A# or B for a new piece, or "
                                                 "switch to DRIFT with aux + top A#."],

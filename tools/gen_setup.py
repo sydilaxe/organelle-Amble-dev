@@ -10,7 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
-from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES
+from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
                acrtb=0, acoutroot=-1, acclkon=0, actrange=0,
@@ -19,7 +19,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                acmap0=2, acmap1=1, acmap2=1, acmap3=1, acmap4=6, acmap5=0, acmap6=3, acsbell=0, acsmot=0, acglide=5, acmodesel=0, acssub=0, acsform=0, acstempo=0, acsmeter=0, acsatm=0, acnsx=0, acchx=0, acslot=0, acslotfull=0, acsvp49=1, acsvp50=1, acsvpp=1, acsetpgl=-1, acmixcc=0, acpgm=0, aclfd=1, acsfd=2,
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
-               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1)
+               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1)
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
@@ -33,7 +33,7 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            ["acmorph", "acrecall", "acancg", "acpump", "acpumpd", "acduck", "acduckr"] + \
            [f"acmc{m}{f}" for m in range(4) for f in ("mode", "ta", "da", "tb", "db")] + \
            ["acjour", "acjpad", "acjdrone", "acjstrike", "acrvpre", "acrvera", "acccout", "acccch", "acccbase", "acccrate"] + \
-           ["acspark", "acsparko"]
+           ["acspark", "acsparko", "acchpick"]
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
 PARTS = ["all", "harmony", "arp only"]
@@ -44,6 +44,22 @@ NSET = 21                                  # SETUP pages
 SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
                "SECTIONS", "SECTION MIX", "SAVES", "LIVE", "RECALL", "GROOVE", "MACRO A", "MACRO B", "JOURNEY",
                "COLOUR", "CC OUT"]
+# quick pages, past SETUP's (aux taps do not reach them; aux leaves them): CHORD (low A held) and one page for
+# each layer (aux + its top key): its sound, in / out / auto, its level and its reverb send
+LAYER_PAGES = [("DRONE", "acmdrone", "acsdrone", "acmxd", "acsndd"), ("SUB", "acmsub", "acssub", "acmxs", None),
+               ("PADS", "acmpad", "acspad", "acmxp", "acsndp"), ("BELLS", "acmbell", "acsbell", "acmxb", "acsndb"),
+               ("MOTION", "acmmotion", "acsmot", "acmxm", "acsndm"), ("TEXTURES", "acmtex", "acstex", "acmxt", "acsndt"),
+               ("ATMOSPHERE", "acmatm", "acsatm", "acmxa", "acsnda"), ("CLOUD", "acmcloud", None, "acmxc", "acsndc")]
+QUICK_NAMES = ["CHORD"] + [n for n, *_ in LAYER_PAGES] + ["INPUT"]
+CHORD_PAGE = NSET                          # (acsetpg)
+LAYER_PAGE0 = NSET + 1                     # + the layer (gen_ui.LAYER_KEYS order)
+SHAPE_X = "dspbmtac"                       # each layer's letter (its SHAPE values acsh<x>t/d/w), LAYER_KEYS order
+INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
+SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the layer key held)
+QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
+NALL = NSET + len(QUICK_NAMES)
+SCHPICK = ["next change", "now"]
+SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
 # a saved slot's name: a word, or auto (its key and scale, kept when it was saved)
 NAME_WORDS = ["auto", "Dawn", "Ember", "Tide", "Glass", "Frost", "Drift", "Hollow", "Mist", "Lantern", "Harbor", "Orbit",
               "Moss", "Signal", "Velvet", "Ash", "Bloom", "Night", "River", "Static", "Halo", "Cinder", "Prism", "Dune",
@@ -131,7 +147,9 @@ SAVE_ARRAYS = [("acsroles", 12), ("acslens", 12), ("acssp", 12), ("acsst", 96), 
 # (added after the arrays, so a line saved before them still loads: they take these defaults)
 SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("acpump", 0), ("acpumpd", 0.5),
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
-              ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1)]
+              ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
+              ("acmeisel", 0), ("acbrsel", 0), ("acsubt", 0)] + \
+             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -379,6 +397,100 @@ def setup_rows():
     assert [n for n, _ in pages] == SETUP_NAMES
     return [(k + 1,) + tuple(rows[k] for _, rows in pages) for k in range(4)]
 
+def quick_pages():
+    """the quick pages, as setup_pages(): CHORD, then a page per layer"""
+    types = dict(acsubt=SUBTYPES, acsdrone=SDRONES, acssub=SSUBS, acspad=SPADS, acsbell=SBELLS, acsmot=SMOTS, acstex=STEXS, acsatm=SATMS)
+    pages = [("CHORD", [
+        ("list 1 Next $1  $2/$3", [("s", "acnxn", CHORD_NAMES), ("f", "acxdeg + 1"), ("f", "acn")]),
+        ("list 2 Now $1", [("s", "acchn", CHORD_NAMES)]),
+        ("list 3 Another - turn up", None),
+        ("list 4 On pick $1", [("s", "acchpick", SCHPICK)]),
+    ])]
+    for name, m, t, mx, snd in LAYER_PAGES:
+        pages.append((name, [
+            ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
+            ("list 2 Play $1", [("s", m, SPLAYQ)]),
+            ("list 3 Level $1%", [("f", f"int({mx}*100)")]),
+            ("list 4 Verb send $1%", [("f", f"int({snd}*100)")]) if snd else ("list 4 Verb send -", None),
+        ]))
+    # INPUT (top G# held): what the input does (the mode: resonators, grains, tape, ghost bells, bands, vocoding,
+    # morphing - the pads carry its spectrum), how loud, how much it steers the composition, its reverb send
+    pages.append(("INPUT", [
+        ("list 1 Mode $1", [("s", "acinmode", INMODES)]),
+        ("list 2 In $1%", [("f", "int(acinput*100)")]),
+        ("list 3 Follow you $1%", [("f", "int(acfollow*100)")]),
+        ("list 4 Verb send $1%", [("f", "int(acsndi*100)")]),
+    ]))
+    # each layer's SHAPE (its key held): its sound, then tone, drive and width (gen_dsp.shaped)
+    for (name, m, t, mx, snd), x in zip(LAYER_PAGES, SHAPE_X):
+        t = "acsubt" if t == "acssub" else t           # (the sub's page: its mode; its SHAPE: its sound)
+        pages.append((name + " SHAPE", [
+            ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
+            ("list 2 Tone $1 $2%", [("s", f"if(acsh{x}t < 0.49, 0, if(acsh{x}t > 0.51, 2, 1))", ["dark", "open", "thin"]),
+                                     ("f", f"int(abs(acsh{x}t - 0.5)*200)")]),
+            ("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
+            ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")]),
+        ]))
+    assert [n for n, _ in pages] == QUICK_NAMES
+    return pages
+
+
+def type_act(var):
+    """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes"""
+    opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
+                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+    if var in ("acspad", "acsdrone", "acstex", "acschar"):
+        then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + [
+            Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
+    elif var in ("acsbell", "acsmot"):
+        then = [V(var, "acsnew"), V("acfade", "600"), Call("ac-layers")]
+    elif var == "acssub":
+        then = [V(var, "acsnew")]
+    elif var == "acsubt":
+        then = [V(var, "acsnew"), SendL("ac-subt", ["acsubt"])]
+    else:     # the atmosphere: from now (auto: the next section picks)
+        then = [V(var, "acsnew"), If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
+    return [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", then)]
+
+
+def quick_knobs(item):
+    """the quick pages' knobs (item: the page x 4 + the knob)"""
+    def at(pg, row):
+        return f"{item} == {pg * 4 + row - 1}"
+
+    def knob(name):        # a knob page's value set from here (as a macro does: not shown as your hand)
+        i = KNOBS.index(name)
+        return [T("acparams", i, "acsv"), V("acmorphing", "1"), SendL("ac-param", [str(i), "acsv"]), V("acmorphing", "0")]
+    st = [
+        # CHORD: knob 1 the next chord, from the key's chords (and, with On pick now, at once); knob 3 fully up
+        # another one picked by the piece (re-armed below 90 %)
+        If(at(CHORD_PAGE, 1), [V("acsnew", "int(acsv*(acn - 0.01))"), If("acsnew != acxdeg || acxt != actonic", [
+            X("acsnew; actonic; 0; 1", "v acxdeg", "v acxt", "v acxscf", "v acxpick"), Call("ac-chordshow"),
+            If("acchpick", [Call("ac-chordnow")])])]),
+        If(at(CHORD_PAGE, 3), [If("acsv > 0.9 && acchsurp <= 0.9", [Call("ac-chordnext")]), V("acchsurp", "acsv")]),
+        If(at(CHORD_PAGE, 4), [V("acchpick", "acsv > 0.5")]),
+    ]
+    for j, (name, m, t, mx, snd) in enumerate(LAYER_PAGES):
+        pg = LAYER_PAGE0 + j
+        st += ([If(at(pg, 1), type_act(t))] if t else []) + [
+            If(at(pg, 2), [V("acsnew", "int(acsv*2.99)"), If(f"acsnew != {m}", [V(m, "acsnew"), V("acfade", LFADE),
+                                                                                Call("ac-layers")])]),
+            If(at(pg, 3), knob(mx))] + ([If(at(pg, 4), knob(snd))] if snd else [])
+    for j, ((name, m, t, mx, snd), x) in enumerate(zip(LAYER_PAGES, SHAPE_X)):
+        pg = SHAPE_PAGE0 + j
+        t = "acsubt" if t == "acssub" else t
+        st += ([If(at(pg, 1), type_act(t))] if t else []) + [
+            If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call("ac-shpupd")]),
+            If(at(pg, 3), [V(f"acsh{x}d", "acsv"), Call("ac-shpupd")]),
+            If(at(pg, 4), [V(f"acsh{x}w", "acsv"), Call("ac-shpupd")])]
+    st += [If(at(INPUT_PAGE, 1), [V("acsnew", f"int(acsv*{len(INMODES) - 0.01})"), If("acsnew != acinmode", [
+               V("acinmode", "acsnew"), Call("ac-inputupd"), Call("ac-scr5")])]),
+           If(at(INPUT_PAGE, 2), knob("acinput")),
+           If(at(INPUT_PAGE, 3), [V("acfollow", "acsv")]),
+           If(at(INPUT_PAGE, 4), knob("acsndi"))]
+    return st
+
+
 def setup():
     c = Canvas("setup", w=2600)
     c.comment("SETUP: hold aux 1 s. Knobs set the 4 items of the page (absolute), aux tap = other page.")
@@ -402,7 +514,7 @@ def setup():
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
         return f"{item} == {SETUP_NAMES.index(page) * 4 + row - 1}"
     run_steps(c, (tb, 0), [
-        If("acsetpg != acsetpgl", [X("1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acsetpgl")]),
+        If("acsetpg != acsetpgl", [X("1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsetpgl")]),
         If(at("GENERAL", 1), [V("acmout", "int(acsv*3.99)"), If("acmout == 0 || acmout == 3", [Call("ac-clockstop")],
                                                                [Call("ac-clockstart")]),
                             If("acmout < 2", [Call("ac-notesoff")], [Call("ac-outchord")])]),
@@ -425,10 +537,7 @@ def setup():
                              If("acguard % 2 == 0 && acshed > 0", [V("acshed", "0"), Call("ac-layers"), Call("ac-inputupd")])]),
     ] + [
         # SOUNDS: act only when the choice changes, so turning the knob within one choice does not re-pick
-        If(at("SOUNDS", 1 + j), [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", [
-            V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if j == 0 else []) + [
-            Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")])])
-        for j, (var, opts) in enumerate((("acspad", SPADS), ("acsdrone", SDRONES), ("acstex", STEXS), ("acschar", SCHARS)))
+        If(at("SOUNDS", 1 + j), type_act(var)) for j, var in enumerate(("acspad", "acsdrone", "acstex", "acschar"))
     ] + [
         # MUSIC: a choice applies at the next chord, which comes now
         If(at("MUSIC", 1), [V("acsnew", f"int(acsv*{len(SKEYS) - 0.01})"), If("acsnew != ackeyc", [
@@ -455,13 +564,11 @@ def setup():
         If(at("CC MAP", 4), [V("acvibr", "0.5*int(6 + 10*acsv)"), SendL("ac-lvvibr", ["acvibr"])]),
         # VOICES: the bells' and the motion's engine, crossfaded at once
     ] + [
-        If(at("VOICES", 1 + j), [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", [
-            V(var, "acsnew"), V("acfade", "600"), Call("ac-layers")])])
-        for j, (var, opts) in enumerate((("acsbell", SBELLS), ("acsmot", SMOTS)))
+        If(at("VOICES", 1 + j), type_act(var)) for j, var in enumerate(("acsbell", "acsmot"))
     ] + [
         # the glide applies from the next chord change
         If(at("VOICES", 3), [V("acglide", f"int(acsv*{len(GLIDES) - 0.01})")]),
-        If(at("VOICES", 4), [V("acssub", f"int(acsv*{len(SSUBS) - 0.01})")]),
+        If(at("VOICES", 4), type_act("acssub")),
         # FORM: the shape applies to the next piece (or now, while the piece waits ready); the tempo and meter at
         # once; the atmosphere from the next section
         If(at("FORM", 1), [V("acsnew", f"int(acsv*{len(SFORMS) - 0.01})"), If("acsnew != acsform", [
@@ -470,8 +577,7 @@ def setup():
             V("acstempo", "acsnew"), Call("ac-settempo")])]),
         If(at("FORM", 3), [V("acsnew", f"int(acsv*{len(SMETERS) - 0.01})"), If("acsnew != acsmeter", [
             V("acsmeter", "acsnew"), If("acsmeter > 0", [V("acmeter", "acsmeter + 2")])])]),
-        If(at("FORM", 4), [V("acsatm", f"int(acsv*{len(SATMS) - 0.01})"), If("acsatm > 0", [
-            V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]),
+        If(at("FORM", 4), type_act("acsatm")),
         # SECTIONS / SECTION MIX: editing a section turns the form to custom (from the piece's plan, the first
         # time); it applies to the piece at once (sections to come; the current one's layers now)
         # the section: turned fully down = now (follows the playing section), then sections 1-12
@@ -531,7 +637,7 @@ def setup():
         If(at("CC OUT", 2), [V("acccch", "1 + int(acsv*15.99)")]),
         If(at("CC OUT", 3), [V("acccbase", "int(acsv*3.99)")]),
         If(at("CC OUT", 4), [V("acccrate", f"int(acsv*{len(SCCRATE) - 0.01})")]),
-    ] + [
+    ] + quick_knobs(item) + [
         Call("ac-oledsetup"), Send("ac-dirty"),
     ])
     c.col()
@@ -540,17 +646,27 @@ def setup():
         Call("ac-setl0"), Call("ac-setl1"), Call("ac-setl2"), Call("ac-setl3"), Call("ac-setl4"),
         FLIP,
     ])
-    Line("ac-setl0", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
-    # page-dependent rows: two Lines per row, chosen by the page
-    defs = setup_rows()
-    for k, *rows in defs:
-        s = c.ch(c.recv(f"ac-setl{k}"), "expr acsetpg", "sel " + " ".join(str(j) for j in range(NSET)))
+    # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
+    proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
+        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")],
+                                                                 [Send("ac-setl0q")])])])])
+    Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
+    Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
+                                                ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
+    Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
+         "ac-sett0")(c)
+    Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
+    # page-dependent rows: a Line per page and row, chosen by the page
+    quick = quick_pages()
+    for k, *rows in setup_rows():
+        rows = rows + [qr[k - 1] for _, qr in quick]
+        s = c.ch(c.recv(f"ac-setl{k}"), "expr acsetpg", "sel " + " ".join(str(j) for j in range(NALL)))
         for j, (ln, parts) in enumerate(rows):
-            c.c(c.to((s, j), "t b"), 0, c.obj(f"s ac-setl{k}{'abcdefghijklmnopqrstuvwxyz'[j]}"), 0)
+            c.c(c.to((s, j), "t b"), 0, c.obj(f"s ac-setl{k}p{j}"), 0)
             if parts:
-                Line(f"ac-setl{k}{'abcdefghijklmnopqrstuvwxyz'[j]}", ln, parts, f"ac-sett{k}")(c)
+                Line(f"ac-setl{k}p{j}", ln, parts, f"ac-sett{k}")(c)
             else:
-                c.c(c.m(c.recv(f"ac-setl{k}{'abcdefghijklmnopqrstuvwxyz'[j]}"), ln), 0, c.obj(f"s ac-sett{k}"), 0)
+                c.c(c.m(c.recv(f"ac-setl{k}p{j}"), ln), 0, c.obj(f"s ac-sett{k}"), 0)
     for k in range(5):
         gated_text(c, f"ac-sett{k}", "acsetup", 0, 2 + k * 12)
     # aux tap in SETUP: the other page
