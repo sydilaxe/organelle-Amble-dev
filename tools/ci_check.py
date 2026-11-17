@@ -397,7 +397,8 @@ for tx in range(4, len(TEXTURES)):
     check(rms_db(a[3 * SR:12 * SR]) > -50, f"texture {TEXTURES[tx]}: {rms_db(a[3 * SR:12 * SR]):.1f} dB")
 cents = []
 for ch in range(len(CHARACTERS)):
-    ev = [(50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+    # (Writing still: the pads alone - moving, the counter-melody's song voice sings over them)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
          [(310, "acmpad 1"), (310, "acfpad 1"), (310, "acdens 1"), (320, "ac-layers bang"), (330, "ac-rwet 0 10"),
           (330, "ac-motion 0"), (330, "ac-fmr 2")] + [(340, f"ac-v{k}-flav -1") for k in (1, 2, 3)] + \
          [(400, f"acchar {ch}"), (400, "acchamt 0.8"), (401, "ac-layers bang"), (1000, "ac-v0-flav 0"),
@@ -454,7 +455,8 @@ check(len(pals) >= 8, f"10 consecutive seeds give {len(pals)} different pad pale
 # 19. stereo: wide above the bass, moving, mono-safe; SETUP Output mono gives mono
 from scipy.signal import butter, sosfilt
 hp = butter(4, 200, 'hp', fs=SR, output='sos')
-for seed, extra, name in ((2718, [], "wide"), (2718, [(40, "acmono 1")], "mono")):
+# (Writing still: the mix's width as designed - moving, a calm opening plays fewer hard-panned bells)
+for seed, extra, name in ((2718, [(5, "acwrite 0")], "wide"), (2718, [(5, "acwrite 0"), (40, "acmono 1")], "mono")):
     log, a = run([(50, "aclen 0"), (60, f"ac-setseed {seed}")] + extra, 160)
     seg = a[110 * SR:160 * SR]
     M, S_ = (seg[:, 0] + seg[:, 1]) / 2, (seg[:, 0] - seg[:, 1]) / 2
@@ -480,7 +482,8 @@ check(np.std(bal) > 1.0, f"stereo: the image moves ({np.std(bal):.1f} dB balance
 # 20. atmospheres; pad types in stereo but mono-safe; scenes place the voices; preferred sounds come up more
 from data import ATMOS_NAMES
 for at, name in enumerate(ATMOS_NAMES):
-    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+    # (Writing still: the atmosphere alone, its level not moved by the phrase's chords)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 77"), (305, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
          [(311, "acmtex 1"), (311, "acftex 0"), (311, "acfatm 1"), (311, f"acatmcur {at}"), (311, "acfade 10"),
           (312, "ac-layers bang"), (313, "ac-rwet 0 10"), (314, "ac-change bang")]
     log, a = run(ev, 12)
@@ -666,8 +669,8 @@ vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE and WRITING joined)
-check(len(vals) == len(GS.SETTINGS) == 143 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC joined)
+check(len(vals) == len(GS.SETTINGS) == 147 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1694,6 +1697,54 @@ check(sub_(after[:6], [85.0, 90.0, 92.0]), f"Answer you: the bells echo your phr
 log, _ = run([(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {(6 + 0.5) / GS.NSLOTS}"),
               (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")], 3, d=d)
 check("slot 7: Chorale" in log.replace("\\ ", " "), "factory piece Chorale loads from slot 7")
+
+# 80. ARC: the motion on the bells' rhythm (shared), the phrase's dynamics and tension, a dominant pedal before the
+#     return, a ground bass, the counter-melody in the song voice
+def aprobe(c):
+    ex = ["acphpos", "acdyn", "acten", "acbright", "acpedal", "acrole"]
+    e = c.ch(c.obj("r ac-flash"), "t b", "expr " + "; ".join(ex))
+    pk = c.obj("pack " + " ".join(["f"] * len(ex)))
+    for i in range(len(ex) - 1, -1, -1):
+        c.c(e, i, pk, i)
+    c.c(pk, 0, c.obj("print AP"), 0)
+    m = c.obj("metro 50")
+    c.c(c.obj("loadbang"), 0, m, 0)
+    e2 = c.to(m, "expr int(acstep/acmdiv); acrcm[int(acms) % int(acrcn)]; acrcn")
+    pk2 = c.obj("pack f f f")
+    for i in (2, 1, 0):
+        c.c(e2, i, pk2, i)
+    c.c(pk2, 0, c.obj("print RC"), 0)
+d = build_tmp()
+cut = lambda log: log.splitlines()[max(k for k, l in enumerate(log.splitlines()) if l.startswith("ac-setseed")):]
+log, _ = run([(10, "actide 0"), (10, "aclen 0"), (10, "acmbell 2"), (10, "acmmotion 2"), (10, "acbassm 3"),
+              (10, "acmtex 2"), (50, "ac-setseed 7")], 150, prints=("ac-mnote", "ac-subp", "ac-dronep", "ac-song", "ac-bell"),
+             d=d, extra=aprobe)
+L_ = cut(log)
+ap = [[float(x) for x in l.split(":", 1)[1].split()] for l in L_ if l.startswith("AP:")]
+# (dynamics: louder towards the V, softer on the I; tension: rising to the V)
+dy = {int(r[0]): round(r[1], 2) for r in ap if r[0] >= 0}
+tn = {int(r[0]): round(r[2], 2) for r in ap if r[0] >= 0}
+check(not errors(log) and dy.get(0, 1) < dy.get(2, 0) and dy.get(3, 1) < dy.get(2, 0) and tn.get(2, 0) > tn.get(0, 1),
+      f"Arc: dynamics {dy}, tension {tn} by the chord's place in the phrase")
+br = sorted({round(r[3], 3) for r in ap})
+check(len(br) >= 3, f"Arc tension: the brightness moves with the phrase ({br[:6]})")
+# (a custom form: emerge, develop, return - in the develop the drone holds the home key's dominant, Ab for Db)
+log2, _ = run([(10, "actide 0"), (10, "acsform 6"), (10, "acsroles 0 0 2 6 7 8 8 8 8 8 8 8 8"), (10, "acscount 4"),
+               (50, "ac-setseed 7"), (20000, "ac-secgo bang"), (21000, "h-mark bang")], 60, prints=("ac-dronep", "h-mark"), d=d,
+              extra=aprobe)
+ped = [r for r in [[float(x) for x in l.split(":", 1)[1].split()] for l in cut(log2) if l.startswith("AP:")] if r[4] == 1]
+drp = sorted({float(l.split()[1]) for l in log2.split("h-mark: bang")[-1].splitlines() if l.startswith("ac-dronep:")})
+check(ped and drp == [44.0], f"Bass pedal: the section before the return holds the dominant ({len(ped)} chords, drone {drp})")
+sp_ = [float(l.split()[1]) for l in L_ if l.startswith("ac-subp:")]
+check(len(sp_) > 12 and len({round(x, 1) for x in sp_}) <= 6, f"Bass ground: the sub a short repeating line ({len(sp_)} notes, "
+      f"{sorted({round(x, 1) for x in sp_})[:6]} Hz)")
+sg = [l for l in L_ if l.startswith("ac-song:")]
+check(len(sg) >= 5, f"Counter: the song voice sings the motif ({len(sg)} notes)")
+# (shared: each motion note falls on a step of the bells' rhythm cell)
+rc = [[float(x) for x in l.split(":", 1)[1].split()] for l in L_ if l.startswith("RC:")]
+check(rc and max(r[2] for r in rc) >= 4 and log.count("ac-mnote:") > 10,
+      f"Rhythm shared: the motion follows the bells' rhythm cell ({int(rc[-1][2])} 8ths a round, "
+      f"{log.count('ac-mnote:')} motion notes)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

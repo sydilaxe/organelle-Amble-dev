@@ -298,6 +298,16 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
                    "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
                    "through it - the motif, very slowly, under the active bells and motion."),
+    "Rhythm": (", ".join(S.SRCELL), "shared: the motion's hits follow the bells' motif rhythm, twice as fast (its "
+               "onsets in 8ths) - one rhythm cell for both layers; your own rhythm (top E held + low keys) still wins."),
+    "Arc": (", ".join(S.SARC), "The phrase's arc. dynamics: the bells and the motion grow louder towards the phrase's V "
+            "and softer on its cadence. tension: the sound brightens and the harmony grows more adventurous towards "
+            "the V, relaxing on the I. both: the two together."),
+    "Bass": (", ".join(S.SBASSM), "pedal: in the section before a return, the drone and the sub hold the home key's "
+             "dominant while the harmony moves above it; the return resolves it home. ground: the sub plays a "
+             "4-note line from the motif's degrees, one note a bar, under the changing chords (a ground bass)."),
+    "Counter": (", ".join(S.SCTR), "song: the distant song voice sings the motif slowly (twice as slow, a bar's rest "
+                "after each round) as a third voice, while the pads play - also when the song texture is not chosen."),
     "Drone level": (", ".join(S.SDRSUB), "subtle: the drone 6 dB lower while the piece is moving."),
     "Ending": (", ".join(S.SENDP), "fade: everything stops and fades over 30 s. by phrase: the chords stop, the motion "
                "stops, the bells play on 9 s, then the pads and the drone fade last."),
