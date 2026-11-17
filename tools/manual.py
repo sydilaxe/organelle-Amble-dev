@@ -124,12 +124,18 @@ for _var, _name, _g in U.LAYER_KEYS:
         "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (
-            " Aux and this key held, a low key picks the motion's rhythm, C-B: the Euclidean patterns 3/8, 5/8, 5/12, "
-            "7/16, 5/13, 4/11, 7/12, 3/7, 5/16, 9/16, 4/9, 11/16 (the same key again: the piece's own; kept in a saved "
-            "piece)." if _name == "motion" else
-            " Aux and this key held, a low key picks the bells' phrase rhythm, C-B: even, long-short, short-long, "
-            "gallop, waltz, dotted, clave, triplet, sparse, rush, swing, slow (the same key again: the piece's own; "
-            "kept in a saved piece)." if _name == "bells" else
+            " Held, the low keys change its Euclidean rhythm (and it then neither opens SHAPE nor toggles): C random, "
+            "C# the piece's own again, D / D# rotate, E / F more / fewer hits, F# / G a longer / shorter cycle, G# "
+            "harmony (off, 3rds, 6ths, triads: the next chord tones above, in the key and scale), A ratchets (off, 25, "
+            "50 %: a repeat half a step later), A# ghost notes (off, 30, 60 %: soft notes on the rests), B swing "
+            "(auto, 0, 15, 30 %). Yours stays through the sections and is kept in a saved piece."
+            if _name == "motion" else
+            " Held, the low keys change its phrase rhythm (and it then neither opens SHAPE nor toggles): C random, "
+            "C# the piece's own again, D / D# rotate, E / F denser / sparser, F# / G the next / previous named rhythm "
+            "(even, long-short, short-long, gallop, waltz, dotted, clave, triplet, sparse, rush, swing, slow), G# "
+            "harmony (off, 3rds, 6ths, 5ths up the scale), A ratchets (a quick repeat), A# ghost notes (soft strikes "
+            "between), B rubato (normal, strict, loose). Yours stays through the sections and is kept in a saved piece."
+            if _name == "bells" else
             " On its SHAPE page knob 1 is the sub's sound: sine (as always), warm (rounder, with the octave), pulse "
             "(a narrow pulse, low-passed) or fm (a slow growl); on its page, the mode (pedal, bass line, both)."
             if _name == "sub" else ""))
@@ -208,6 +214,12 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Recall": (", ".join(S.SRECALL), "What a load brings: the piece (its seed, music, form and sections, and its sound), "
                "or the sound only - knobs, sounds, voices, layers, PERFORM - while the piece playing goes on."),
     "Anchor glide": (", ".join(n for n, _ in S.SANCG), "How long ANCHOR (aux + top A) takes to glide back."),
+    "Memory": ("off, on", "With Memory on, every knob you turn in a section is kept for that section; when the "
+               "section comes again - the piece replayed, or loaded from its slot - those knobs glide back to where you "
+               "left them (the others stay as they are). Saved with the piece; a new piece starts with an empty memory."),
+    "Glide": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
+    "Clear sec": ("turn up", "Fully up: forget what the playing section kept."),
+    "Clear all - turn up": ("turn up", "Fully up: forget every section's knobs."),
     "Compare": ("yours, saved", "Up: the slot as loaded or saved; down: yours again (as holding top B)."),
     "Pump": (", ".join(S.SPUMP), "PUMP: the bed (drone, sub, pads) drops on each period and comes back over 70 % of "
              "it - a sidechain breath on the grid."),
@@ -656,7 +668,7 @@ def story():
                "level and brightness (SETUP <i>Breath curve</i>)."),
           Paragraph("MIDI out", H2),
           para("SETUP <i>MIDI out</i>: " + esc(", ".join(S.MOUT)) + ". Tempo is MIDI clock (24 per beat) at the "
-               "piece's tempo, following its changes, with Start and Stop. Notes go out on these channels, counted "
+               "piece's tempo, following its changes, with Start and Stop (and Continue when a stopped piece plays on from where it stopped). Notes go out on these channels, counted "
                "from SETUP <i>MIDI out ch</i> (wrapping after 16):"),
           table([["Channel", "Part"]] + MIDI_CH, [1.0, 5.7]),
           para("Chord and bass velocities follow the piece's energy. Notes are rounded to the nearest semitone. "

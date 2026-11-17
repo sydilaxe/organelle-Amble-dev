@@ -17,7 +17,7 @@ GLOBALS = dict(
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
-    acmxq=0, acsgms=200, acsubt=0, acsleep=0, acshdt=0.5, acshdd=0, acshdw=0.5, acshst=0.5, acshsd=0, acshsw=0.5, acshpt=0.5, acshpd=0, acshpw=0.5, acshbt=0.5, acshbd=0, acshbw=0.5, acshmt=0.5, acshmd=0, acshmw=0.5, acshtt=0.5, acshtd=0, acshtw=0.5, acshat=0.5, acshad=0, acshaw=0.5, acshct=0.5, acshcd=0, acshcw=0.5, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
+    acmxq=0, acsgms=200, acmuser=0, acmuk=3, acmun=8, acmurot=0, acmusw=-1, acmghost=0, acmrat=0, acmharm=0, acmpk=3, acmpn=8, acmprot=0, acmpsw=0, acmv=0, acmdl=0, acmpan=0.5, acmh=0, acbuser=0, acbru0=1, acbru1=1, acbru2=1, acbru3=1, acbru4=1, acbt0=0, acbt1=0, acbt2=0, acbt3=0, acbt4=0, acbghost=0, acbrat=0, acbrub=1, acbharm=0, acbv=0, acbpan=0.5, acbh=0, acbint=1000, acbgp=0,  acsubt=0, acsleep=0, acshdt=0.5, acshdd=0, acshdw=0.5, acshst=0.5, acshsd=0, acshsw=0.5, acshpt=0.5, acshpd=0, acshpw=0.5, acshbt=0.5, acshbd=0, acshbw=0.5, acshmt=0.5, acshmd=0, acshmw=0.5, acshtt=0.5, acshtd=0, acshtw=0.5, acshat=0.5, acshad=0, acshaw=0.5, acshct=0.5, acshcd=0, acshcw=0.5, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
     acfdrone=1, acfpad=1, acftex=1, acfcloud=1, acfbell=1, acfmotion=0, actex1=0, actex2=1, actexA=0, actexB=1,
     acpal1=0, acpal2=1, acpal3=3, acpartI=0, acbellI=0, acsecbright=0.8, actidef=1, acpow=1,
     acpsum=1, acfirst=1, acmodflag=0, acD=0, acp0=0, acp1=0, aci=0, acchg=0, acfade=8000,
@@ -89,6 +89,10 @@ ARCH_EXPR = ("if(acarch==0, pow(sin(3.14159*X), acpow), if(acarch==1, if(X<0.78,
              "if(acarch==2, (0.55 - 0.45*cos(12.566*X))*(0.4 + 0.6*sin(3.14159*X)), "
              "if(acarch==3, max(exp(-pow((X-0.33)/0.13, 2)), 0.9*exp(-pow((X-0.75)/0.12, 2))), "
              "min(1, 1.3*pow(sin(3.14159*X), 0.6))))))")
+
+
+# the bells' own step lengths (top D# held + low keys), read by step index aci
+BRU = "if(aci == 0, acbru0, if(aci == 1, acbru1, if(aci == 2, acbru2, if(aci == 3, acbru3, acbru4))))"
 
 
 def deg2p(d):
@@ -277,7 +281,9 @@ def piece():
         V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel")])])
     proc(c, "ac-wakeup", [Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
                                                            Call("ac-verbsel")])])
-    proc(c, "ac-newkey", [If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
+    # (a new piece: its own memory, empty)
+    proc(c, "ac-newkey", [Call("ac-memclearall"),
+                          If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
     # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
     # while playing, it switches at once
@@ -358,7 +364,7 @@ def piece():
         T("acmotif0", "aci", "if(aci==0, int(acr1*3)*2, acmotif0[int(aci)-1] + int(acr1*5) - 2)"),
         T("acmotif", "aci", "acmotif0[int(aci)]"),
         T("acmrhya", "aci", "acrhyt[int(acr2*5)]"),
-        T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)])"),
+        T("acmrhy", "aci", "if(acbuser, if(aci == 0, acbru0, if(aci == 1, acbru1, if(aci == 2, acbru2, if(aci == 3, acbru3, acbru4)))), if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)]))"),
     ])])
     # each section transforms it by role: inverted (develop), raised and faster (intensify, climax),
     # as it was (establish, return), varied otherwise
@@ -370,18 +376,71 @@ def piece():
                                 "acmotif0[int(aci)] + acmtr, if(acrole==6 || acrole<=1, acmotif0[int(aci)], "
                                 "acmotif0[int(aci)] + int(acr1*3) - 1)))"),
             T("acmrhya", "aci", "acrhyt[int(acr2*5)] * if(acrole==3 || acrole==4, 0.5, 1)"),
-            T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)])"),
+            T("acmrhy", "aci", "if(acbuser, if(aci == 0, acbru0, if(aci == 1, acbru1, if(aci == 2, acbru2, if(aci == 3, acbru3, acbru4)))), if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)]))"),
         ]),
     ])
-    # aux + top E (motion) or D# (bells) held, + a low key: that rhythm (the same key again: the piece's own)
-    proc(c, "ac-mrhypick", [V("acmeisel", "if(acmeisel == acrsel + 1, 0, acrsel + 1)"),
-                            V("acmei", "if(acmeisel > 0, acmeisel - 1, acmeia)"),
-                            X("aceuk[int(acmei)]; aceun[int(acmei)]", "v acmk", "v acmn"), Send("ac-mrhytoast")])
-    proc(c, "ac-brhypick", [V("acbrsel", "if(acbrsel == acrsel + 1, 0, acrsel + 1)"),
-                            Loop("5", "aci", [T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], "
-                                                                 "acmrhya[int(aci)])")]), Send("ac-brhytoast")])
-    Line("ac-mrhytoast", "list motion $1", [("s", "acmeisel", ["auto"] + [f"{k}/{n}" for k, n in EUCLID])], "ac-toast")(c)
+    # ---- top E (motion) / D# (bells) held + a low key (acrsel 0-11): the rhythm, changed step by step. Yours stays
+    #      through the sections (acmuser / acbuser) and is kept in a saved piece; C# gives back the piece's own.
+    #      (Random numbers are drawn only by C's randomize, and by ghosts and ratchets while they are on: a piece you
+    #      did not touch plays as it always did)
+    mtake = [If("acmuser == 0", [X("acmk; acmn; acmrot; 1", "v acmuk", "v acmun", "v acmurot", "v acmuser")])]
+    mset = [X("acmuk; acmun; acmurot", "v acmk", "v acmn", "v acmrot")]
+    mops = {
+        0: mtake + [RNG, V("acmuk", "2 + int(acr1*7)"), V("acmun", "max(acmuk + 1, min(16, 5 + int(acr2*12)))"),
+                    V("acmurot", "int(acr3*acmun)")] + mset + [Send("ac-mrhytoast")],
+        1: [X("0; -1; 0; 0; 0", "v acmuser", "v acmusw", "v acmghost", "v acmrat", "v acmharm"),
+            X("acmpk; acmpn; acmprot; acmpsw", "v acmk", "v acmn", "v acmrot", "v acmswing"), Toast("motion: the piece's own")],
+        2: mtake + [V("acmurot", "(acmurot + 1) % acmun")] + mset + [Send("ac-mrhytoast")],
+        3: mtake + [V("acmurot", "(acmurot - 1 + acmun) % acmun")] + mset + [Send("ac-mrhytoast")],
+        4: mtake + [V("acmuk", "min(acmun, acmuk + 1)")] + mset + [Send("ac-mrhytoast")],
+        5: mtake + [V("acmuk", "max(1, acmuk - 1)")] + mset + [Send("ac-mrhytoast")],
+        6: mtake + [V("acmun", "min(16, acmun + 1)")] + mset + [Send("ac-mrhytoast")],
+        7: mtake + [V("acmun", "max(max(2, acmuk), acmun - 1)"), V("acmurot", "acmurot % acmun")] + mset + [Send("ac-mrhytoast")],
+        8: [V("acmharm", "(acmharm + 1) % 4"), Send("ac-mharmtoast")],
+        9: [V("acmrat", "if(acmrat < 0.2, 0.25, if(acmrat < 0.4, 0.5, 0))"), Send("ac-mrattoast")],
+        10: [V("acmghost", "if(acmghost < 0.2, 0.3, if(acmghost < 0.5, 0.6, 0))"), Send("ac-mghosttoast")],
+        11: [V("acmusw", "if(acmusw < 0, 0, if(acmusw < 0.1, 0.15, if(acmusw < 0.2, 0.3, -1)))"),
+             V("acmswing", "if(acmusw >= 0, acmusw, acmpsw)"), Send("ac-mswtoast")],
+    }
+    proc(c, "ac-mop", [If(f"acrsel == {k}", st) for k, st in mops.items()])
+    Line("ac-mrhytoast", "list motion $1/$2 rot $3", [("f", "acmk"), ("f", "acmn"), ("f", "acmrot")], "ac-toast")(c)
+    Line("ac-mharmtoast", "list motion harmony $1", [("s", "acmharm", ["off", "3rds", "6ths", "triads"])], "ac-toast")(c)
+    Line("ac-mrattoast", "list motion ratchets $1%", [("f", "int(acmrat*100)")], "ac-toast")(c)
+    Line("ac-mghosttoast", "list motion ghosts $1%", [("f", "int(acmghost*100)")], "ac-toast")(c)
+    Line("ac-mswtoast", "list motion swing $1", [("s", "if(acmusw < 0, 0, 1 + int(acmusw*6.67 + 0.5))",
+                                                      ["auto", "0%", "15%", "30%"])], "ac-toast")(c)
+    # the bells: their 5 step lengths (acbru0-4, from the piece's when first changed)
+    btake = [If("acbuser == 0", [X("acmrhy[0]; acmrhy[1]; acmrhy[2]; acmrhy[3]; acmrhy[4]; 1", "v acbru0", "v acbru1",
+                                   "v acbru2", "v acbru3", "v acbru4", "v acbuser")])]
+    bset = [Loop("5", "aci", [T("acmrhy", "aci", BRU)])]
+    rot = lambda order: [X("; ".join(f"acbru{k}" for k in order), *[f"v acbt{k}" for k in range(5)]),
+                         X("; ".join(f"acbt{k}" for k in range(5)), *[f"v acbru{k}" for k in range(5)])]
+    scale = lambda f: [X("; ".join(f"min(4, max(0.25, acbru{k}*{f}))" for k in range(5)), *[f"v acbru{k}" for k in range(5)])]
+    named = [X("; ".join(f"acbrhyt[int((acbrsel - 1)*5 + {k})]" for k in range(5)), *[f"v acbru{k}" for k in range(5)])]
+    bops = {
+        0: btake + [RNG, X("; ".join(f"acrhyt[int(fmod(acr{1 + k % 4}*{1 + 2.37 * k:.2f}, 1)*5)]" for k in range(5)),
+                           *[f"v acbru{k}" for k in range(5)])] + bset + [Toast("bells: random")],
+        1: [X("0; 0; 0; 1; 0; 0", "v acbuser", "v acbghost", "v acbrat", "v acbrub", "v acbrsel", "v acbharm"),
+            Loop("5", "aci", [T("acmrhy", "aci", "acmrhya[int(aci)]")]), Toast("bells: the piece's own")],
+        2: btake + rot([4, 0, 1, 2, 3]) + bset + [Toast("bells: rotate >")],
+        3: btake + rot([1, 2, 3, 4, 0]) + bset + [Toast("bells: rotate <")],
+        4: btake + scale(0.75) + bset + [Toast("bells: denser")],
+        5: btake + scale(1.33) + bset + [Toast("bells: sparser")],
+        6: btake + [V("acbrsel", f"acbrsel % {len(BELL_RHYTHMS)} + 1")] + named + bset + [Send("ac-brhytoast")],
+        7: btake + [V("acbrsel", f"(acbrsel + {len(BELL_RHYTHMS) - 2} + {len(BELL_RHYTHMS)}) % {len(BELL_RHYTHMS)} + 1")]
+           + named + bset + [Send("ac-brhytoast")],
+        8: [V("acbharm", "(acbharm + 1) % 4"), Send("ac-bharmtoast")],
+        9: [V("acbrat", "if(acbrat < 0.2, 0.25, if(acbrat < 0.4, 0.5, 0))"), Send("ac-brattoast")],
+        10: [V("acbghost", "if(acbghost < 0.2, 0.3, if(acbghost < 0.5, 0.6, 0))"), Send("ac-bghosttoast")],
+        11: [V("acbrub", "if(acbrub > 0.5 && acbrub < 1.5, 0, if(acbrub < 0.5, 2.5, 1))"), Send("ac-brubtoast")],
+    }
+    proc(c, "ac-bop", [If(f"acrsel == {k}", st) for k, st in bops.items()])
     Line("ac-brhytoast", "list bells $1", [("s", "acbrsel", ["auto"] + [n for n, _ in BELL_RHYTHMS])], "ac-toast")(c)
+    Line("ac-bharmtoast", "list bells harmony $1", [("s", "acbharm", ["off", "3rds", "6ths", "5ths"])], "ac-toast")(c)
+    Line("ac-brattoast", "list bells ratchets $1%", [("f", "int(acbrat*100)")], "ac-toast")(c)
+    Line("ac-bghosttoast", "list bells ghosts $1%", [("f", "int(acbghost*100)")], "ac-toast")(c)
+    Line("ac-brubtoast", "list bells rubato $1", [("s", "if(acbrub < 0.5, 0, if(acbrub < 1.5, 1, 2))",
+                                                       ["strict", "normal", "loose"])], "ac-toast")(c)
     return c
 
 
@@ -419,6 +478,10 @@ def section():
         RNG,
         X("12*(1 + int(acr1*2)); (0.08 + acr2*0.25)*acrhythm; (acrole==3 || acrole==4) && acr3 < 0.6",
           "v acmoct", "v acmswing", "v acgdlock"),
+        # (the piece's own pattern kept; yours - top E held + low keys - over it)
+        X("acmk; acmn; acmrot; acmswing", "v acmpk", "v acmpn", "v acmprot", "v acmpsw"),
+        If("acmuser", [X("acmuk; acmun; acmurot", "v acmk", "v acmn", "v acmrot")]),
+        If("acmusw >= 0", [V("acmswing", "acmusw")]),
         # key plan: move to this section's key area at the next chord change
         If("acmode==1 && ackeyc == 0", [V("acpend", "if(((int(actonic)-36) % 12) != ((int(achome)-36 + int(ackeyp[int(acsec)])) "
                                      "% 12 + 12) % 12, ((int(achome)-36 + int(ackeyp[int(acsec)])) % 12 + 12) % 12, "
@@ -456,7 +519,9 @@ def section():
         Later("ac-scr", 97),
         Send("ac-led"),
     ]
-    proc(c, "ac-section", [If("acmode==1 && acsec>=acnsec", [Call("ac-fin")], rest)])
+    # (MEMORY: the section's kept knobs, once its own settings are in)
+    proc(c, "ac-section", [If("acmode==1 && acsec>=acnsec", [Call("ac-fin")],
+                              rest + [If("acmemon", [Later("ac-memrecall", 30)])])])
     # the pad types of the 4 voices: the piece's palette, or SETUP SOUNDS (raw = the first demos' dry, buzzy types:
     # vox, partials, fold, pulsar; or one type for all four voices)
     steps = []
@@ -506,6 +571,7 @@ def section():
     proc(c, "ac-start", [If("acstopped", [
         If("acready", [Toast("start - playing")], [Toast("playing again")]),
         Call("ac-wakeup"),
+        V("acclkcont", "acready == 0"),         # (resuming: MIDI Continue; a piece from its start: Start)
         X("0; 1; 0", "v acstopped", "v acrun", "v acready"),
         SendL("ac-master", ["0.62 + 0.38*acenergy", "2500"]),
         Arm("ac-nextsec", "acsecrem", stop="ac-secstop"),
@@ -719,11 +785,25 @@ def rhythm():
             V("acmai", "((int(if(acmarp==0, acmai+1, if(acmarp==1, acmai-1, if(acmarp==2, acr1*4, "
                        "acmai + if(acr1<0.5, 1, -1))))) % 4) + 4) % 4"),
             V("acmp", "acnew[int(acmai)] + acmoct"),
-            SendL("ac-mnote", ["if(acmp>100, acmp-12, acmp)",
-                               "if(int(acms) % int(acmn) == 0, 1, 0.5 + acr2*0.3)",
-                               "(int(acms) % 2 == 1)*acmswing*15000/acbpm*acmdiv + acr3*14*acrhythm",
-                               "min(0.97, max(0.03, acscn[int(acscene)*10 + 6] + acscn[int(acscene)*10 + 7]*(acmai/3 - 0.5)"
-                               " + (acr4 - 0.5)*0.12))"]),
+            V("acmp", "if(acmp>100, acmp-12, acmp)"),
+            X("if(int(acms) % int(acmn) == 0, 1, 0.5 + acr2*0.3); "
+              "(int(acms) % 2 == 1)*acmswing*15000/acbpm*acmdiv + acr3*14*acrhythm; "
+              "min(0.97, max(0.03, acscn[int(acscene)*10 + 6] + acscn[int(acscene)*10 + 7]*(acmai/3 - 0.5)"
+              " + (acr4 - 0.5)*0.12))", "v acmv", "v acmdl", "v acmpan"),
+            SendL("ac-mnote", ["acmp", "acmv", "acmdl", "acmpan"]),
+            # harmony (top E held + G#): the next chord tones above, in the piece's key and scale
+        ] + [If(cond, [V("acmh", f"acmp + ((int(acnew[int((acmai + {k}) % 4)]) - int(acmp)) % 12 + 12) % 12"),
+                       V("acmh", "if(acmh == acmp, acmh + 12, acmh)"), V("acmh", "if(acmh > 103, acmh - 12, acmh)"),
+                       SendL("ac-mnote", ["acmh", "acmv*0.6", "acmdl", "1 - acmpan"])])
+             for k, cond in ((1, "acmharm == 1 || acmharm == 3"), (2, "acmharm == 2 || acmharm == 3"))] + [
+            # ratchets: a repeat half a step later
+            If("acmrat > 0", [RNG, If("acr1 < acmrat", [
+                SendL("ac-mnote", ["acmp", "acmv*0.55", "acmdl + 7500/acbpm*acmdiv", "acmpan"])])]),
+        ], [
+            # ghost notes: soft notes on the rests
+            If("acmghost > 0", [RNG, If("acr1 < acmghost", [
+                V("acmh", "acnew[int(acr2*4)] + acmoct"),
+                SendL("ac-mnote", ["if(acmh > 100, acmh - 12, acmh)", "0.15 + acr3*0.1", "acr4*14*acrhythm", "acr3"])])]),
         ]),
     ])])
     return c
@@ -857,9 +937,21 @@ def players():
     c = Canvas("players", w=2400)
     c.comment("Event players: bell motif, rain drops, creature chirps, input onsets")
     bellp = f"{deg2p('acdeg + acmotif[int(acbi)]')} + 24"
+    hoff = "if(acbharm == 1, 2, if(acbharm == 2, 5, 4))"     # harmony: a 3rd, a 6th or a 5th up the scale
     play = [V("acbp", bellp), V("acbp", "if(acbp<67, acbp+12, if(acbp>96, acbp-12, acbp))"),
-            SendL("ac-bell", ["acbp", "0.35+0.65*acr2", "min(0.97, max(0.03, acscn[int(acscene)*10 + 4] + "
-                                                     "acscn[int(acscene)*10 + 5]*(acr3 - 0.5)))"])]
+            X("0.35+0.65*acr2; min(0.97, max(0.03, acscn[int(acscene)*10 + 4] + acscn[int(acscene)*10 + 5]*(acr3 - 0.5)))",
+              "v acbv", "v acbpan"),
+            SendL("ac-bell", ["acbp", "acbv", "acbpan"]),
+            If("acbharm > 0", [V("acbh", f"{deg2p(f'acdeg + acmotif[int(acbi)] + {hoff}')} + 24"),
+                               V("acbh", "acbp + ((int(acbh) - int(acbp)) % 12 + 12) % 12"),
+                               V("acbh", "if(acbh == acbp, acbh + 12, acbh)"),
+                               SendL("ac-bell", ["acbh", "acbv*0.6", "1 - acbpan"])]),
+            If("acbrat > 0", [RNG, If("acr1 < acbrat", [Arm("ac-bratch", "110 + acr2*70", stop="ac-playstop")])])]
+    proc(c, "ac-bratch", [If("acrun", [SendL("ac-bell", ["acbp", "acbv*0.5", "acbpan"])])])
+    proc(c, "ac-bghost", [If("acgbell > 0.01 && acrun", [
+        RNG, V("acbgp", f"{deg2p('acdeg + acmotif[int(acr1*5)]')} + 24"),
+        V("acbgp", "if(acbgp<67, acbgp+12, if(acbgp>96, acbgp-12, acbgp))"),
+        SendL("ac-bell", ["acbgp", "0.12 + acr2*0.1", "acr3"])])])
     proc(c, "ac-btick", [
         If("acgbell > 0.01 && acrun && (acroute != 3 || acnow - aclnt > 8000)", [
             RNG,
@@ -868,7 +960,12 @@ def players():
             If("acbi==0 && acr3<0.6", [RNG, T("acmotif", "int(acr1*5)", "acmotif[int(acr1*5)] + int(acr2*5) - 2")]),
         ]),
         RNG,
-        Arm("ac-btick", f"(60000/{BPMH}) * acmrhy[int(acbi)] * (1 + int(acr4*3)) * (1.6 - 0.7*acdeff) * (0.9 + acr1*0.2)", stop="ac-playstop"),
+        # (rubato: top D# held + B - 0 strict, 1 as always, 2.5 loose)
+        V("acbint", f"(60000/{BPMH}) * acmrhy[int(acbi)] * (1 + int(acr4*3)) * (1.6 - 0.7*acdeff) * (1 + (acr1 - 0.5)*0.2*acbrub)"),
+        Arm("ac-btick", "acbint", stop="ac-playstop"),
+        # ghost notes: a soft one between the strikes
+        If("acbghost > 0 && acgbell > 0.01 && acrun", [RNG, If("acr1 < acbghost", [Arm("ac-bghost", "acbint*0.5",
+                                                                                      stop="ac-playstop")])]),
     ])
     proc(c, "ac-bellnow", [If("acmbell && acrun", [RNG] + play + [V("acbi", "(acbi+1) % 5")])])
     proc(c, "ac-rtick", [

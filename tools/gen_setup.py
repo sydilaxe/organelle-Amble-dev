@@ -1,4 +1,4 @@
-"""SETUP (hold aux 1 s, or aux + a low key for that page): 21 pages of 4 rows, each row set by its knob.
+"""SETUP (hold aux 1 s, or aux + a low key for that page): 22 pages of 4 rows, each row set by its knob.
 
 Where things are:
   the choices of each row        constants below (SPADS, SFORMS, SMORPH ...), next to a comment naming the page
@@ -13,13 +13,13 @@ from gen_oled import Fill, FLIP, gated_text
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
-               acrtb=0, acoutroot=-1, acclkon=0, actrange=0,
+               acrtb=0, acoutroot=-1, acclkon=0, acclkcont=0, actrange=0,
                acmparts=0, acarpoct=48, acoutbass=-1, acload=0, acloadtest=0, acshedt=0, acldraw=0, acguard=1,
                ackeyc=0, acsclc=0, acchdc=0, acpulc=2, acroute=0, acbrto=0, acpressto=1, acccsel=0, aclastcc=0, aclastv=0, acvibr=5.5,
                acmap0=2, acmap1=1, acmap2=1, acmap3=1, acmap4=6, acmap5=0, acmap6=3, acsbell=0, acsmot=0, acglide=5, acmodesel=0, acssub=0, acsform=0, acstempo=0, acsmeter=0, acsatm=0, acnsx=0, acchx=0, acslot=0, acslotfull=0, acsvp49=1, acsvp50=1, acsvpp=1, acsetpgl=-1, acmixcc=0, acpgm=0, aclfd=1, acsfd=2,
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
-               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1)
+               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0)
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
@@ -40,10 +40,14 @@ PARTS = ["all", "harmony", "arp only"]
 # SETUP page 4, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
 SGUARD = ["off", "on", "off + log", "on + log"]
 OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everything else right (mono stems)
-NSET = 21                                  # SETUP pages
+NSET = 22                                  # SETUP pages
 SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
                "SECTIONS", "SECTION MIX", "SAVES", "LIVE", "RECALL", "GROOVE", "MACRO A", "MACRO B", "JOURNEY",
-               "COLOUR", "CC OUT"]
+               "COLOUR", "CC OUT", "MEMORY"]
+# SETUP page 22, MEMORY: with Memory on, the knobs you turn in a section are kept for it (acsnapt / acsnapv, a
+# value per section and knob); when that section comes again they glide back over Glide. Saved with the piece.
+SMEMG = [("cut", 0), ("2 s", 2000), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000)]
+NSNAP = 12                                  # sections remembered (a DRIFT piece's sections take them in turn)
 # quick pages, past SETUP's (aux taps do not reach them; aux leaves them): CHORD (low A held) and one page for
 # each layer (aux + its top key): its sound, in / out / auto, its level and its reverb send
 LAYER_PAGES = [("DRONE", "acmdrone", "acsdrone", "acmxd", "acsndd"), ("SUB", "acmsub", "acssub", "acmxs", None),
@@ -149,9 +153,17 @@ SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("ac
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
               ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
               ("acmeisel", 0), ("acbrsel", 0), ("acsubt", 0)] + \
-             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))]
+             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))] + \
+             [("acmemon", 0), ("acmemg", 2)] + \
+             [(n, d) for n, d in (("acmuser", 0), ("acmuk", 3), ("acmun", 8), ("acmurot", 0), ("acmusw", -1),
+                                  ("acmghost", 0), ("acmrat", 0), ("acmharm", 0), ("acbuser", 0), ("acbru0", 1),
+                                  ("acbru1", 1), ("acbru2", 1), ("acbru3", 1), ("acbru4", 1), ("acbghost", 0),
+                                  ("acbrat", 0), ("acbrub", 1), ("acbharm", 0))]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
-SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
+# then the section memory (MEMORY): a line saved before it lacks it, and it loads empty
+SAVE_TAIL = [("acsnapt", NSNAP * len(KNOBS)), ("acsnapv", NSNAP * len(KNOBS))]
+SAVE_TAIL_AT = SAVE_EXTRA_AT + len(SAVE_EXTRA)
+SAVE_LEN = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
 SOUND_ONLY = set(KNOBS) | {"acspad", "acsdrone", "acstex", "acschar", "acsbell", "acsmot", "acglide", "acssub",
                           "acsatm"} | {"acm" + n for n in ("drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud")} \
@@ -203,6 +215,7 @@ SCCRATE = [("2 Hz", 500), ("5 Hz", 200), ("10 Hz", 100)]
 CC_OUT = ["drone", "sub", "pads", "bells", "motion", "textures", "atmos", "cloud", "energy", "density",
           "brightness", "to chord", "section", "reverb", "pad drift", "swell"]
 ARRAYS["acsavebuf"] = SAVE_LEN
+ARRAYS.update({n: k for n, k in SAVE_TAIL})
 ARRAYS["acsetbuf"] = len(SETTINGS) - 12
 ARRAYS["acslotbuf"] = SAVE_LEN
 GLIDE_X = "if(acglide == 0, 0, if(acglide == 1, 0.05, if(acglide == 2, 0.15, if(acglide == 3, 0.3, if(acglide == 4, 0.6, 1)))))"
@@ -388,6 +401,12 @@ def setup_pages():
             ("list 3 From CC $1", [("f", _pick("acccbase", list(enumerate(SCCBASE))))]),
             ("list 4 Rate $1", [("s", "acccrate", [n for n, _ in SCCRATE])]),
         ]),
+        ("MEMORY", [
+            ("list 1 Memory $1", [("s", "acmemon", ["off", "on"])]),
+            ("list 2 Glide $1", [("s", "acmemg", [n for n, _ in SMEMG])]),
+            ("list 3 Clear sec $1 - up", [("f", f"int(acsec) % {NSNAP} + 1")]),
+            ("list 4 Clear all - turn up", None),
+        ]),
     ]
 
 
@@ -514,7 +533,7 @@ def setup():
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
         return f"{item} == {SETUP_NAMES.index(page) * 4 + row - 1}"
     run_steps(c, (tb, 0), [
-        If("acsetpg != acsetpgl", [X("1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsetpgl")]),
+        If("acsetpg != acsetpgl", [X("1; 1; 1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsvpm3", "v acsvpm4", "v acsetpgl")]),
         If(at("GENERAL", 1), [V("acmout", "int(acsv*3.99)"), If("acmout == 0 || acmout == 3", [Call("ac-clockstop")],
                                                                [Call("ac-clockstart")]),
                             If("acmout < 2", [Call("ac-notesoff")], [Call("ac-outchord")])]),
@@ -633,6 +652,11 @@ def setup():
         If(at("COLOUR", 4), [V("acsparko", f"int(acsv*{len(SSPARKO) - 0.01})")]),
         If(at("SAVES", 4), [V("acsname", f"int(acsv*{len(NAME_WORDS) - 0.01})")]),
         # CC OUT
+        # MEMORY: on / off, the glide; knob 3 fully up clears the playing section's memory, knob 4 all of it
+        If(at("MEMORY", 1), [V("acmemon", "acsv > 0.5")]),
+        If(at("MEMORY", 2), [V("acmemg", f"int(acsv*{len(SMEMG) - 0.01})")]),
+        If(at("MEMORY", 3), [If("acsv > 0.9 && acsvpm3 <= 0.9", [Call("ac-memclear")]), V("acsvpm3", "acsv")]),
+        If(at("MEMORY", 4), [If("acsv > 0.9 && acsvpm4 <= 0.9", [Call("ac-memclearall")]), V("acsvpm4", "acsv")]),
         If(at("CC OUT", 1), [V("acccout", "acsv > 0.5")]),
         If(at("CC OUT", 2), [V("acccch", "1 + int(acsv*15.99)")]),
         If(at("CC OUT", 3), [V("acccbase", "int(acsv*3.99)")]),

@@ -54,7 +54,7 @@ The layers and their rhythms:
   - low G: hold for **Root** and press a key, play a MIDI note or turn knob 1;
   - low A chord change now (hold it: the **CHORD** page, to pick the next chord), A# **Resolve** (the tonic as open fifths, held),
     B next section (hold it: hold section);
-  - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, drive, width; aux: the layer's page - its sound, in / out / auto, level and reverb send; aux and E (motion) or D# (bells) held, a low key picks one of 12 rhythms); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
+  - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, drive, width; aux: the layer's page - its sound, in / out / auto, level and reverb send; E (motion) or D# (bells) held, the low keys change the rhythm - randomize, rotate, more or fewer hits, cycle length, harmony in the key, ratchets, ghost notes, swing or rubato); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
   - aux + a low key opens that SETUP page.
 - **Your own form:** SETUP FORM, SECTIONS and SECTION MIX build a piece section by section: roles, lengths, pad
@@ -64,7 +64,7 @@ The layers and their rhythms:
 - **Performing:** a PERFORM knob page (low F) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
   other relationships drift in); ANCHOR (aux + top A) to come back to a sound; quick save and recall (hold top B
   and press a key), COMPARE (hold top B), loads that morph in; factory pieces in empty slots 1-6; JOURNEY (the
-  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT.
+  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP 22): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again.
 - **Two screens:** the play view (the chord now and the next one coming, a live score, the voices that sound) and
   the MIX view (levels and sends, the column you turn framed with its value), which takes over while a MIX or
   SENDS page is open.
@@ -117,7 +117,7 @@ emulator, so the font only approximates the Organelle's.
 Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 hold, 71 off, 74 voice tone. Row 3 shows the last CC that arrived, to find what your controller sends.
 
 **MIDI out** (SETUP page 1): off, **tempo only** (clock), **tempo + notes**, or **notes only**.
-- **Clock:** 24 ticks a beat at the piece's tempo (following the form's tempo changes), with Start and Stop
+- **Clock:** 24 ticks a beat at the piece's tempo (following the form's tempo changes), with Start, Stop and Continue (Continue when a stopped piece plays on)
   at the start and end of a piece.
 - **Notes**, so external synths and arpeggiators follow the composition. Each part has its own channel,
   counted from the MIDI out channel (wrapping after 16):

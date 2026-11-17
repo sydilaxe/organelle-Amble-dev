@@ -120,8 +120,11 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
         page (sound, tone, drive, width); aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
-        3 its level, 4 its reverb send; aux leaves. Aux + E (motion) or
-        D# (bells) held, + a low key C..B: its rhythm (again: auto)
+        3 its level, 4 its reverb send; aux leaves. E (motion) or D#
+        (bells) held + low keys: C random, C# the piece's own, D/D# rotate,
+        E/F more/fewer hits (bells: denser/sparser), F#/G longer/shorter
+        cycle (bells: next/previous named rhythm), G# harmony in the key,
+        A ratchets, A# ghost notes, B swing (bells: rubato)
   G#  input mode: auto / reso / cloud / tape / ghost / bands / vocode /
       morph; hold: the INPUT page (mode, In, Follow you, reverb send);
       aux: capture 8 s of input (cloud + a memory)
@@ -183,6 +186,7 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
 1 s to leave, save)
   1 MIDI out   off / tempo only / tempo+note / notes only
      tempo: MIDI clock, 24 a beat at the piece's tempo, Start/Stop with it
+     (Continue when a stopped piece plays on)
      notes, by channel from the base channel (page 2):
        base  the chord as voiced (held)     +1  the tonic (held)
        +2    bells                          +3  the motion arpeggio
@@ -289,6 +293,10 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 21, CC OUT: 16 CCs of what moves inside (layer levels, energy,
   density, brightness, the way to the next chord ...), Channel, From CC,
   Rate
+  page 22, MEMORY: Memory on keeps the knobs you turn in each section;
+  when the section comes again (the piece replayed, or loaded from its
+  slot) they glide back over Glide; Clear sec / Clear all (turn up).
+  Saved with the piece; a new piece starts with an empty memory
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
 lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,

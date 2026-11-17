@@ -5,7 +5,7 @@ SWELL, DUCK, PUMP, the JOURNEY of the layers through their engines, and CC OUT.
 Ideas from Frasil (Styves Goupil, MPL-2.0): ANCHOR, MORPH, COMPARE, SINK / BLUR / SWELL, PUMP, the drone's
 layers; and from TrimFX: the macros (one control moving two settings, offset or latch), ducking under the player.
 Nothing of their code is used here."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, Toast, Later
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, Toast, Later, Line
 from data import NK, DRONES, STRIKES, FLAVOURS
 import gen_setup as S
 
@@ -125,6 +125,19 @@ def perform():
     proc(c, "ac-anchortap", [If("acancs", [Call("ac-anchorgo")], [Call("ac-anchorset")])])
     proc(c, "ac-anchorgo", [Loop(str(NK), "aci", [T("acmto", "aci", "acanc[int(aci)]")]), Call("ac-verbcut")]
          + layers_from("acancm") + [V("acmdur", ANCG_MS), Call("ac-morphgo"), Toast("back to anchor")])
+    # ---- MEMORY (SETUP 22): a section's kept knobs glide back when it comes again (the others stay as they are)
+    from gen_setup import NSNAP, SMEMG, _pick as _spick
+    snap = f"acmsi*{NK} + aci"
+    proc(c, "ac-memrecall", [X(f"int(acsec) % {NSNAP}; 0", "v acmsi", "v acmemk"),
+                             Loop(str(NK), "aci", [T("acmto", "aci", f"if(acsnapt[int({snap})], acsnapv[int({snap})], acparams[int(aci)])"),
+                                                   V("acmemk", f"acmemk + acsnapt[int({snap})]")]),
+                             If("acmemk > 0", [Call("ac-verbcut"), V("acmdur", _spick("acmemg", SMEMG)), Call("ac-morphgo"),
+                                               Send("ac-memsay")])])
+    Line("ac-memsay", "list memory: section $1", [("f", "acmsi + 1")], "ac-toast")(c)
+    proc(c, "ac-memclear", [V("acmsi", f"int(acsec) % {NSNAP}"), Loop(str(NK), "aci", [T("acsnapt", snap, "0")]),
+                            Send("ac-memclsay")])
+    Line("ac-memclsay", "list memory cleared: section $1", [("f", "acmsi + 1")], "ac-toast")(c)
+    proc(c, "ac-memclearall", [Loop(str(NSNAP * NK), "aci", [T("acsnapt", "aci", "0")]), Toast("memory cleared")])
     # ---- the slot as loaded or saved (COMPARE's, and the changed dot's)
     proc(c, "ac-basesetto", [Loop(str(NK), "aci", [T("acbase", "aci", "acmto[int(aci)]")])]
          + [T("acbasem", j, n) for j, n in enumerate(L8)] + [X("1; 0", "v acbases", "v acchanged")])
