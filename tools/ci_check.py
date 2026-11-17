@@ -412,7 +412,7 @@ check(all(c[2] > -45 for c in cents), "every character keeps the pads audible")
 check(cents[1][1] < 0.9, f"chorus widens the pads (L/R {cents[1][1]:.2f})")
 rot, dim_ = cents[CHARACTERS.index("rotor")], cents[CHARACTERS.index("dim")]
 check(rot[1] < 0.95 and dim_[1] < 0.95, f"rotor and dimension widen the pads (L/R {rot[1]:.2f}, {dim_[1]:.2f})")
-check(min(abs(c[0] - cents[0][0]) for c in cents[2:]) > 50, "tape, ring and crush change the colour " +
+check(min(abs(c[0] - cents[0][0]) for c in cents[2:5]) > 50, "tape, ring and crush change the colour " +
       str([int(c[0]) for c in cents]))
 
 

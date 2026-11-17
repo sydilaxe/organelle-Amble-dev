@@ -9396,7 +9396,7 @@
 #X obj 250 3428 expr acmgt*acsltex*acgt14 \; acfade;
 #X obj 250 3452 pack f f;
 #X obj 250 3476 s ac-g-tex14;
-#X obj 250 3500 expr max(acgtex*((actex1==15) || (actex2==15)) \, (acctr*acwrite)*0.8*min(1 \, acgpad*3)*(1 - acended)*(acshed < 2));
+#X obj 250 3500 expr max(acgtex*((actex1==15) || (actex2==15)) \, (acctr*acwrite)*(acetex > 0)*0.8*min(1 \, acgpad*3)*(1 - acended)*(acshed < 2));
 #X obj 250 3524 v acgt15;
 #X obj 250 3548 expr acmgt*acsltex*acgt15 \; acfade;
 #X obj 250 3572 pack f f;

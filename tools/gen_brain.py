@@ -716,7 +716,8 @@ def layers():
     for i in range(len(TEXTURES)):
         steps += [V(f"acgt{i}", f"acgtex*((actex1=={i}) || (actex2=={i}))" if i != 15 else
           # (the song's voice also sings the counter-melody: ARC Counter, while the pads play)
-          "max(acgtex*((actex1==15) || (actex2==15)), (acctr*acwrite)*0.8*min(1, acgpad*3)*(1 - acended)*(acshed < 2))"),
+          # (and only while the textures are in: their key out silences it too)
+          "max(acgtex*((actex1==15) || (actex2==15)), (acctr*acwrite)*(acetex > 0)*0.8*min(1, acgpad*3)*(1 - acended)*(acshed < 2))"),
                   SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
     proc(c, "ac-layers", steps)
     # a MIX knob: the levels follow while it turns - an update 20 ms after the first change, each gliding over 25 ms
