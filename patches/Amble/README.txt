@@ -317,6 +317,9 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   Register (spaced)
   page 28, WRITING: Writing (still: the static, droning piece; moving),
   Pads carry (the motif), Drone level (subtle), Ending (by phrase)
+  page 29, ARC: Rhythm (shared: the motion on the bells' rhythm), Arc
+  (dynamics and tension over the phrase), Bass (a dominant pedal before
+  the return; a ground bass), Counter (the song voice sings the motif)
   A feature the scale can't carry (no 5th, not 12-tone, pentatonic for
   the dominants) steps aside.
 
