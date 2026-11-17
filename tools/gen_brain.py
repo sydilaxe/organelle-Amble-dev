@@ -17,7 +17,7 @@ GLOBALS = dict(
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
-    acmxq=0, acsgms=200, acsubt=0, acshdt=0.5, acshdd=0, acshdw=0.5, acshst=0.5, acshsd=0, acshsw=0.5, acshpt=0.5, acshpd=0, acshpw=0.5, acshbt=0.5, acshbd=0, acshbw=0.5, acshmt=0.5, acshmd=0, acshmw=0.5, acshtt=0.5, acshtd=0, acshtw=0.5, acshat=0.5, acshad=0, acshaw=0.5, acshct=0.5, acshcd=0, acshcw=0.5, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
+    acmxq=0, acsgms=200, acsubt=0, acsleep=0, acshdt=0.5, acshdd=0, acshdw=0.5, acshst=0.5, acshsd=0, acshsw=0.5, acshpt=0.5, acshpd=0, acshpw=0.5, acshbt=0.5, acshbd=0, acshbw=0.5, acshmt=0.5, acshmd=0, acshmw=0.5, acshtt=0.5, acshtd=0, acshtw=0.5, acshat=0.5, acshad=0, acshaw=0.5, acshct=0.5, acshcd=0, acshcw=0.5, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
     acfdrone=1, acfpad=1, acftex=1, acfcloud=1, acfbell=1, acfmotion=0, actex1=0, actex2=1, actexA=0, actexB=1,
     acpal1=0, acpal2=1, acpal3=3, acpartI=0, acbellI=0, acsecbright=0.8, actidef=1, acpow=1,
     acpsum=1, acfirst=1, acmodflag=0, acD=0, acp0=0, acp1=0, aci=0, acchg=0, acfade=8000,
@@ -268,8 +268,15 @@ def piece():
     proc(c, "ac-readystop", [If("acready", [
         X("1; 0; acsecdur*actime", "v acstopped", "v acrun", "v acsecrem"),
         Send("ac-master", "0 0"), Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
-        Call("ac-scr"), Send("ac-led"),
+        Call("ac-scr"), Send("ac-led"), Arm("ac-sleep", "1000", stop="ac-wake"),
     ])])
+    # asleep: stopped, and the fade (8 s) and the reverb's tail are done - the layers, the pads' character and the
+    # reverb switch off, so nothing computes in the silence (a performance log showed the same 36 % load stopped as
+    # playing); Start wakes them under its fade-in. (Not during the profile, which plays parts while stopped.)
+    proc(c, "ac-sleep", [If("acstopped && acprof == 0 && acsleep == 0", [
+        V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel")])])
+    proc(c, "ac-wakeup", [Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
+                                                           Call("ac-verbsel")])])
     proc(c, "ac-newkey", [If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
     # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
@@ -494,9 +501,11 @@ def section():
         Send("ac-master", "0 8000"),            # a long fade: the sound and its reverb die away slowly
         Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
         Toast("stopped - A# to start"), Call("ac-scr"), Send("ac-led"), If("aclogon", [Send("ac-logwrite")]),
+        Arm("ac-sleep", "12000", stop="ac-wake"),
     ])])
     proc(c, "ac-start", [If("acstopped", [
         If("acready", [Toast("start - playing")], [Toast("playing again")]),
+        Call("ac-wakeup"),
         X("0; 1; 0", "v acstopped", "v acrun", "v acready"),
         SendL("ac-master", ["0.62 + 0.38*acenergy", "2500"]),
         Arm("ac-nextsec", "acsecrem", stop="ac-secstop"),
@@ -544,7 +553,8 @@ def layers():
     # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP page 12)
     steps = [V(f"ace{n}", f"if(acm{n} != 1, acm{n}, if(acsx{n} == 1, 0, if(acsx{n} == 2, 2, 1)))") for n in SEC_LAYERS]
     # the MIX knobs as gains (data.level: even dB steps; 50 % = x1)
-    steps += [V(f"acmg{x}", level(f"acmx{x}")) for x in "dspbmtca"]
+    # (asleep - stopped, after the fade - every layer is off, so its subpatch stops computing)
+    steps += [V(f"acmg{x}", f"({level(f'acmx{x}')})*(1 - acsleep)") for x in "dspbmtca"]
     steps += [V("acdeff", "min(1, 0.45*acswell + if(acmode==1, acenergy*(0.35+1.3*acdens), acdens*(0.8+0.4*acenergy)) + 0.35*acbreath*"
                              "(acbrto == 0 || acbrto == 2))")]
     for name, e in lay:
@@ -570,7 +580,7 @@ def layers():
     steps += [SendL(f"ac-g-atm{i}", [f"acmga*acslatm*acgatm*(acatmcur=={i})", "acfade*1.5"]) for i in range(len(ATMOS_NAMES))]
     # the pad character: SETUP SOUNDS, else none for raw pads, else the piece's
     steps += [V("accheff", "if(acschar > 0, acschar - 1, if(acspad == 1, 0, acchar))")]
-    steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 2)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)", "acfade"])
+    steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 2)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)*(1 - acsleep)", "acfade"])
               for i in range(1, len(CHARACTERS))]
     steps += [SendL("ac-chdry", ["1 - (acshed < 2)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt)", "acfade"])]
     for i in range(len(TEXTURES)):
@@ -644,8 +654,8 @@ def verb():
     tsec = "((1.5 + 28.5*pow(acrvtime, 1.5)) * if(acrole==4, 1.5, if(acrole==7, 1.4, 1)) * (1 + 1.5*acblur))"
     proc(c, "ac-verbsel", [
         V("acvtype", "if(acrvtype < 0.2, acvsec, 1 + min(3, int((acrvtype-0.2)/0.2)))"),
-        SendL("ac-g-rvb", ["acvtype==1 || acvtype==2", "2500"]),
-        SendL("ac-g-rvh", ["acvtype>=3", "2500"]),
+        SendL("ac-g-rvb", ["(acvtype==1 || acvtype==2)*(1 - acsleep)", "2500"]),
+        SendL("ac-g-rvh", ["(acvtype>=3)*(1 - acsleep)", "2500"]),
         SendL("ac-shim", ["(acvtype==4)*0.3", "3000"]),
         Call("ac-revupd"),
     ])

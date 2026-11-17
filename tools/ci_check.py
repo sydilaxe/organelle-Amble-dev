@@ -608,6 +608,11 @@ check(cases[0] in (["cloud in"], ["cloud out"]) and len(cases[1]) == 2 and cases
       and cases[2] == [] and cases[3] == ["freeze: verb + cloud"]
       and cases[4] == ["freeze: verb + cloud", "freeze released"],
       f"top G = cloud in / out, aux + top G = its page (no toast), top A = Freeze, again = released ({cases})")
+# asleep: stopped, after the fade, the layers and the reverb switch off (nothing computes in the silence);
+# Start wakes them
+log, _ = run([(50, "ac-setseed 7"), (3000, "ac-stop bang"), (20000, "ac-startstop bang")], 24, prints=("ac-g-rvb",))
+rv = [l.split()[1] for l in log.splitlines() if l.startswith("ac-g-rvb")]
+check(rv[-2:] == ["0", "1"], f"stopped, the reverb (and the layers) sleep after the fade; Start wakes them ({rv})")
 mt = toasts([(40, "acsync 1"), (2000, "ac-rtin 252"), (4000, "ac-rtin 250")])
 check("stopped - A# to start" in mt and "playing again" in mt, "following a clock: MIDI Stop / Start stop and start")
 
