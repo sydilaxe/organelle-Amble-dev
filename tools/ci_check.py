@@ -12,7 +12,7 @@ import numpy as np
 import gen_setup as GS
 import gen_ui as U
 from harness import run, errors, rms_db, SR, build_tmp
-from data import FLAVOURS
+from data import FLAVOURS, INMODES
 
 fails = []
 
@@ -1024,7 +1024,8 @@ check("ac-sett0: list CHORD" in seg[1] and len(set(picks)) >= 2 and picks and no
       f"({pickb} -> {nows4}), aux leaves")
 # aux + a layer key: its page; knob 2 (Play) in / out / auto; knob 1 its sound
 log, _ = run([(50, "ac-setseed 7"), (2000, "aux 1"), (2050, "notesRaw 76 100"), (2100, "notesRaw 76 0"), (2200, "aux 0"),
-              (2500, "knob2 0.9"), (3000, "knob1 0.3"), (3500, "knob2 0.01"), (4000, "aux 1"), (4050, "aux 0")], 5,
+              (2500, "knob2 0.9"), (3000, f"knob1 {(GS.SMOTS.index('fm') + 0.5) / len(GS.SMOTS):.3f}"), (3500, "knob2 0.01"),
+              (4000, "aux 1"), (4050, "aux 0")], 5,
              prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-toast"))
 check("ac-sett0: list MOTION" in log and "ac-sett2: 2 Play in" in log and "ac-sett2: 2 Play out" in log
       and "ac-sett1: 1 Sound fm" in log and "ac-toast" not in log,
@@ -1094,7 +1095,8 @@ check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150
 
 # top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
-              (2800, "notesRaw 80 0"), (3000, "knob1 0.8"), (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
+              (2800, "notesRaw 80 0"), (3000, f"knob1 {(INMODES.index('vocode') + 0.5) / len(INMODES):.3f}"),
+              (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
              prints=("ac-sett0", "ac-sett1", "ac-sett3"))
 ts = [t for t in (l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")) if not t.startswith("hold:")]
 check(ts == ["input reso"] and "ac-sett0: list INPUT" in log and "ac-sett1: 1 Mode vocode" in log
