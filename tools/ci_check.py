@@ -662,8 +662,8 @@ vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick and SETUP DISPLAY joined)
-check(len(vals) == len(GS.SETTINGS) == 123 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE and DIALOGUE joined)
+check(len(vals) == len(GS.SETTINGS) == 139 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1460,6 +1460,111 @@ pd_ = sorted({l.split("Pre-delay ")[1] for l in mir.splitlines() if "Pre-delay" 
 check("list COLOUR aux: back" in mir and "200 ms" in pd_,
       f"low D held: the COLOUR page as a quick page, knob 1 sets its Pre-delay ({pd_})")
 check(len(leds) >= 6 and {l.split()[1] for l in leds} >= {"0"}, f"LED beat: the LED blinks with the bed ({len(leds)} changes in 3 s)")
+
+# 77. how the piece writes (SETUP LINES, HARMONY, PHRASE, DIALOGUE): each one does what it says; all off, a piece
+#     plays as before (checked against the build before them when they came); saved with a piece, an older line
+#     loads them off
+def chprobe(c):
+    # each chord as it sounds: its name, the key, the scale, the degree, a secondary dominant, the 4 pad voices
+    ex = ["acchn", "actonic", "acsci", "acdeg", "acsdnow", "acch[0]", "acch[1]", "acch[2]", "acch[3]"]
+    e = c.ch(c.obj("r ac-flash", 1400, 0), "t b", "expr " + "; ".join(ex))
+    pk = c.obj("pack " + " ".join(["f"] * len(ex)), 1400, 60)
+    for i in range(len(ex) - 1, -1, -1):
+        c.c(e, i, pk, i)
+    c.c(pk, 0, c.obj("print CH", 1400, 80), 0)
+import os
+k = lambda i, n: (i + 0.5) / n
+d = build_tmp()
+W = ("ac-bell", "ac-mnote", "ac-dronep")
+def wr(sets, secs=150, seed=11, ev=()):
+    log, _ = run([(10, "actide 0"), (10, "acmbell 2"), (10, "acmmotion 2")] + [(20, f"{n} {v}") for n, v in sets]
+                 + [(50, f"ac-setseed {seed}")] + list(ev), secs, prints=W, d=d, extra=chprobe)
+    L = log.splitlines()
+    i = max(k for k, l in enumerate(L) if l.startswith("ac-setseed"))     # (the seeded piece, not the start-up one)
+    L = L[i:]
+    ch = [[float(x) for x in l.split(":", 1)[1].split()] for l in L if l.startswith("CH:")]
+    nt = lambda w: [[float(x) for x in l.split(":", 1)[1].split()] for l in L if l.startswith(w + ":")]
+    return log, ch, nt("ac-bell"), nt("ac-mnote"), nt("ac-dronep")
+base = wr([])
+check(not errors(base[0]) and len(base[1]) > 15, f"writing: a piece with fast chords ({len(base[1])} chords)")
+# Phrases (4): pairs of 4 chords, the first ending IV-V, the second V-I - in a 7-note scale (ionian here)
+log, ch, *_ = wr([("acphr", 1), ("acsclc", 5)])
+degs = [int(c_[3]) for c_ in ch]
+vi = sum(1 for a_, b_ in zip(degs, degs[1:]) if (a_, b_) == (4, 0))
+ivv = sum(1 for a_, b_ in zip(degs, degs[1:]) if (a_, b_) == (3, 4))
+check(not errors(log) and vi >= 2 and ivv >= 2, f"Phrases: V-I closes and IV-V half closes ({vi}, {ivv}; {degs})")
+# Moves: the piece moves to mediant and tonnetz keys of its own - each a tonic chord in ionian or aeolian
+log, ch, *_ = wr([("acmovm", 3), ("achmvp", 2)])
+mv = [c_ for a_, c_ in zip(ch, ch[1:]) if c_[1] != a_[1] or c_[2] != a_[2]]
+bkeys = {(c_[1], c_[2]) for c_ in base[1]}
+check(not errors(log) and len(mv) >= 2 and all(c_[2] in (2, 4) and c_[3] == 0 for c_ in mv),
+      f"Moves: {len(mv)} key moves, each to a tonic in ionian or aeolian ({[(int(c_[1]), int(c_[2])) for c_ in mv]}; "
+      f"before {len(bkeys)} key(s))")
+# Dominants: a chord's own V, major (mixolydian), the drone staying on the key; then the chord it leads to
+log, ch, b_, m_, dr = wr([("acsecd", 2)])
+sd = [k_ for k_, c_ in enumerate(ch) if c_[4] == 1]
+okd = all(ch[k_][2] == 3 and ch[k_][3] == 0 and k_ + 1 < len(ch) and ch[k_ + 1][1] != ch[k_][1] for k_ in sd if k_ + 1 < len(ch))
+tonics = {int(c_[1]) for k_, c_ in enumerate(ch) if k_ not in sd}
+check(not errors(log) and len(sd) >= 2 and okd and {int(x[0]) for x in dr} <= tonics | {int(base[4][0][0])},
+      f"Dominants: {len(sd)} secondary dominants, major, each resolving; the drone stays on the key's tonics "
+      f"({sorted({int(x[0]) for x in dr})} in {sorted(tonics)})")
+# Voicing smooth: the pad voices move less from chord to chord
+mov = lambda ch: np.mean([sum(abs(b_[5 + i] - a_[5 + i]) for i in range(4)) for a_, b_ in zip(ch, ch[1:])])
+log, ch, *_ = wr([("acvlead", 1)])
+check(not errors(log) and mov(ch) < 0.8 * mov(base[1]), f"Voicing smooth: the voices move {mov(ch):.1f} semitones a "
+      f"change, {mov(base[1]):.1f} before")
+# Register spaced: bells 84-103, motion 67-84, pads at most 76
+log, ch, b_, m_, _ = wr([("acreg", 1)])
+check(not errors(log) and b_ and m_ and all(84 <= x[0] <= 103 for x in b_) and all(67 <= x[0] <= 84 for x in m_)
+      and max(max(c_[5:9]) for c_ in ch) <= 76,
+      f"Register spaced: bells {min(x[0] for x in b_):g}-{max(x[0] for x in b_):g}, motion {min(x[0] for x in m_):g}-"
+      f"{max(x[0] for x in m_):g}, pads up to {max(max(c_[5:9]) for c_ in ch):g}")
+# Canon: each bell note again, an octave up, on the other side; Phasing: each motion note again, later each time
+log, _, b_, m_, _ = wr([("accanon", 1)], 60)
+pairs = sum(1 for a_, c_ in zip(b_, b_[1:]) if c_[0] == a_[0] + 12 and abs(c_[2] - (1 - a_[2])) < 0.01)
+check(not errors(log) and pairs >= 0.4 * len(b_) / 2, f"Canon: {pairs} of {len(b_)} bell notes are the octave echo")
+log, _, b_, m_, _ = wr([("acphase", 2)], 60)
+b60 = wr([], 60)
+mb = b60[3]
+check(not errors(log) and 1.8 * len(mb) <= len(m_) <= 2.2 * len(mb), f"Phasing: a second motion voice ({len(m_)} notes, {len(mb)} before)")
+# Melody 1/f, grow, mutate: the motion plays, its notes changed
+for v, nm in ((1, "1/f"), (2, "grow"), (3, "mutate")):
+    log, _, b_, m_, _ = wr([("acmelm", v), ("acmutp", 2)], 60)
+    check(not errors(log) and len(m_) > 20 and [x[0] for x in m_] != [x[0] for x in mb],
+          f"Melody {nm}: the motion plays its own line ({len(m_)} notes, {sorted({int(x[0]) for x in m_})})")
+# Answer motion: the bells and the motion take turns (2 bars each); Answer you: the bells only after you play
+log, _, b_, m_, _ = wr([("acans", 1)], 60)
+check(not errors(log) and len(m_) < 0.75 * len(mb) and b_, f"Answer motion: they take turns ({len(m_)} motion notes, {len(mb)} before)")
+log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=[(30000, "notesRaw 60 100"), (30500, "notesRaw 60 0")])
+check(not errors(log) and b_ and len(b_) < len(b60[2]), f"Answer you: the bells answer what you play ({len(b_)} bell "
+      f"notes, {len(b60[2])} before)")
+# Breath, Motif develops, Key plan, New types: they play, and differ
+log, _, b_, m_, _ = wr([("acrests", 2)], 90)
+check(not errors(log) and len(m_) < len(mb) * 1.4, f"Breath: rests ({len(m_)} motion notes in 90 s)")
+for sets, nm in (([("acmdev", 1)], "Motif develops"), ([("acnewt", 1)], "New types"), ([("ackplan", 1), ("aclen", 0)], "Key plan home")):
+    log, ch, *_ = wr(sets, 120)
+    check(not errors(log) and ch, f"{nm}: plays ({len(ch)} chords)")
+log, ch, *_ = wr([("ackplan", 1), ("aclen", 0)], 240)
+check(len({c_[1] for c_ in ch}) == 1, f"Key plan home: one key through the sections ({sorted({c_[1] for c_ in ch})})")
+# saved with the piece; a line saved before them loads them off
+import gen_saves as GSV
+dd = build_tmp()
+old = GSV.factory_rows().splitlines()[0].rstrip(";").split()[:GS.SAVE_MORE_AT]
+open(os.path.join(dd, "saves.txt"), "w").write("4 " + " ".join(old) + ";\n")
+def pr(c):
+    m = c.obj("metro 500", 1200, 20)
+    c.c(c.obj("loadbang", 1200, 0), 0, m, 0)
+    c.c(c.to(m, "expr acmelm*100 + acphr*10 + acans"), 0, c.obj("print P", 1200, 80), 0)
+ld = lambda slot: [(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(slot, GS.NSLOTS)}"),
+                   (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")]
+sv = [(50, "ac-setseed 5"), (60, "acmelm 2"), (60, "acphr 2"), (60, "acans 1"), (300, "acsetup 1"), (310, "acsetpg 12"),
+      (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"), (500, "ac-setknob 1 0.5"), (600, "ac-setknob 1 1"), (700, "acsetup 0")]
+run(sv, 2, d=dd)
+log, _ = run([(50, "acmelm 0"), (50, "acphr 0"), (50, "acans 0")] + ld(2), 2, d=dd, extra=pr)
+got = [l for l in log.splitlines() if l.startswith("P:")][-1]
+log2, _ = run([(50, "acmelm 3"), (50, "acphr 1"), (50, "acans 2")] + ld(3), 2, d=dd, extra=pr)
+got2 = [l for l in log2.splitlines() if l.startswith("P:")][-1]
+check(got == "P: 221" and got2 == "P: 0", f"saved with the piece ({got}); an older line loads them off ({got2})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

@@ -1,12 +1,12 @@
 """SAVES (SETUP page 13) and the factory pieces.
 
-saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS, SAVE_ARRAYS and SAVE_EXTRA (all in
-gen_setup). A load sets them (the knobs through the morph engine, gen_perform) and prepares the piece; an empty slot
+saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA, SAVE_TAIL and
+SAVE_MORE (all in gen_setup). A load sets them (the knobs through the morph engine, gen_perform) and prepares the piece; an empty slot
 1-6 loads a factory piece from factory.txt, written at build time by factory_rows()."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast
 from data import FACTORY, PAGES, NK
 from gen_setup import (GLOBALS, KNOBS, SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA, SAVE_EXTRA_AT, SAVE_LEN, SOUND_ONLY,
-                       SAVE_TAIL, SAVE_TAIL_AT,
+                       SAVE_TAIL, SAVE_TAIL_AT, SAVE_MORE, SAVE_MORE_AT,
                        SMORPH, SFORMS, SSCALES, SCHORDS, SATMS, SDRONES, SPADS, SBELLS, SMOTS, STEMPOS, SSUBS, _pick)
 
 
@@ -33,6 +33,7 @@ def factory_rows():
             row += [arrdef[name_]] * n
         row += [v[n] for n, _ in SAVE_EXTRA]
         row += [0] * sum(n for _, n in SAVE_TAIL)
+        row += [d_ for _, d_ in SAVE_MORE]
         assert len(row) == SAVE_LEN
         rows.append(" ".join(f"{x:g}" for x in row) + ";")
     return "\n".join(rows) + "\n"
@@ -76,6 +77,7 @@ def saves():
     for name, n in SAVE_TAIL:
         steps += [Loop(str(n), "aci", [T("acsavebuf", f"{off3} + aci", f"{name}[int(aci)]")])]
         off3 += n
+    steps += [T("acsavebuf", SAVE_MORE_AT + i, n) for i, (n, _) in enumerate(SAVE_MORE)]
     proc(c, "ac-savepiece", steps + [Send("ac-savewrite"), Call("ac-slotcheck"), Call("ac-basesetnow"),
                                      V("acslotcur", "acslot"), Send("ac-savesay")])
     w = c.to(c.recv("ac-savewrite"), "t b b b")
@@ -101,7 +103,8 @@ def saves():
     # (the fields a line saved before them lacks keep their defaults)
     row = c.to(c.recv("ac-loadrow"), "t b l b")
     run_steps(c, (row, 2), [T("acsavebuf", SAVE_EXTRA_AT + i, str(d)) for i, (_, d) in enumerate(SAVE_EXTRA)]
-              + [Loop(str(sum(n for _, n in SAVE_TAIL)), "aci", [T("acsavebuf", f"{SAVE_TAIL_AT} + aci", "0")])])
+              + [Loop(str(sum(n for _, n in SAVE_TAIL)), "aci", [T("acsavebuf", f"{SAVE_TAIL_AT} + aci", "0")])]
+              + [T("acsavebuf", SAVE_MORE_AT + i, str(d)) for i, (_, d) in enumerate(SAVE_MORE)])
     c.c((row, 1), 0, c.obj("array set acsavebuf"), 0)
     c.c((row, 0), 0, c.obj("s ac-loadapply"), 0)
     knobs = KNOBS
@@ -132,6 +135,8 @@ def saves():
             steps += [T("acmto", knobs.index(n), f"acsavebuf[{SAVE_EXTRA_AT + i}]")]
         else:
             steps += [V(n, f"acsavebuf[{SAVE_EXTRA_AT + i}]")]
+    # how the piece writes (a recall of "sound only" keeps the piece's)
+    steps += [If("acrecall == 0 || acstopped", [V(n, f"acsavebuf[{SAVE_MORE_AT + i}]") for i, (n, _) in enumerate(SAVE_MORE)])]
     # the knobs glide over Morph (at once while stopped); the anchor lets go; this is the slot COMPARE plays
     steps += [Call("ac-verbcut"), V("acmdur", f"if(acstopped, 0, {_pick('acmorph', SMORPH)})"), Call("ac-morphgo"),
               Call("ac-basesetto"), V("acancs", "0"), V("acslotcur", "acslot"),

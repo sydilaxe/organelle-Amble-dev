@@ -19,7 +19,9 @@ SCALES = [
     ("melmin",   [0, 2, 3, 5, 7, 9, 11]),
     ("slendro",  [0, 2.4, 4.8, 7.2, 9.6]),                      # 5-tone equal
     ("pelog",    [0, 1.2, 2.7, 5.4, 6.8, 7.9, 10.4]),
+    ("6thdim",   [0, 2, 4, 5, 7, 8, 9, 11]),                    # Barry Harris: major 6th + diminished 7th
 ]
+SCALE_AUTO = 16            # (a piece picks among the first 16; the later ones by hand, or with SETUP HARMONY New types)
 
 # Chord voicing families for the 4 pad voices: (name, type, offsets)
 #   type 0: offsets are scale degrees above the chord root (voice-led per voice)
