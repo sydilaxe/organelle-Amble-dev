@@ -1205,6 +1205,16 @@ check(calm and loud and all(-45 < col("rms", r) < -8 and col("pk", r) < 0 and co
       and all(col("clip", r) > 1000 and col("pk", r) > 0 for r in loud),
       f"audio log: a piece at {[col('rms', r) for r in calm]} dBFS, nothing cut; over full scale: cut "
       f"{[col('clip', r) for r in loud]}, peak {[col('pk', r) for r in loud]} dBFS")
+# logging switched on mid-piece: the meter's first block held all the sound thrown at it while it was off
+# (the device logged +32 dBFS and 126 samples cut on its first line), and its first read counted a quiet window
+d = build_tmp()
+run([(50, "ac-setseed 7"), (20000, "acguard 3"), (20010, "ac-logupd bang"), (36000, "ac-stop bang")], 38, d=d)
+pf = glob.glob(os.path.join(d, "logs", "perf-*.txt"))
+L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
+first = L[1] if len(L) > 1 else None
+check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet", first) == 0,
+      f"audio log started mid-piece: first line peak {first and col('pk', first)} dBFS, cut {first and col('clip', first)}, "
+      f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
 #     what is there. SETUP's 21 pages, the 8 knob pages, keys and toasts, the profile's parts

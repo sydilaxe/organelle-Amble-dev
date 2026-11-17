@@ -72,7 +72,7 @@ GLOBALS = dict(acprof=0, acprst=0, acprsum=0, acprn=0, acprmax=0, aclogwas=0, ac
 ARRAYS = dict(aclogbuf=len(FIELDS), acprfl=4, acamwl=4410, acamwr=4410, acamwc=4410)
 GLOBALS.update({n: 0 for n in ("aclgpk aclgdcs aclgmn aclgclip aclgq aclglate aclgrs aclgrn aclglo aclghi aclgsub "
                                "acamxl acamnl acamxr acamnr acamsl acamsr acamsc acamp acame0 acame1 acame2 acame3 "
-                               "acamlt").split()})
+                               "acamlt acamsk").split()})
 
 
 def perflog():
@@ -198,7 +198,12 @@ def audiometer():
     over the 0.98 the output cuts at; env~ gives the level and three bands. (catch~ ac-mtest: a test signal.)"""
     c = Canvas("audio-meter", w=1800)
     c.comment("Audio meter for the performance log: computes only while logging")
-    c.c(c.recv("ac-logrun"), 0, c.obj("switch~"), 0)
+    # switched on, the meter's first 200 ms are not counted: catch~ is not emptied while this canvas is off, so its
+    # first block holds everything thrown at it meanwhile (on the device: one block at +32 dBFS, 126 samples "cut").
+    # One trigger: the skip is set before the metro's first read
+    lr = c.to(c.recv("ac-logrun"), "t f f")
+    run_steps(c, (c.to((lr, 1), "sel 1"), 0), [V("acamsk", "2")])
+    c.c(lr, 0, c.obj("switch~"), 0)
     l = c.obj("+~")
     c.c(c.obj("catch~ ac-mtrL"), 0, l, 0)
     c.c(c.obj("catch~ ac-mtest"), 0, l, 1)
@@ -220,11 +225,12 @@ def audiometer():
                                      (("hip~ 4000", "hip~ 4000"), "aclghi"), (("lop~ 40", "lop~ 40"), "aclgsub"))):
         e = c.ch(m, *filt, "env~ 4096 4096", "t b f")
         c.c(e, 1, c.obj(f"v acame{i}"), 0)
-        run_steps(c, (e, 0), [V(acc, f"{acc} + pow(10, acame{i}/10)")] + ([V("aclgrn", "aclgrn + 1")] if i == 0 else []))
+        run_steps(c, (e, 0), [If("acamsk == 0", [V(acc, f"{acc} + pow(10, acame{i}/10)")]
+                                 + ([V("aclgrn", "aclgrn + 1")] if i == 0 else []))])
     c.col()
     # every 100 ms: the window just written read (right to left), then the capture starts again
     met = c.obj("metro 100")
-    c.c(c.recv("ac-logrun"), 0, met, 0)
+    c.c(lr, 0, met, 0)
     tk = c.to(met, "t b b")
     for t in tw:
         c.c(tk, 0, t, 0)
@@ -235,8 +241,8 @@ def audiometer():
                                         ("sum", "acamwl", "acamsl"), ("sum", "acamwr", "acamsr"),
                                         ("sum", "acamwc", "acamsc"))):
         c.c(c.ch((rd, k + 1), f"array {op} {arr}"), 0, c.obj(f"v {val}"), 0)
-    run_steps(c, (rd, 0), [
+    run_steps(c, (rd, 0), [If("acamsk > 0", [V("acamsk", "acamsk - 1")], [
         V("acamp", "max(max(acamxl, -acamnl), max(acamxr, -acamnr))"), V("aclgpk", "max(aclgpk, acamp)"),
         V("aclgdcs", "aclgdcs + acamsl + acamsr"), V("aclgmn", "aclgmn + 1"), V("aclgclip", "aclgclip + acamsc"),
-        If("acamp < 0.001 && acrun && acstopped == 0 && acprof == 0", [V("aclgq", "aclgq + 1")])])
+        If("acamp < 0.001 && acrun && acstopped == 0 && acprof == 0", [V("aclgq", "aclgq + 1")])])])
     return c
