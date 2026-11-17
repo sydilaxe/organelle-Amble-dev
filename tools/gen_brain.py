@@ -29,7 +29,7 @@ GLOBALS = dict(
     actime=1, acgdrone=0, acgpad=0, acgtex=0, acgcloud=0, acgbell=0, acgmotion=0,
     acgt0=0, acgt1=0, acgt2=0, acgt3=0,
     # how the piece writes (SETUP LINES, HARMONY, PHRASE, DIALOGUE)
-    acmgi=-1, acmgn=1, acvc=0, acvd0=0, acvd1=0, acvd2=0, accp=0, acpsd=0, acphc=-1, acphn=0, acphd=4, acphs=3,
+    acmgi=-1, acmgn=1, acvc=0, acvd0=0, acvd1=0, acvd2=0, accp=0, acpsd=0, acphc=-1, acphn=0, acphd=4, acphs=3, acsfit=1,
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
     acbi=0, acbc=0, acdropi=0, acbright=0.5, acbp=0, acgdurv=300, acr1=0.5, acr2=0.5, acr3=0.5, acr4=0.5,
@@ -962,23 +962,29 @@ def change():
     # (only while the next chord stays in the key and nothing chose it: a key move, Resolve, the CHORD page - and
     # the key moves not with a fixed key or scale)
     ok = "acxt == actonic && acfirst == 0 && acres == 0 && acpend < 0 && acxpick == 0 && ackeyc == 0 && acsclc == 0"
+    # What the scale offers: its V and IV (its degrees at 7 and 5 semitones, -1 if it has none) and whether it is
+    # near 12-tone (pelog, harm7, slendro are not). A feature the scale can't carry steps aside: phrases need a V
+    # (a missing IV leaves that chord the piece's own); the key moves and secondary dominants (to ionian, aeolian,
+    # mixolydian) a 12-tone scale with a V - and secondary dominants 7 notes or more
     # Phrases: 4 or 8 chords, in pairs: the first ends open (IV, V), the second closed (V, I). A key move starts
-    # a new phrase. (The scale's V and IV: its degrees nearest 7 and 5 semitones)
-    cad = "acphc >= 4*acphr - 2"
+    # a new phrase.
+    cad = "acphc >= 4*acphr - 2 && acphd >= 0"
     proc(c, "ac-chordplan", [
+        If("acphr > 0 || acmovm > 0 || acsecd > 0", [
+            X("-1; -1; 1", "v acphd", "v acphs", "v acsfit"),
+            Loop("acn", "aci", [If("abs(acscale[int(aci)] - 7) < 0.3", [V("acphd", "aci")]),
+                                If("abs(acscale[int(aci)] - 5) < 0.6", [V("acphs", "aci")]),
+                                If("abs(acscale[int(aci)] - int(acscale[int(aci)] + 0.5)) > 0.2", [V("acsfit", "0")])])]),
         If("acphr > 0", [If("acxt == actonic && acfirst == 0 && acres == 0 && acpend < 0 && acxpick == 0", [
             V("acphc", "(acphc + 1) % (4*acphr)"),
             If(cad, [
-                X("int(acn*0.57); int(acn*0.43)", "v acphd", "v acphs"),
-                Loop("acn", "aci", [If("abs(acscale[int(aci)] - 7) < 0.3", [V("acphd", "aci")]),
-                                    If("abs(acscale[int(aci)] - 5) < 0.6", [V("acphs", "aci")])]),
-                V("acxdeg", "if(acphc == 4*acphr - 1, if(acphn % 2, 0, acphd), if(acphn % 2, acphd, acphs))"),
+                V("acxdeg", "if(acphc == 4*acphr - 1, if(acphn % 2, 0, acphd), if(acphn % 2, acphd, if(acphs >= 0, acphs, acxdeg)))"),
                 If("acphc == 4*acphr - 1", [V("acphn", "acphn + 1")])])],
             [V("acphc", "-1")])]),
         # key moves of the piece's own: a chromatic mediant (the major or minor key a 3rd away, the chord keeping
         # its kind) or a tonnetz step (P: the parallel; R: the relative; L: the leading-tone exchange - major turns
         # minor and back). The new key's tonic chord comes, in ionian or aeolian
-        If(f"acmovm > 0 && ({ok}) && (acphr == 0 || ({cad}) == 0)", [RNG, If(f"acr1 < {_S._pick('achmvp', _S.SMOVP)}", [
+        If(f"acmovm > 0 && acsfit && acphd >= 0 && ({ok}) && (acphr == 0 || ({cad}) == 0)", [RNG, If(f"acr1 < {_S._pick('achmvp', _S.SMOVP)}", [
             X("int(acchn/6); acchn % 6; if(acmovm == 3, 1 + int(acr2*2), acmovm)", "v acmvr", "v acmvq", "v acmvo"),
             If("acmvq <= 1", [
                 If("acmvo == 1", [V("acmvo", "if(acr3 < 0.25, 3, if(acr3 < 0.5, 4, if(acr3 < 0.75, 8, 9)))")],
@@ -987,7 +993,7 @@ def change():
             ])])]),
         # secondary dominants: before a chord (not the tonic) its own V comes, a major chord a 5th above it (its
         # key's mixolydian), the drone staying on the key
-        If(f"acsecd > 0 && ({ok}) && acxdeg != 0 && acn >= 7 && (acphr == 0 || ({cad}) == 0)", [
+        If(f"acsecd > 0 && acsfit && acphd >= 0 && ({ok}) && acxdeg != 0 && acn >= 7 && (acphr == 0 || ({cad}) == 0)", [
             RNG, If(f"acr1 < {_S._pick('acsecd', _S.SSECD)}", [
                 X("actonic; acsci; acxdeg", "v acsdt", "v acsds", "v acsdg"),
                 X("36 + (int(actonic) - 36 + int(acscale[int(acsdg)] + 0.5) + 7) % 12; 1; 3; 0", "v acxt", "v acxscf",
@@ -1053,17 +1059,21 @@ def players():
     c.comment("Event players: bell motif, rain drops, creature chirps, input onsets")
     bellp = f"{deg2p('acdeg + acmotif[int(acbi)]')} + 24"
     hoff = "if(acbharm == 1, 2, if(acbharm == 2, 5, 4))"     # harmony: a 3rd, a 6th or a 5th up the scale
-    # (SETUP DIALOGUE Answer you: the motif moved by octaves near your last note; Register spaced: 84-103)
+    # (SETUP DIALOGUE Answer you: the bells answer what you play (or sing) with the piece's motif - as it develops,
+    # with its rhythm, harmony and canon - moved by octaves near your last note, while you play and after, fading
+    # out 4-12 s after your last note; Register spaced: 84-103)
     play = [V("acbp", bellp), If("acans == 2", [V("acbp", "acbp + 12*floor((acant + 12 - acbp)/12 + 0.5)")]),
             V("acbp", "if(acbp<67, acbp+12, if(acbp>96, acbp-12, acbp))"),
             If("acreg", [V("acbp", "acbp + 12*ceil(max(0, 84 - acbp)/12) - 12*ceil(max(0, acbp - 103)/12)")]),
-            X("0.35+0.65*acr2; min(0.97, max(0.03, acscn[int(acscene)*10 + 4] + acscn[int(acscene)*10 + 5]*(acr3 - 0.5)))",
+            # (Answer you: full for 4 s after your last note, then fading out over 8 s)
+            X("(0.35+0.65*acr2)*if(acans == 2, min(1, max(0, (12000 - (acnow - acanst))/8000)), 1); min(0.97, max(0.03, acscn[int(acscene)*10 + 4] + acscn[int(acscene)*10 + 5]*(acr3 - 0.5)))",
               "v acbv", "v acbpan"),
             SendL("ac-bell", ["acbp", "acbv", "acbpan"]),
             # SETUP LINES Canon: the note again an octave, a scale's 5th or two octaves up, later, on the other side
             If("accanon > 0", [
-                V("accp", f"if(accanon == 2, {deg2p('acdeg + acmotif[int(acbi)] + 4')} + 24 + 12*floor((acbp + 7 - "
-                          f"({deg2p('acdeg + acmotif[int(acbi)] + 4')} + 24))/12 + 0.5), acbp + 12*accanon - 12*(accanon == 3))"),
+                # (the 5th: four degrees up in a 7-note scale; in another scale, the octave)
+                V("accp", f"if(accanon == 2 && acn == 7, {deg2p('acdeg + acmotif[int(acbi)] + 4')} + 24 + 12*floor((acbp + 7 - "
+                          f"({deg2p('acdeg + acmotif[int(acbi)] + 4')} + 24))/12 + 0.5), acbp + 12*accanon - 12*(accanon >= 2))"),
                 V("accp", "accp - 12*ceil(max(0, accp - 108)/12)"),
                 SendL("ac-blater", ["accp", "acbv*0.55", "1 - acbpan",
                                     f"60000/{BPMH}*if(accand == 3, acmeter, {_S._pick('accand', _S.SCAND)})"])]),
@@ -1082,8 +1092,8 @@ def players():
         If("acgbell > 0.01 && acrun && (acroute != 3 || acnow - aclnt > 8000)", [
             RNG,
             # (SETUP DIALOGUE Answer: the bells' turn, or after you play; PHRASE Breath: not resting)
-            If("acr1 > 0.18 && (acans == 0 || (acans == 1 && acansm == 0) || (acans == 2 && acnow - acanst > 600 && "
-               "acnow - acanst < 7000)) && (acrests == 0 || acrestb == 0 || acrestl == 1)", play),
+            If("acr1 > 0.18 && (acans == 0 || (acans == 1 && acansm == 0) || (acans == 2 && acnow - acanst > 300 && "
+               "acnow - acanst < 12000)) && (acrests == 0 || acrestb == 0 || acrestl == 1)", play),
             V("acbi", "(acbi+1) % 5"),
             If("acbi==0 && acr3<0.6", [RNG, T("acmotif", "int(acr1*5)", "acmotif[int(acr1*5)] + int(acr2*5) - 2")]),
         ]),
@@ -1165,7 +1175,7 @@ def later():
     c.comment("Notes played later: the bells' canon (ac-blater: pitch, velocity, pan, delay) and the motion's "
               "phasing voice (ac-mlater: pitch, velocity, delay, pan, then the delay). Stop clears them.")
     for r, n, s in (("ac-blater", 3, "ac-bell"), ("ac-mlater", 4, "ac-mnote")):
-        pp = c.to(c.recv(r), "pipe " + " ".join(["0"] * n))
+        pp = c.to(c.recv(r), "pipe " + " ".join(["0"] * (n + 1)))     # (its last argument: the delay)
         c.c(c.m(c.recv("ac-playstop"), "clear"), 0, pp, 0)
         pk = c.obj("pack " + " ".join(["f"] * n))
         for i in range(n):

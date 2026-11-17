@@ -81,8 +81,8 @@ SVLEAD = ["as before", "smooth"]
 SKPLAN = ["auto", "home", "fifths", "thirds"]
 SBREATH = [("off", 0), ("some", 0.05), ("often", 0.12)]
 # DIALOGUE: the motif develops (each section also plays it backwards, slower, faster or in fragments); answer
-# (motion: the motion and the bells take 2 bars each in turn; you: the bells answer you, after you play, near your
-# note); phasing (a second motion voice, on the other side, slowly drifts later, a step every 50 or 16 steps); the
+# (motion: the motion and the bells take 2 bars each in turn; you: the bells answer what you play, with the
+# motif, near your note, and keep answering after you stop, fading out over 12 s); phasing (a second motion voice, on the other side, slowly drifts later, a step every 50 or 16 steps); the
 # register (spaced: the pads below 77, the motion 67-84, the bells 84-103)
 SMDEV = ["fixed", "develops"]
 SANS = ["off", "motion", "you"]

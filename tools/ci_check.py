@@ -1500,12 +1500,16 @@ bkeys = {(c_[1], c_[2]) for c_ in base[1]}
 check(not errors(log) and len(mv) >= 2 and all(c_[2] in (2, 4) and c_[3] == 0 for c_ in mv),
       f"Moves: {len(mv)} key moves, each to a tonic in ionian or aeolian ({[(int(c_[1]), int(c_[2])) for c_ in mv]}; "
       f"before {len(bkeys)} key(s))")
-# Dominants: a chord's own V, major (mixolydian), the drone staying on the key; then the chord it leads to
-log, ch, b_, m_, dr = wr([("acsecd", 2)])
+# Dominants: a chord's own V, major (mixolydian), the drone staying on the key; then the chord it leads to (seed 7:
+# Db dorian). A scale that can't carry them (seed 11: minor pentatonic) ignores them
+log, ch, *_ = wr([("acsecd", 2)])
+check(not errors(log) and not any(c_[4] for c_ in ch), "Dominants: a pentatonic piece ignores them")
+base7 = wr([], seed=7)
+log, ch, b_, m_, dr = wr([("acsecd", 2)], seed=7)
 sd = [k_ for k_, c_ in enumerate(ch) if c_[4] == 1]
 okd = all(ch[k_][2] == 3 and ch[k_][3] == 0 and k_ + 1 < len(ch) and ch[k_ + 1][1] != ch[k_][1] for k_ in sd if k_ + 1 < len(ch))
 tonics = {int(c_[1]) for k_, c_ in enumerate(ch) if k_ not in sd}
-check(not errors(log) and len(sd) >= 2 and okd and {int(x[0]) for x in dr} <= tonics | {int(base[4][0][0])},
+check(not errors(log) and len(sd) >= 2 and okd and {int(x[0]) for x in dr} <= tonics | {int(base7[4][0][0])},
       f"Dominants: {len(sd)} secondary dominants, major, each resolving; the drone stays on the key's tonics "
       f"({sorted({int(x[0]) for x in dr})} in {sorted(tonics)})")
 # Voicing smooth: the pad voices move less from chord to chord
@@ -1535,7 +1539,8 @@ for v, nm in ((1, "1/f"), (2, "grow"), (3, "mutate")):
 # Answer motion: the bells and the motion take turns (2 bars each); Answer you: the bells only after you play
 log, _, b_, m_, _ = wr([("acans", 1)], 60)
 check(not errors(log) and len(m_) < 0.75 * len(mb) and b_, f"Answer motion: they take turns ({len(m_)} motion notes, {len(mb)} before)")
-log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=[(30000, "notesRaw 60 100"), (30500, "notesRaw 60 0")])
+log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=sum([[(t, "ac-livenote 64 100 1"), (t + 500, "ac-livenote 64 0 1")]
+                                                    for t in (20000, 32000, 44000)], []))
 check(not errors(log) and b_ and len(b_) < len(b60[2]), f"Answer you: the bells answer what you play ({len(b_)} bell "
       f"notes, {len(b60[2])} before)")
 # Breath, Motif develops, Key plan, New types: they play, and differ
