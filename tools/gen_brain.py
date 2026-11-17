@@ -17,7 +17,7 @@ GLOBALS = dict(
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
-    acmxq=0, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
+    acmxq=0, acsgms=200, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
     acfdrone=1, acfpad=1, acftex=1, acfcloud=1, acfbell=1, acfmotion=0, actex1=0, actex2=1, actexA=0, actexB=1,
     acpal1=0, acpal2=1, acpal3=3, acpartI=0, acbellI=0, acsecbright=0.8, actidef=1, acpow=1,
     acpsum=1, acfirst=1, acmodflag=0, acD=0, acp0=0, acp1=0, aci=0, acchg=0, acfade=8000,
@@ -565,10 +565,11 @@ def layers():
         steps += [V(f"acgt{i}", f"acgtex*((actex1=={i}) || (actex2=={i}))"),
                   SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
     proc(c, "ac-layers", steps)
-    # a MIX knob: the levels follow while it turns - an update 50 ms after the first change, each gliding over 60 ms
-    # into the next (a [delay] restarted by every knob message waited for the knob to stop, then jumped)
-    proc(c, "ac-mixch", [If("acmxq == 0", [V("acmxq", "1"), Later("ac-mixgo", 50)])])
-    proc(c, "ac-mixgo", [V("acmxq", "0"), V("acfade", "60"), Call("ac-layers")])
+    # a MIX knob: the levels follow while it turns - an update 20 ms after the first change, each gliding over 25 ms
+    # into the next (a [delay] restarted by every knob message waited for the knob to stop, then jumped; 50 + 60 ms
+    # felt laggy)
+    proc(c, "ac-mixch", [If("acmxq == 0", [V("acmxq", "1"), Later("ac-mixgo", 20)])])
+    proc(c, "ac-mixgo", [V("acmxq", "0"), V("acfade", "25"), Call("ac-layers")])
     d = c.to(c.recv("ac-densch"), "delay 150")
     run_steps(c, (d, 0), [V("acfade", "1500"), Call("ac-layers")])
     c.col()
@@ -637,7 +638,8 @@ def verb():
         Call("ac-revupd"),
     ])
     from data import SEND_BUS
-    proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "200"]) for n in SEND_BUS])
+    # (200 ms glides, but 30 ms while a SENDS knob turns: acsgms)
+    proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])
     c.c(c.to(c.recv("ac-init"), "t b"), 0, c.obj("s ac-sendupd"), 0)
     proc(c, "ac-revupd", [
         # Bloom: loop gain exp(-4.2*size/T), as Conduit's; damping = the loop low-pass pole (0.5 = the unit)

@@ -14,11 +14,11 @@ PLAY (the knob pages SHAPE, SPACE, PIECE, PERFORM):
 MIX (the SENDS and MIX pages): a bar per voice, the knob as a tick, the column turned framed with its value.
 SETUP: the page's name and its 4 rows (gen_setup draws them).
 A knob turned on a PLAY page shows its page for 6 s."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Later
 from data import ROLES, PAGE_NAMES, PAGES, NOTE_NAMES, SCALES
 
 OSC = "oscOut"
-GLOBALS = dict(acpopt=0, actoastt=0, acfr=0, acel=0, acsecel=0, acox=0, acoxs=0, acmcur=-1, acrvlvl=0, acsetup=0, acsetpg=0, acinv=0, acinlast=-1e+06, acinon=0, acinhi=0, aclastk=0, acmixc=-1, acfx=0)
+GLOBALS = dict(acpopt=0, actoastt=0, acfr=0, acel=0, acsecel=0, acox=0, acoxs=0, acmcur=-1, acrvlvl=0, acsetup=0, acsetpg=0, acinv=0, acinlast=-1e+06, acinon=0, acinhi=0, aclastk=0, acmixc=-1, acfx=0, acokq=0)
 ARRAYS = dict(acdisp=4, acdg=8, acinh=32, acino=32)
 MIXV = "(acpage >= 3 && acpage <= 6)"     # the knob pages that show the MIX view: SENDS, MIX
 # the play view's voice tags (2 x 4) and the MIX view's columns: (letter, knob, layer); the reverb last
@@ -254,7 +254,10 @@ def oled():
     c.col()
     # ---- the knob page pop-up (6 s after the last knob turn or aux tap)
     # (a value moved from elsewhere - a CC on another page's knob - shows as a message)
-    proc(c, "ac-oledknob", [If(mixv, [V("acmixc", "if(int(aclastk/4) == acpage, aclastk % 4 + 4*(acpage == 4 || acpage == 6), "
+    # (a turning knob sends a value every few ms: the screen follows at most every 40 ms, with the latest value -
+    # each redraw is some 17 messages to the display)
+    proc(c, "ac-oledknob", [If("acokq == 0", [V("acokq", "1"), Later("ac-oledknob2", 40)])])
+    proc(c, "ac-oledknob2", [V("acokq", "0"), If(mixv, [V("acmixc", "if(int(aclastk/4) == acpage, aclastk % 4 + 4*(acpage == 4 || acpage == 6), "
                                             "-1)"),
                                       Send("ac-mixknob"), Call("ac-scr4"), Call("ac-scr5"), Call("ac-oledmixbars")],
                                [If("int(aclastk/4) == acpage", [Call("ac-oledpop")], [Send("ac-mixknob")])])])

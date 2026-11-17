@@ -637,9 +637,9 @@ run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 
 vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
-# (every SETTINGS value is saved: 118 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages and GLINT's Sparkle joined)
-check(len(vals) == len(GS.SETTINGS) == 118 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+# (every SETTINGS value is saved: 119 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
+#  CC OUT pages, GLINT's Sparkle and the CHORD page's On pick joined)
+check(len(vals) == len(GS.SETTINGS) == 119 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)

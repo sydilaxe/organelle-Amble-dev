@@ -26,7 +26,7 @@ SIDE = {  # what to do after a knob changes a value (index = page*4 + knob)
     11: [Send("ac-densch"), Call("ac-pulseupd")],
 }
 for _i in range(12, SEND_KNOBS):              # the SENDS pages
-    SIDE[_i] = [Call("ac-sendupd")]
+    SIDE[_i] = [V("acsgms", "30"), Call("ac-sendupd"), V("acsgms", "200")]
 for _i in range(SEND_KNOBS, MIX_KNOBS):      # the MIX pages: the layer levels (coalesced: knobs send fast)
     SIDE[_i] = [Send("ac-mixch")]
 SIDE[28] = [Call("ac-sinkupd")]              # PERFORM: Sink, Blur, Swell (Harm applies at the next choice)
