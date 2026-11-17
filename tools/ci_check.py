@@ -661,9 +661,9 @@ run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 
 vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
-# (every SETTINGS value is saved: 119 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle and the CHORD page's On pick joined)
-check(len(vals) == len(GS.SETTINGS) == 119 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+# (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick and SETUP DISPLAY joined)
+check(len(vals) == len(GS.SETTINGS) == 123 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1092,7 +1092,7 @@ check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
               (2800, "notesRaw 80 0"), (3000, "knob1 0.8"), (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
              prints=("ac-sett0", "ac-sett1", "ac-sett3"))
-ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+ts = [t for t in (l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")) if not t.startswith("hold:")]
 check(ts == ["input reso"] and "ac-sett0: list INPUT" in log and "ac-sett1: 1 Mode vocode" in log
       and "ac-sett3: 3 Follow you 90%" in log, f"top G#: tap = next input mode ({ts}), held = the INPUT page")
 
@@ -1117,7 +1117,9 @@ def vprobe2(exprs, every):
         c.c(pk, 0, c.obj("print P", 1200, 80), 0)
     return f
 pv = lambda log: [[float(x) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("P:")]
-toasts_of = lambda log: [l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast")]
+# (a held key's hint - SETUP DISPLAY Hints, section 76 - is left out: these checks follow the keys' own toasts)
+toasts_of = lambda log: [t for t in (l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast"))
+                         if not t.startswith("hold:")]
 auxkey = lambda t, n: [(t, "aux 1"), (t + 10, f"notesRaw {n} 100"), (t + 50, f"notesRaw {n} 0"), (t + 100, "aux 0")]
 log, _ = run([(50, "ac-setseed 7")] + auxkey(1000, 81) + [(2000, "knob1 0.9"), (2100, "knob1 0.95")] + auxkey(4000, 81), 15,
              extra=vprobe2(["acdens"], 1000))
