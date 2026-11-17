@@ -137,8 +137,15 @@ def run_steps(c, src, steps):
         st(c, (t, len(steps) - 1 - i))
 
 
-def proc(c, recv, steps):
-    """[r recv] -> steps in order. Returns the receive object."""
+PROCS = set()
+
+
+def proc(c, recv, steps, shared=False):
+    """[r recv] -> steps in order. Returns the receive object. A name is one proc: two procs on one name both run
+    whenever either is called, in no set order, so the build stops - unless both say shared=True (two independent
+    listeners to one event, like ac-step's player and its screen mark)."""
+    assert recv not in PROCS or shared, f"proc {recv} is defined twice (shared=True on both, if meant)"
+    PROCS.add(recv)
     r = c.recv(recv)
     run_steps(c, (r, 0), steps)
     c.col()

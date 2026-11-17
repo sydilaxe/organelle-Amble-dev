@@ -8,6 +8,11 @@ does (CPU time over logical time), over 100 ms windows: the average and the wors
 files on its audio thread, and a big write on the Organelle's SD card could itself make the audio drop out."""
 from pdlib import Canvas, proc, V, T, X, Send, SendL, Call, If, Loop, Arm, Toast, Later, run_steps
 
+def _db(acc):
+    """an env~ power sum over the 5 s as dBFS (env~ reads 100 at full scale)"""
+    return f"if(aclgrn > 0 && {acc} > 0, 10*log10({acc}/aclgrn) - 100, -120)"
+
+
 # (name, expression): one line every 5 s
 FIELDS = [
     ("t", "int(acnow/1000)"), ("load", "int(100*aclgsum/max(1, aclgn))"), ("peak", "int(100*aclgmax)"),
@@ -22,6 +27,13 @@ FIELDS = [
     ("pump", "acpump"), ("duck", "int(100*acduck)"), ("spark", "int(100*acspark)"), ("ccout", "acccout"),
     ("input", "int(100*acinput)"), ("inmode", "acinmode"), ("held", "acheld"), ("verb", "acvtype"), ("page", "acpage"),
     ("setup", "acsetup*100 + acsetpg"), ("morph", "acmph"),
+    # the sound (audiometer(), before the output's clip~ at 0.98): its level (dBFS), loudest sample, the levels
+    # under 200 Hz, over 4 kHz and under 40 Hz, the DC offset (x1000), samples the output cut, 100 ms windows near
+    # silence while a piece plays, and the worst 100 ms the scheduler fell behind real time (ms: a dropout risk)
+    ("rms", f"int({_db('aclgrs')})"), ("pk", "int(if(aclgpk > 0, 20*log10(aclgpk), -120))"),
+    ("lo", f"int({_db('aclglo')})"), ("hi", f"int({_db('aclghi')})"), ("sub", f"int({_db('aclgsub')})"),
+    ("dc", "int(1000*abs(aclgdcs)/max(1, aclgmn*8820))"), ("clip", "aclgclip"), ("quiet", "aclgq"),
+    ("late", "int(aclglate)"),
 ]
 # the profile run (SETUP 4, knob 3 turned fully up): every part alone for a few seconds, its load measured
 def _parts():
@@ -57,7 +69,10 @@ OFF = (["ac-g-pad", "ac-g-drone", "ac-g-sub", "ac-g-motion", "ac-g-cloud", "ac-g
        + [f"ac-g-tex{i}" for i in range(12)] + [f"ac-g-atm{i}" for i in range(5)] + [f"ac-g-ch{i}" for i in range(1, 5)])
 
 GLOBALS = dict(acprof=0, acprst=0, acprsum=0, acprn=0, acprmax=0, aclogwas=0, aclogon=0, aclgsum=0, aclgn=0, aclgmax=0, aclgw=0, aclgpart=0, aclgfile=0, aclgl=0)
-ARRAYS = dict(aclogbuf=len(FIELDS), acprfl=4)
+ARRAYS = dict(aclogbuf=len(FIELDS), acprfl=4, acamwl=4410, acamwr=4410, acamwc=4410)
+GLOBALS.update({n: 0 for n in ("aclgpk aclgdcs aclgmn aclgclip aclgq aclglate aclgrs aclgrn aclglo aclghi aclgsub "
+                               "acamxl acamnl acamxr acamnr acamsl acamsr acamsc acamp acame0 acame1 acame2 acame3 "
+                               "acamlt").split()})
 
 
 def perflog():
@@ -76,21 +91,38 @@ def perflog():
     c.c(ct, 0, pk, 0)
     c.c(tb, 1, ct, 0)
     c.c(tb, 0, tm, 0)
+    rs = c.to(c.recv("ac-logrun"), "t b b")      # (both restart when logging starts: the first window is 100 ms)
+    c.c(rs, 0, tm, 0)
+    c.c(rs, 1, ct, 0)
     up = c.ch(pk, "expr $f1/max(1, $f2)", "t b f")
     c.c(up, 1, c.obj("v aclgw"), 0)
+    # and how late the window ended by the wall clock: real time over 100 ms means the scheduler fell behind
+    rt = c.obj("realtime")
+    c.c(c.to(c.recv("ac-logrun"), "t b"), 0, rt, 0)
+    lt = c.to(met, "t b b")
+    c.c(lt, 1, rt, 1)
+    c.c(lt, 0, rt, 0)
+    lu = c.ch(rt, "expr $f1 - 100", "t b f")
+    c.c(lu, 1, c.obj("v acamlt"), 0)
+    run_steps(c, (lu, 0), [If("acamlt < 5000", [V("aclglate", "max(aclglate, acamlt)")])])
     run_steps(c, (up, 0), [If("acprof", [V("acprsum", "acprsum + aclgw"), V("acprn", "acprn + 1"),
                                          V("acprmax", "max(acprmax, aclgw)")],
                               [V("aclgsum", "aclgsum + aclgw"), V("aclgn", "aclgn + 1"), V("aclgmax", "max(aclgmax, aclgw)"),
                                If("aclgn >= 50", [Call("ac-logline")])])])
     c.col()
     # a line: the fields into the buffer, the buffer appended to the text
-    line = c.obj("t b b")
+    # (right to left: the fields, the line appended, then the sums reset - one trigger, so in that order; two
+    #  receivers of ac-logline ran in no set order, and the reset could come first and log zeros)
+    line = c.obj("t b b b")
     c.c(c.recv("ac-logline"), 0, line, 0)
-    run_steps(c, (line, 1), [T("aclogbuf", i, e) for i, (_, e) in enumerate(FIELDS)])
+    run_steps(c, (line, 2), [T("aclogbuf", i, e) for i, (_, e) in enumerate(FIELDS)])
     add = c.obj("text set aclog 1e+06")
-    c.c(c.to((line, 0), "array get aclogbuf"), 0, add, 0)
-    c.c(c.to(c.recv("ac-logline"), "t b"), 0, c.obj("s ac-logafter"), 0)
+    c.c(c.to((line, 1), "array get aclogbuf"), 0, add, 0)
+    c.c(line, 0, c.obj("s ac-logafter"), 0)
     proc(c, "ac-logafter", [V("aclgsum", "0"), V("aclgn", "0"), V("aclgmax", "0"), V("aclgl", "aclgl + 1"),
+                            X("0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0", *[f"v {n}" for n in (
+                                "aclgpk", "aclgdcs", "aclgmn", "aclgclip", "aclgq", "aclglate", "aclgrs", "aclgrn",
+                                "aclglo", "aclghi", "aclgsub")]),
                             If("aclgl % 12 == 0", [Send("ac-logwrite")]),
                             If("aclgl >= 120", [Send("ac-logwrite"), Call("ac-lognew")])])
     c.col()
@@ -157,4 +189,54 @@ def perflog():
     proc(c, "ac-logupd", [If("acguard >= 2", [If("aclogon == 0", [V("aclogon", "1"), Call("ac-lognew"),
                                                                   Send("ac-logrun", "1")])],
                              [If("aclogon", [V("aclogon", "0"), Send("ac-logrun", "0"), Send("ac-logwrite")])])])
+    return c
+
+
+def audiometer():
+    """the sound, metered for the log: on only while logging (ac-logrun). Every 100 ms the last 100 ms of each
+    channel (before the output's clip~) is read whole: its loudest sample, its sum (the DC), and how many samples were
+    over the 0.98 the output cuts at; env~ gives the level and three bands. (catch~ ac-mtest: a test signal.)"""
+    c = Canvas("audio-meter", w=1800)
+    c.comment("Audio meter for the performance log: computes only while logging")
+    c.c(c.recv("ac-logrun"), 0, c.obj("switch~"), 0)
+    l = c.obj("+~")
+    c.c(c.obj("catch~ ac-mtrL"), 0, l, 0)
+    c.c(c.obj("catch~ ac-mtest"), 0, l, 1)
+    r = c.obj("catch~ ac-mtrR")
+    tw = [c.obj("tabwrite~ acamwl"), c.obj("tabwrite~ acamwr"), c.obj("tabwrite~ acamwc")]
+    c.c(l, 0, tw[0], 0)
+    c.c(r, 0, tw[1], 0)
+    cl = c.obj("expr~ (abs($v1) > 0.98) + (abs($v2) > 0.98)")
+    c.c(l, 0, cl, 0)
+    c.c(r, 0, cl, 1)
+    c.c(cl, 0, tw[2], 0)
+    mono = c.obj("+~")
+    c.c(l, 0, mono, 0)
+    c.c(r, 0, mono, 1)
+    m = c.to(mono, "*~ 0.5")
+    c.col()
+    # the level and three bands: power sums (the rms's env~ counts them)
+    for i, (filt, acc) in enumerate((((), "aclgrs"), (("lop~ 200", "lop~ 200"), "aclglo"),
+                                     (("hip~ 4000", "hip~ 4000"), "aclghi"), (("lop~ 40", "lop~ 40"), "aclgsub"))):
+        e = c.ch(m, *filt, "env~ 4096 4096", "t b f")
+        c.c(e, 1, c.obj(f"v acame{i}"), 0)
+        run_steps(c, (e, 0), [V(acc, f"{acc} + pow(10, acame{i}/10)")] + ([V("aclgrn", "aclgrn + 1")] if i == 0 else []))
+    c.col()
+    # every 100 ms: the window just written read (right to left), then the capture starts again
+    met = c.obj("metro 100")
+    c.c(c.recv("ac-logrun"), 0, met, 0)
+    tk = c.to(met, "t b b")
+    for t in tw:
+        c.c(tk, 0, t, 0)
+    rd = c.obj("t b b b b b b b b")
+    c.c(tk, 1, rd, 0)
+    for k, (op, arr, val) in enumerate((("max", "acamwl", "acamxl"), ("min", "acamwl", "acamnl"),
+                                        ("max", "acamwr", "acamxr"), ("min", "acamwr", "acamnr"),
+                                        ("sum", "acamwl", "acamsl"), ("sum", "acamwr", "acamsr"),
+                                        ("sum", "acamwc", "acamsc"))):
+        c.c(c.ch((rd, k + 1), f"array {op} {arr}"), 0, c.obj(f"v {val}"), 0)
+    run_steps(c, (rd, 0), [
+        V("acamp", "max(max(acamxl, -acamnl), max(acamxr, -acamnr))"), V("aclgpk", "max(aclgpk, acamp)"),
+        V("aclgdcs", "aclgdcs + acamsl + acamsr"), V("aclgmn", "aclgmn + 1"), V("aclgclip", "aclgclip + acamsc"),
+        If("acamp < 0.001 && acrun && acstopped == 0 && acprof == 0", [V("aclgq", "aclgq + 1")])])
     return c

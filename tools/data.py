@@ -100,6 +100,14 @@ PAGES = [
     # brighter, a little louder), Harm (0 = the pleasing harmony only; up = more adventurous relationships)
     [("Sink", "acsink", 0.0), ("Blur", "acblur", 0.0), ("Swell", "acswell", 0.0), ("Harm", "acharmx", 0.0)],
 ]
+def level(v):
+    """a MIX or SENDS knob (0-1) as a gain: 50 % = the designed balance (x1), 100 % = +6 dB, and below 50 % even steps
+    in dB down to -24 dB at 5 %, then to silence - so the bottom of the knob turns as gently as the top (a plain
+    2 x knob dropped 8 dB in its last fifth and then fell away)"""
+    return (f"if({v} >= 0.5, pow(10, 0.6*({v} - 0.5)), if({v} >= 0.05, pow(10, -2.6667*(0.5 - {v})), "
+            f"{v}*1.2619))")
+
+
 PAGE_NAMES = ["SHAPE", "SPACE", "PIECE", "SENDS 1", "SENDS 2", "MIX 1", "MIX 2", "PERFORM"]
 MIX_KNOBS = 28       # knobs up to the end of the MIX pages (the PERFORM page is saved after the newer SETUP values)
 NK = 32              # all the knobs (acparams)

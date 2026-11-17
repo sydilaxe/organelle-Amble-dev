@@ -91,17 +91,21 @@ THE COMPOSER LISTENS
 
 THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   Low octave
-  C   SHAPE page   C#  SPACE page   D  PIECE page
-  D#  MIX 1 page   E   MIX 2 page   F  SENDS (again: SENDS 2)   F#  PERFORM
+  (the white keys C-F: the playing pages; the black keys: the levels)
+  C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells)
+  D   SPACE page      D#  MIX 2 page (motion, textures, cloud, atmos)
+  E   PIECE page
+  F   PERFORM page    F#  SENDS 1 page (drone, pads, bells, motion)
   G   ROOT: hold it and press a key, play a MIDI note or turn knob 1 -
       that note is the next key (while G is up, MIDI notes play)
-  G#  RESOLVE: the tonic as open fifths, held - no modulation, no
-      dissonant chords - until pressed again (a CC mapped to resolve
-      holds it from a pedal)
+  G#  SENDS 2 page (textures, cloud, atmosphere, input)
   A   tap: chord change now (to the next chord shown); hold: pick another
       next chord, again every 0.7 s - let go when you like it
-  A#  next section
-  B   hold section (stays past its length; again: moves on)
+  A#  RESOLVE: the tonic as open fifths, held - no modulation, no
+      dissonant chords - until pressed again (a CC mapped to resolve
+      holds it from a pedal)
+  B   tap: next section; hold: hold section (stays past its length;
+      hold again: moves on)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); aux + tap: auto

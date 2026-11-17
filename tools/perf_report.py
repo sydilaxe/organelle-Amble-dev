@@ -7,6 +7,8 @@ What it tells you:
   - the spikes: the worst moments and what had just changed (a page drawn, a section, a load, a morph)
   - what each thing costs while playing: a fit of the load against what was on (layers, pad types, engines, effects),
     so a cost shows even when it never causes a spike
+  - the sound: level and headroom, samples the output cut, the scheduler falling behind (dropouts), near-silence,
+    rumble, DC - each with what had just changed
   - the profile: each part alone, above the baseline
   - so: what is cheap enough to make richer, and what is worth optimising
 
@@ -23,6 +25,7 @@ from data import FLAVOURS, DRONES, STRIKES, VERBS
 from gen_log import FIELDS
 
 GUARD = 78
+AUDIO = {"rms", "pk", "lo", "hi", "sub", "dc", "clip", "quiet", "late"}
 LAYERS = ("drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud")
 
 
@@ -97,7 +100,7 @@ def describe(r):
 def changes(prev, r):
     if prev is None or prev["file"] != r["file"]:
         return "start of a log"
-    skip = {"t", "load", "peak", "file"}
+    skip = {"t", "load", "peak", "file"} | AUDIO      # (what was measured, not what was done)
     d = [k for k in r if k not in skip and prev.get(k) != r.get(k)]
     return ", ".join(f"{k} {prev.get(k, 0):g}->{r[k]:g}" for k in d) or "nothing logged changed"
 
@@ -152,6 +155,48 @@ def fit(rows):
     return (beta[0], resid.std()), {n: (beta[i + 1], sd[i + 1], seen[n]) for i, n in enumerate(keep)}
 
 
+def audio(rows, playing):
+    """the sound: level and headroom, what the output cut, near-silence while playing, rumble, DC, harshness, the
+    scheduler falling behind - each with the moments it happened and what had just changed"""
+    if not rows or "rms" not in rows[0]:
+        return
+    print("== The sound")
+    lv = [r for r in playing if r["rms"] > -100]
+    if lv:
+        rms = np.array([r["rms"] for r in lv])
+        pk = np.array([r["pk"] for r in lv])
+        print(f"  level: typically {np.median(rms):.0f} dBFS (quietest {rms.min():.0f}, loudest {rms.max():.0f}); "
+              f"loudest sample {pk.max():.1f} dBFS, headroom {-pk.max():.1f} dB")
+    issues = []
+
+    def flag(title, test, why):
+        hit = [i for i, r in enumerate(rows) if test(r)]
+        if hit:
+            issues.append(title)
+            print(f"  {title}: {len(hit)} line(s) - {why}")
+            for i in sorted(hit, key=lambda i: -rows[i].get("clip", 0) - rows[i].get("late", 0))[:4]:
+                r = rows[i]
+                print(f"      {r['file']} t={r['t']:.0f}s  clip {r['clip']:.0f}, peak {r['pk']:.0f} dBFS, "
+                      f"rms {r['rms']:.0f}, late {r['late']:.0f} ms")
+                print(f"        changed: {changes(rows[i - 1] if i else None, r)}")
+                print(f"        state:   {describe(r)}")
+    flag("CUT AT THE OUTPUT", lambda r: r["clip"] > 0,
+         "samples over 0.98 were cut (heard as crackle or harshness): lower that layer or its MIX level")
+    flag("SCHEDULER BEHIND", lambda r: r["late"] > 20,
+         "Pd fell more than 20 ms behind real time - with the CPU load near those moments, a likely dropout; with "
+         "a low load, something else stalled it (an SD-card write, a USB device)")
+    flag("NEAR SILENT WHILE PLAYING", lambda r: r["run"] == 1 and r["quiet"] >= 10,
+         "a second or more under -60 dBFS while a piece played (a start or a sparse section can do this)")
+    flag("RUMBLE", lambda r: r["rms"] > -60 and r["sub"] > r["rms"] - 6,
+         "most of the level is under 40 Hz: inaudible on small speakers, it takes headroom")
+    flag("DC OFFSET", lambda r: r["dc"] >= 10, "a steady offset of 1 % or more: it takes headroom and can thump")
+    flag("HARSH", lambda r: r["rms"] > -60 and r["hi"] > r["rms"] - 6,
+         "unusually much over 4 kHz for Amble's sound")
+    if not issues:
+        print("  nothing cut, no stalls, no rumble or DC: clean")
+    print()
+
+
 def main(args):
     paths = []
     for a in args or [os.path.join(os.path.dirname(__file__), "..", "patches", "Amble", "logs")]:
@@ -190,6 +235,8 @@ def main(args):
             print(f"  {len(bursty)} line(s) peak more than 25 points over their average: a short burst of control "
                   "work (a chord change, a page drawn, a save) rather than sound; spreading it over more ticks helps")
         print()
+
+        audio(rows, playing)
 
         base, cost = fit(playing)
         print("== What each thing costs while playing (fit of the load on what was on)")

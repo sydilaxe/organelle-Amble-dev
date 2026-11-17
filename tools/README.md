@@ -33,7 +33,7 @@ python3 shots.py               OLED screenshots into ../docs/shots
 | `manual.py`, `readme_text.py` | the PDF manual and the patch's README.txt, from the same data |
 | `harness.py`, `ci_check.py` | running the patch offline in Pd with timed events, and the checks |
 | `shots.py`, `oledemu.py` | screenshots: the OLED messages of an offline run drawn into PNGs |
-| `gen_log.py` | the performance log (`logs/perf-*.txt`, every 5 s) and the profile run (`logs/profile-*.txt`) |
+| `gen_log.py` | the performance log (`logs/perf-*.txt`, every 5 s, with the audio meter) and the profile run |
 | `perf_report.py` | reads those logs from a device: spikes, what each thing costs, what to optimise or enrich |
 
 ## Names in the patch

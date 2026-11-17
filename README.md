@@ -49,10 +49,11 @@ The layers and their rhythms:
   press top A# to start. Stop fades out over 8 s and freezes the piece where it is; Start goes on from there.
   An incoming MIDI Start / Stop does the same when Sync is set to follow clock.
 - **The Organelle keys are functions**, one press each, so a hand can leave your instrument for a moment:
-  - low C to F#: the knob pages SHAPE, SPACE, PIECE, MIX 1, MIX 2, SENDS (again: SENDS 2), PERFORM;
+  - low white keys C, D, E, F: the knob pages SHAPE, SPACE, PIECE, PERFORM; the black keys beside them: MIX 1
+    (C#), MIX 2 (D#), SENDS 1 (F#), SENDS 2 (G#);
   - low G: hold for **Root** and press a key, play a MIDI note or turn knob 1;
-  - low G# **Resolve** (the tonic as open fifths, held), A chord change now (hold it to pick another next chord),
-    A# next section, B hold section;
+  - low A chord change now (hold it to pick another next chord), A# **Resolve** (the tonic as open fifths, held),
+    B next section (hold it: hold section);
   - top C to G: the layers in or out (aux: back to auto); G# input mode (aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
   - aux + a low key opens that SETUP page.
@@ -60,7 +61,7 @@ The layers and their rhythms:
   types, and per layer auto / off / on or coming in or going out at 1/4, 1/2, 3/4 of a section. With Section at
   *now* they edit the section that plays. **SAVES** keeps 16 pieces; a program change can load one (SETUP LIVE),
   and a bank of 16 CCs can drive the layer levels and in/out buttons from a controller.
-- **Performing:** a PERFORM knob page (low F#) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
+- **Performing:** a PERFORM knob page (low F) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
   other relationships drift in); ANCHOR (aux + top A) to come back to a sound; quick save and recall (hold top B
   and press a key), COMPARE (hold top B), loads that morph in; factory pieces in empty slots 1-6; JOURNEY (the
   pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT.
@@ -267,7 +268,8 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
   vocoder off. Below 50 % for 20 s it steps back. The pads, drone, sub, bells, motion and reverb never change.
   SETUP page 4 shows the load and the guard's level, and can turn the guard off.
 - **Performance logs.** Set the CPU guard to *on, log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
-  the patch folder (the load, its worst 100 ms, and what was on). Turn SETUP 4's CPU knob fully up for a profile:
+  the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
+  cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
   every part alone for 6 s (about 7 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
   `python3 tools/perf_report.py path/to/logs`: the spikes and what caused them, what each thing costs while playing,
   and what is cheap enough to make richer or worth optimising.
