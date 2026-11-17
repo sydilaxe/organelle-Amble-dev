@@ -226,7 +226,8 @@ def stepcount(c):
     c.c(e, 0, c.obj("print MN", 1000, 480), 0)
 
 
-ev = [(50, "ac-setseed 3"), (310, "ac-secstop bang"), (310, "ac-chgstop bang"), (320, "acdens 1"), (320, "acrhythm 1"),
+# (Writing still: the Euclidean pattern itself - moving, a calm opening plays every other step)
+ev = [(5, "acwrite 0"), (50, "ac-setseed 3"), (310, "ac-secstop bang"), (310, "ac-chgstop bang"), (320, "acdens 1"), (320, "acrhythm 1"),
       (320, "acfmotion 1"), (320, "acenergy 1"), (320, "acfade 10"), (321, "ac-layers bang"),
       (330, "acmk 5"), (330, "acmn 8"), (330, "acmdiv 1"), (330, "acmrot 0")]
 log, _ = run(ev, 25, extra=stepcount)
@@ -695,7 +696,7 @@ check("ac-sett1: 1 Pads tine" in log and len(flav_vals(after)) >= 8 and set(flav
 check(len(flav_vals(at_once)) == 5 and len(flav_vals(later)) == 3,
       f"a new section changes the pad types one voice at a time ({len(flav_vals(at_once)) - 4} at once, "
       f"{len(flav_vals(later))} later)")
-log, _ = run([(50, "ac-setseed 7")] + sp(0.1) + [(1000 + 400 * i, "ac-section bang") for i in range(6)], 17,
+log, _ = run([(50, "ac-setseed 7")] + sp(1.5 / len(GS.SPADS)) + [(1000 + 400 * i, "ac-section bang") for i in range(6)], 17,
              prints=tuple(FL) + ("ac-g-ch1", "ac-g-ch2", "ac-g-ch3", "ac-g-ch4", "ac-sett1", "h-mark"))
 after = log.split("h-mark")[-1]
 vs = flav_vals(after)

@@ -305,7 +305,7 @@ def screen():
     Line("ac-scr4p0", "list Dens $1 Tide $2", [("f", "int(acdens*100)"), ("f", "int(actide*100)")], "ac-txt4")(c)
     Line("ac-scr5p0", "list Colr $1 In $2 $3",
          [("f", "int(accolor*100)"), ("f", "int(acinput*100)"),
-          ("s", "if(acinmode==0, 8 + acinclass, acinmode)", INMODES + ["auto", "pitched", "plucked", "texture"])],
+          ("s", f"if(acinmode==0, {len(INMODES)} + acinclass, acinmode)", INMODES + ["auto", "pitched", "plucked", "texture"])],
          "ac-txt5")(c)
     Line("ac-scr4p1", "list Mix $1 Verb $2", [("f", "int(acrvmix*100)"),
                                               ("s", "if(acrvtype < 0.2, 0, 1 + min(3, int((acrvtype-0.2)/0.2)))", VERBS)],

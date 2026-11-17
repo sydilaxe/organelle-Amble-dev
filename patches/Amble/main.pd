@@ -45755,7 +45755,7 @@
 #X obj 2550 68 t b b b;
 #X obj 2550 92 expr int(accolor*100);
 #X obj 2550 116 expr int(acinput*100);
-#X obj 2550 140 expr if(acinmode==0 \, 8 + acinclass \, acinmode);
+#X obj 2550 140 expr if(acinmode==0 \, 10 + acinclass \, acinmode);
 #X obj 2550 164 sel 0 1 2 3 4 5 6 7 8 9 10 11 12 13;
 #X msg 2550 188 symbol auto;
 #X msg 2550 212 symbol reso;
