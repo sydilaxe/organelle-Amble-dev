@@ -506,7 +506,7 @@ for fl in range(len(FLAVOURS)):
     wide += np.corrcoef(seg[:, 0], seg[:, 1])[0, 1] < 0.9
     T += 5000
 check(wide >= 7, f"{wide} of {len(FLAVOURS)} pad types have their own stereo")
-check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB)")
+check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB, {FLAVOURS[int(np.argmin(dips))]})")
 log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718")], 40,
              prints=tuple(f"ac-v{k}-home" for k in range(4)))
 homes = {tuple(l.split()[1] for l in log.splitlines() if l.startswith(f"ac-v{k}-home")) for k in range(4)}

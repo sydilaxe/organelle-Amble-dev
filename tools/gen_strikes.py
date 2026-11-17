@@ -106,7 +106,11 @@ def engine(layer, kind):
                "crystal": "Crystal: a wine glass's modes (1 : 2.32 : 4.25 : 6.63), long and pure, the fundamental "
                           "beating slowly",
                "lpg": "LPG: a west-coast pluck - a sine through a wavefolder (harder notes fold brighter) and a "
-                      "low-pass gate, the filter and the level closing together like a vactrol"}[kind])
+                      "low-pass gate, the filter and the level closing together like a vactrol",
+               "gong": "Gong: FM as on the DX7's bells - two modulators at inharmonic ratios (1.41, 2.83); the "
+                       "index swells for 0.12 s after the strike, then falls slower than the level (a tam-tam's bloom)",
+               "chip": "Chip: a game console's pulse - a narrow pulse for hard notes, a square for soft ones, its "
+                       "level stepping down in 16 steps (4-bit), a short tick of pitch at the start"}[kind])
     # the length of the layer's notes: the bells ring their full decay; the motion follows the piece's ping
     # decay (250-950 ms) times the engine's own factor
     # (a value per engine: [v] names are global)
@@ -224,6 +228,29 @@ def engine(layer, kind):
             s.c(fo, 0, lp, 0)
             s.c(cf, 0, lp, 1)
             sig = mul(s, s.to((lp, 1), "*~ 1"), _env(s, vel, hz, 0.55, 1, dec, slen))
+        elif kind == "gong":
+            fsig = s.to(hz, "sig~")
+            i1 = _env(s, vel, hz, 4.5, 120, int(dec * 0.7), slen, sq=False)     # (rising 120 ms: the bloom)
+            i2 = _env(s, vel, hz, 1.2, 40, int(dec * 0.3), slen, sq=False)
+            d1 = mul(s, mul(s, s.ch(hz, "* 1.41", "osc~"), i1), fsig)
+            d2 = mul(s, mul(s, s.ch(hz, "* 2.83", "osc~"), i2), fsig)
+            car = s.to(add(s, add(s, fsig, d1), d2), "osc~")
+            sig = mul(s, car, _env(s, vel, hz, 0.42, 4, dec, slen))
+        elif kind == "chip":
+            # the duty: 0.5 (soft) .. 0.125 (hard); a pitch tick from a 4th up in 25 ms
+            du = s.obj("expr 0.5 - 0.375*$f1")
+            s.c(vel, 0, du, 0)
+            tk = s.obj("expr $f1*1.335; $f1")
+            s.c(hz, 0, tk, 0)
+            pk = s.obj("pack f f")
+            s.c(tk, 1, pk, 1)
+            s.c(tk, 0, pk, 0)
+            fv = s.ch(s.m(pk, "$1, $2 25"), "vline~")
+            pl = s.obj("expr~ ($v1 < $v2)*2 - 1")
+            s.c(s.to(fv, "phasor~"), 0, pl, 0)
+            s.c(s.to(du, "sig~"), 0, pl, 1)
+            e = s.to(_env(s, vel, hz, 1.0, 1, dec, slen), "expr~ floor($v1*15)/15")
+            sig = mul(s, s.to(pl, "lop~ 9000"), s.to(e, "*~ 0.22"))
         else:   # metal
             sig = _partials(s, vel, hz, [(1, 0.4, 1.0), (4.0, 0.12, 0.3), (10.0, 0.05, 0.08)], dec, slen)
             # a beating twin of the fundamental, 0.8 Hz up

@@ -263,8 +263,104 @@ def flav_cz():
     return s
 
 
+VOWELS = [(800, 1150, 2900), (400, 1600, 2700), (350, 2000, 2800), (450, 800, 2830), (325, 700, 2530), (600, 1700, 2600), (500, 900, 2600), (700, 1500, 2600), (620, 1200, 2550)]      # F1 F2 F3 (Hz): a e i o u, then between them
+
+
+def flav_choir():
+    s, ln = switched("choir", "$0-fw18")
+    s.comment("Choir: a glottal source (narrow pulses, softer and rounder when dark) through three formants that "
+              "wander through nine vowels - a slow quasi-random drift of two unrelated cycles; the right side sings "
+              "its own vowel a little apart, a hair sharp")
+    f, b = _flav_inlets(s, 2)
+    lb = s.obj("loadbang")
+    for j in range(3):
+        name = f"$0-vf{j}"
+        s.obj(f"array define {name} {len(VOWELS) + 3}")
+        vals = [VOWELS[-1][j]] + [v[j] for v in VOWELS] + [VOWELS[0][j], VOWELS[1][j]]
+        s.c(s.m(lb, " ".join(str(x) for x in vals)), 0, s.obj(f"array set {name}"), 0)
+    expo = s.ch(b, "*~ -8", "+~ 12")                        # pulse narrowness: 12 (dark) .. 4 (bright)
+    outs = []
+    for side, (d, r1, r2) in enumerate(((1.0, 0.031, 0.047), (1.0025, 0.037, 0.043))):
+        vib = s.ch(s.obj(f"osc~ {5.1 + 0.4 * side}"), "*~ 0.004", f"+~ {d}")
+        ph = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~")
+        src = s.obj("pow~")
+        s.c(ph, 0, src, 0)
+        s.c(expo, 0, src, 1)
+        drift = add(s, s.obj(f"osc~ {r1}"), s.ch(s.obj(f"osc~ {r2}"), "*~ 0.7"))
+        idx = s.ch(drift, "*~ 0.294", "+~ 0.5", f"*~ {len(VOWELS) - 1}", "+~ 1")
+        sm = s.obj("*~ 1")
+        for j, (q, a) in enumerate(((7, 1.0), (10, 0.55), (14, 0.25))):
+            fm = s.to(idx, f"tabread4~ $0-vf{j}")
+            v = s.obj(f"vcf~ {q}")
+            s.c(s.to(src, "hip~ 60"), 0, v, 0)
+            s.c(fm, 0, v, 1)
+            s.c(s.to(v, f"*~ {a}"), 0, sm, 0)
+        outs.append(s.to(sm, "*~ 1.6"))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
+def flav_vosim():
+    s, ln = switched("vosim", "$0-fw19")
+    s.comment("VOSIM: each period of the note, a train of three sin-squared pulses at a formant frequency, each "
+              "weaker than the last - a vowel-like, slightly nasal tone; the formant rises with brightness and "
+              "sweeps slowly, the right side's a 3rd above")
+    f, b = _flav_inlets(s, 2)
+    ph = s.to(f, "phasor~")
+    sweep = s.ch(s.recv("$0-la"), "osc~", "*~ 0.15", "+~ 1")
+    fmt = mul(s, s.ch(b, "*~ 1600", "+~ 500"), sweep)
+    outs = []
+    for k in (1.0, 1.26):
+        fx = s.to(fmt, f"*~ {k}")
+        vs = s.obj("expr~ if($v1*$v2/max($v3, 1) < 3, pow(sin(3.14159*$v1*$v2/max($v3, 1)), 2)*"
+                   "pow(0.65, floor($v1*$v2/max($v3, 1))), 0)")
+        s.c(ph, 0, vs, 0)
+        s.c(fx, 0, vs, 1)
+        s.c(f, 0, vs, 2)
+        outs.append(s.ch(vs, "hip~ 40", "*~ 0.9"))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
+def flav_whistle():
+    s, ln = switched("whistle", "$0-fw20")
+    s.comment("Whistle: the chord whistled - a pure tone two octaves up with a slow, unsteady pitch and a vibrato "
+              "that grows with brightness, breath around it (noise in a narrow band on the tone), the octave below "
+              "faintly for body; one tone, each side its own breath (two tones a hair apart would beat away in mono)")
+    f, b = _flav_inlets(s, 2)
+    wob = s.ch(add(s, s.obj("osc~ 0.29"), s.ch(s.obj("osc~ 0.23"), "*~ 0.6")), "*~ 0.002", "+~ 1")
+    vib = mul(s, s.ch(s.obj("osc~ 5.4"), "*~ 0.006"), b)
+    fw = mul(s, s.to(f, "*~ 4"), add(s, wob, vib))
+    tone = s.ch(fw, "osc~", "*~ 0.4")
+    body = s.ch(s.to(fw, "*~ 0.5"), "osc~", "*~ 0.08")
+    outs = []
+    for side in range(2):
+        br = s.obj("vcf~ 25")
+        s.c(s.obj("noise~"), 0, br, 0)
+        s.c(fw, 0, br, 1)
+        outs.append(add(s, add(s, tone, body), s.to(br, "*~ 0.5")))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
+def flav_lissa():
+    s, ln = switched("lissa", "$0-fw21")
+    s.comment("Lissajous: the two sides are the figure's two axes - the note on the left, its fifth (3:2) on the "
+              "right drifting slowly in phase, so the stereo image turns; brightness adds each side's octave, and "
+              "a little of each side crosses to the other")
+    f, b = _flav_inlets(s, 2)
+    x = s.to(f, "osc~")
+    y = s.to(s.ch(f, "*~ 1.5", "+~ 0.07"), "osc~")
+    bx = mul(s, s.ch(s.to(f, "*~ 2"), "osc~"), s.to(b, "*~ 0.35"))
+    by = mul(s, s.ch(s.to(f, "*~ 3"), "osc~"), s.to(b, "*~ 0.3"))
+    L = s.to(add(s, add(s, x, bx), s.to(y, "*~ 0.25")), "*~ 0.45")
+    R = s.to(add(s, add(s, y, by), s.to(x, "*~ 0.25")), "*~ 0.45")
+    _out(s, L, ln, R)
+    return s
+
+
 NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat,
-             flav_reed, flav_organ, flav_air, flav_cz)
+             flav_reed, flav_organ, flav_air, flav_cz, flav_choir, flav_vosim, flav_whistle, flav_lissa)
 
 
 # ---------------------------------------------------------------- drone designs 1..3 (0 is the original)
@@ -794,8 +890,34 @@ def tex_song():
     return s
 
 
+def tex_pulsar():
+    s, ln = switched("pulsar-tex", "ac-g-tex16")
+    s.comment("Pulsar: two pulse trains (Roads' pulsar synthesis) on chord tones - each pulse a burst of the tone "
+              "fading out within the first fifth of the period; the pulse rate wanders between a rhythm (4 Hz) and "
+              "a low pitch (90 Hz), some pulses masked at random; the two trains on opposite sides, half a period "
+              "apart")
+    rate = s.ch(add(s, s.obj("osc~ 0.011"), s.ch(s.obj("osc~ 0.029"), "*~ 0.5")), "*~ 0.66", "+~ 1", "*~ 1.5",
+                "expr~ 4*pow(22.5, max(0, min(1, $v1/3)))")
+    outs = []
+    for k, off in ((0, 0.0), (2, 0.5)):
+        hz = s.ch(s.recv(f"ac-voccar{k}"), "line~")
+        tone = s.to(hz, "*~ 2")
+        ph = s.ch(s.to(rate, "phasor~"), f"+~ {off}", "wrap~")
+        p = s.obj("expr~ if($v1 < 0.2, sin(6.28319*$v1*$v2/max($v3, 0.5))*(1 - $v1/0.2), 0)")
+        s.c(ph, 0, p, 0)
+        s.c(tone, 0, p, 1)
+        s.c(rate, 0, p, 2)
+        mask = s.obj("samphold~")
+        s.c(s.obj("noise~"), 0, mask, 0)
+        s.c(ph, 0, mask, 1)
+        outs.append(mul(s, p, s.to(mask, "expr~ $v1 > -0.5")))
+    g = f"*~ {TEXG['PULSAR_G']}"
+    throws(s, mul(s, s.to(outs[0], g), ln), mul(s, s.to(outs[1], g), ln), mix=0.6, send=0.5)
+    return s
+
+
 NEW_TEXTURES = (tex_radio, tex_data, tex_buzz, tex_murmur, tex_echoes, tex_whisper, tex_leaves, tex_brook,
-                tex_bubbles, tex_crickets, tex_harp, tex_song)
+                tex_bubbles, tex_crickets, tex_harp, tex_song, tex_pulsar)
 
 
 # ---------------------------------------------------------------- character on the pads (inlet 0 L, 1 R)

@@ -381,6 +381,10 @@ FLAV_DESC = {
             "vibrato",
     "organ": "drawbars 16' 8' 5 1/3' 4' 2', the upper ones drawn out with brightness, a slow rotary swell",
     "air": "a flute: a pure tone with breath around it (more with brightness) and a slow vibrato",
+    "choir": "a choir: glottal pulses through three formants drifting slowly through nine vowels, each side its own",
+    "vosim": "VOSIM: trains of fading sin-squared pulses at a formant - vowel-like, a little nasal; brighter, higher",
+    "whistle": "the chord whistled two octaves up: an unsteady pure tone with breath and a growing vibrato",
+    "lissa": "Lissajous: the note on one side, its fifth on the other slowly turning in phase - the image rotates",
     "cz": "phase distortion (the Casio CZ): a cosine through a bent phase - from a sine towards a saw with brightness, "
           "and on the right the resonant wave, its resonance sweeping slowly",
 }
@@ -396,7 +400,9 @@ TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few h
             "bubbles": "water drops tuned to the chord - sines rising in pitch as they die (a bubble model)",
             "crickets": "three crickets chirping on a high chord tone, each its own pace, one far off",
             "harp": "an aeolian harp: three strings tuned to the chord, sung by gusts of wind (a string model)",
-            "song": "a distant FM voice singing slow gliding phrases on chord tones"}
+            "song": "a distant FM voice singing slow gliding phrases on chord tones",
+            "pulsar": "two pulse trains on chord tones (pulsar synthesis): the pulse rate wanders between a rhythm "
+                      "and a low pitch, some pulses dropped at random, the trains on opposite sides"}
 STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)",
                "fm": "FM pings: a carrier and a modulator at the piece's ratio, the index falling fast "
                      "(the motion's own)",
@@ -410,6 +416,9 @@ STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)
                "bowl": "a singing bowl: its modes (1 : 2.76 : 5.4 : 8.9), the lower ones beating, long and soft",
                "plate": "a thin metal plate: close, inharmonic modes - a gong-like shimmer, shorter",
                "crystal": "a wine glass: pure, long modes (1 : 2.32 : 4.25 : 6.63), the fundamental beating slowly",
+               "gong": "an FM gong (as the DX7's bells): two inharmonic modulators whose brightness blooms just "
+                       "after the strike, then fades slower than the sound",
+               "chip": "a game console's pulse: narrower when hard, its level stepping down in 4-bit steps",
                "lpg": "a west-coast pluck: a sine through a wavefolder and a low-pass gate - soft notes round, hard "
                       "ones folded brighter, blooming and closing like a vactrol"}
 DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",

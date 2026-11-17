@@ -51,13 +51,13 @@ MOVES_P = [3, -3, 4, -4, 3, -4, 2, -2, 2, -2, 5, -1]
 MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 
 FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat",
-            "reed", "organ", "air", "cz"]
+            "reed", "organ", "air", "cz", "choir", "vosim", "whistle", "lissa"]
 FLAV_AUTO = 14             # (a piece picks among the first 14; the later ones by hand)          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,
-            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18)
+            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18, PULSAR_G=0.35)
 TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur", "echoes", "whisper",
-            "leaves", "brook", "bubbles", "crickets", "harp", "song"]
+            "leaves", "brook", "bubbles", "crickets", "harp", "song", "pulsar"]
 # a piece picks its textures among the first 12 (so a seed, and a saved piece, plays what it always did); the
 # later ones are chosen by hand (SETUP SOUNDS, the textures' page)
 TEX_AUTO = 12
@@ -196,7 +196,7 @@ FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1
 # the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
-STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg"]
+STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg", "gong", "chip"]
 # (a piece's own pick, Auto, is among the first 6 - the weights below - so a seed plays what it did; the later
 # engines are chosen by hand: SETUP VOICES, the layer's page)
 # auto: what a piece picks (bells lean to bars and metal, motion to the FM pings and blips)
@@ -206,13 +206,13 @@ MOTION_ENGINE_WEIGHTS = [0.4, 2.0, 1.5, 0.9, 0.9, 0.5]
 # level and equal peaks (the short, spiky wood and blip would be too loud at equal level) - see tools/ci_check.py;
 # then the decay in ms on the bells, and the motion's decay as a factor of its piece decay (250-950 ms)
 STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2, kalimba=0.7, steel=0.9,
-                             pluck=0.85, bowl=0.62, plate=1.0, crystal=0.57, lpg=7.5),
+                             pluck=0.85, bowl=0.62, plate=1.0, crystal=0.57, lpg=7.5, gong=0.75, chip=1.0),
                    motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0, kalimba=8.0, steel=8.0,
-                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=48.0))
+                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=48.0, gong=8.0, chip=8.0))
 STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000,
-                  bowl=7000, plate=3800, crystal=5200, lpg=1500)
+                  bowl=7000, plate=3800, crystal=5200, lpg=1500, gong=6500, chip=900)
 STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
-                   bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8)
+                   bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8, gong=1.4, chip=0.6)
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
 # with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
