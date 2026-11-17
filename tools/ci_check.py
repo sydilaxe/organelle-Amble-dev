@@ -639,7 +639,8 @@ def rvprobe(c):
 for vt, name in ((0.3, "Bloom 1"), (0.7, "Hall")):
     ds = []
     for seed in (7, 11, 23):
-        log, a = run([(50, f"ac-setseed {seed}"), (1000, f"ac-param 5 {vt}")], 40, extra=rvprobe)
+        # (the reverb's own balance: Writing still - moving, the drone is 6 dB lower and the reverb about 1 dB less)
+        log, a = run([(5, "acwrite 0"), (50, f"ac-setseed {seed}"), (1000, f"ac-param 5 {vt}")], 40, extra=rvprobe)
         rv = np.median([float(l.split()[1]) for l in log.splitlines() if l.startswith("RV:")][40:]) - 100
         ds.append(rv - rms_db(a[20 * SR:40 * SR].mean(1)))
     check(-10 < np.mean(ds) < -2, f"{name} at the default Mix: {np.mean(ds):+.1f} dB against the whole output "
@@ -662,8 +663,8 @@ vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE and DIALOGUE joined)
-check(len(vals) == len(GS.SETTINGS) == 139 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE and WRITING joined)
+check(len(vals) == len(GS.SETTINGS) == 143 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1043,7 +1044,8 @@ check(len(ts) == 1 and ts[0].startswith("motion ") and "ac-sett0" not in log,
       f"top E held + low F (fewer hits): that, nothing else ({ts})")
 # the rhythm keys: more hits, harmony and ratchets add notes; C# gives back the piece's own; bells harmony adds strikes
 def rk(keys, layer, prints):
-    ev = [(50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfmotion",
+    # (Writing still: with Answer motion the motion would rest every other 2 bars)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfmotion",
                                                                                      "acfbell", "acrhythm")] + \
          [(300, "acmmotion 2"), (300, "acmbell 2"), (301, "ac-layers bang")]
     t = 1000
