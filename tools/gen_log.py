@@ -148,7 +148,7 @@ def perflog():
         Send("ac-chgstop"), Send("ac-secstop"), V("acsetup", "0"), Call("ac-oledall"),
         X("1; 0; aclogon", "v acprof", "v acprst", "v aclogwas"), Send("ac-logrun", "1"), V("acflxf", "50"),
         Loop("4", "aci", [T("acprfl", "aci", "acflav[int(aci)]")]),
-        Send("ac-profclear"), Later("ac-profgo", 9000), Toast(f"profile: {PROFILE_MIN} min silent")])])     # (after the stop's fade)
+        Send("ac-profclear"), Later("ac-profgo", 9000, stop="ac-profstop"), Toast(f"profile: {PROFILE_MIN} min silent")])])     # (after the stop's fade)
     pc = c.obj("t b b")
     c.c(c.recv("ac-profclear"), 0, pc, 0)
     c.c(c.m((pc, 0), "list part load peak"), 0, c.obj("text set acprofile 1e+06"), 0)
@@ -172,7 +172,7 @@ def perflog():
     c.c(c.to(c.recv("ac-profvals"), "t l"), 0, lst, 1)
     c.c(lst, 0, c.obj("text set acprofile 1e+06"), 0)
     run_steps(c, (rec, 0), [V("acflxf", "50"), V("acprst", "acprst + 1"),
-                            If(f"acprst < {len(parts)}", [Later("ac-profgo", 10)], [Call("ac-profend")])])
+                            If(f"acprst < {len(parts)}", [Later("ac-profgo", 10, stop="ac-profstop")], [Call("ac-profend")])])
     proc(c, "ac-profvalsq", [SendL("ac-profvals", ["int(1000*acprsum/max(1, acprn))/10", "int(1000*acprmax)/10"])])
     c.c((rec, 2), 0, c.obj("s ac-profvalsq"), 0)
     pf = c.ch(c.recv("ac-profwrite"), "expr account % 10000", "makefilename logs/profile-%04d.txt")
@@ -184,6 +184,9 @@ def perflog():
          + [V("acfade", "500"), Call("ac-layers"), Call("ac-verbsel"), Call("ac-inputupd"), Call("ac-sinkupd"),
             Call("ac-sparkupd"), If("aclogwas == 0", [Send("ac-logrun", "0")]),
             Toast("profile written")])
+    # A# while it runs: the profile stops (what it measured so far is written) and the piece is back, stopped
+    # (its timers listened for ac-profstop, but nothing sent it: a started profile could not be cancelled)
+    proc(c, "ac-profabort", [If("acprof", [Send("ac-profstop"), Call("ac-profend"), Toast("profile stopped")])])
     c.col()
     # on, off (SETUP 4); when the piece stops, the part so far is written
     proc(c, "ac-logupd", [If("acguard >= 2", [If("aclogon == 0", [V("aclogon", "1"), Call("ac-lognew"),

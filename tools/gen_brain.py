@@ -504,9 +504,9 @@ def section():
         Call("ac-clockstart"), Call("ac-outchord"),
         Call("ac-scr"), Send("ac-led"),
     ])])
-    proc(c, "ac-startstop", [If("acstopped", [Call("ac-start")],
+    proc(c, "ac-startstop", [If("acprof", [Call("ac-profabort")], [If("acstopped", [Call("ac-start")],
                                 [If("acended || acrun == 0", [Call("ac-reseed"), Toast("new piece")],
-                                    [Call("ac-stop")])])])
+                                    [Call("ac-stop")])])])])
     proc(c, "ac-finoff", [If("acrun==0", [V("acended", "1"), V("acfade", "2000"), Call("ac-layers"),
                                           Call("ac-scr"), Send("ac-led")])])
     return c

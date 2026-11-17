@@ -1227,6 +1227,14 @@ check(not errors(log) and names == [n for n, _ in LG._parts()] and all(len(r) ==
 rep = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "perf_report.py"),
                       os.path.join(d, "logs")], capture_output=True, text=True)
 check(rep.returncode == 0 and "The profile" in rep.stdout and "The session" in rep.stdout, "perf_report reads both")
+# A# during the profile stops it (the parts so far written) and the piece is back, stopped; A# again plays it
+d = build_tmp()
+log, a = run([(50, "ac-setseed 7"), (500, "ac-profile bang"), (25000, "ac-startstop bang"), (27000, "ac-startstop bang")],
+             34, d=d)
+pr = glob.glob(os.path.join(d, "logs", "profile-*.txt"))
+rows = [l.split() for l in open(pr[0]).read().split(";") if l.strip()] if pr else []
+check("ac-toast: list profile stopped" in log and 1 < len(rows) < len(LG._parts()) and rms_db(a[-4 * SR:]) > -50,
+      f"A# stops the profile ({len(rows) - 1} parts written), and starts the piece again ({rms_db(a[-4 * SR:]):.0f} dB)")
 log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"), (400, "ac-setknob 2 0.5"),
               (500, "ac-setknob 2 1"), (600, "ac-setknob 2 0.95")], 12, prints=("ac-toast",))
 starts = sum(f"profile: {LG.PROFILE_MIN} min" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
