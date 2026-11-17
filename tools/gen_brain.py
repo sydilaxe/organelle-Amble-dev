@@ -204,7 +204,7 @@ def piece():
           "v acpal3"),
         SendL("ac-fmr", ["acfmrt[int(acfmrpick[int(acr4*40)])]"]),
         RNG,
-        X("acpapick[int(acr1*40)]; int(acr2*%d); int(acr3*%d); int(acr4*%d)" % (len(TEXTURES), len(TEXTURES),
+        X("acpapick[int(acr1*40)]; int(acr2*%d); int(acr3*%d); int(acr4*%d)" % (TEX_AUTO, TEX_AUTO,
                                                                                    len(BELL_SETS)),
           "v acpartI", "v actexA", "v actexB", "v acbellI"),
         SendL("ac-partials", ["acpartt[int(acpartI)*4+1]", "acpartt[int(acpartI)*4+2]", "acpartt[int(acpartI)*4+3]"]),
@@ -401,7 +401,7 @@ def section():
         rest += [RNG, V("acf" + lay, f"acr1 < acrmask[int(acrole)*6+{i}]{extra}")]
     rest += [
         RNG,
-        X("if(acr1<0.5, actexA, actexB); if(acr2<0.5, actexB, int(acr3*%d))" % len(TEXTURES), "v actex1a", "v actex2a"),
+        X("if(acr1<0.5, actexA, actexB); if(acr2<0.5, actexB, int(acr3*%d))" % TEX_AUTO, "v actex1a", "v actex2a"),
         Call("ac-sndovr"),
         # rhythm of the motion layer: a Euclidean pattern, its rotation, 16ths or 8ths, arpeggio shape
         RNG,
@@ -883,27 +883,28 @@ def players():
         If("acgt8 > 0.01", [SendL("ac-echo", ["mtof(min(100, acch[int(acr1*4)] + 24 + 12*int(acr2*2)))", "acr3"])]),
         Arm("ac-etick", "(1800 + acr4*5000) * (1.4 - 0.6*acdeff)", stop="ac-playstop"),
     ])
-    # bubbles: bursts of drops on chord tones (higher = shorter), three voices in turn
-    proc(c, "ac-bbtick", [
-        If("acgt12 > 0.01", [If("acbbn > 0", [
+    # bubbles: bursts of drops on chord tones (higher = shorter), three voices in turn. (These two players draw
+    # random numbers only while their texture sounds: drawing them always moved every later choice of a piece, so
+    # a seed - or a saved piece - no longer played what it did)
+    proc(c, "ac-bbtick", [If("acgt12 > 0.01", [
+        If("acbbn > 0", [
             RNG, V("acbbv", "(acbbv + 1) % 3"),
             SendL("ac-bub", ["acbbv", "mtof(min(108, acch[int(acr1*4)] + 24 + 12*int(acr2*2)))", "25 + acr3*90",
                              "0.15 + acr4*0.35", "fmod(acr1*7.3, 1)"]),
-            V("acbbn", "acbbn - 1")], [RNG, V("acbbn", "2 + int(acr1*8)")])]),
+            V("acbbn", "acbbn - 1")], [RNG, V("acbbn", "2 + int(acr1*8)")]),
         RNG,
-        Arm("ac-bbtick", "if(acbbn > 0, 40 + acr2*180, (800 + acr3*4000) * (1.4 - 0.6*acdeff))", stop="ac-playstop"),
-    ])
+        Arm("ac-bbtick", "if(acbbn > 0, 40 + acr2*180, (800 + acr3*4000) * (1.4 - 0.6*acdeff))", stop="ac-playstop")],
+        [Arm("ac-bbtick", "1500", stop="ac-playstop")])])
     # song: phrases of 2-5 notes on chord tones, each gliding from the last, then a rest
-    proc(c, "ac-sgtick", [
-        If("acgt15 > 0.01", [If("acsgn > 0", [
+    proc(c, "ac-sgtick", [If("acgt15 > 0.01", [
+        If("acsgn > 0", [
             RNG, V("acsgd", "900 + acr4*2200"),
             SendL("ac-song", ["mtof(acch[int(acr1*4)] + 12*int(acr2*2))", "150 + acr3*700", "acsgd"]),
-            V("acsgn", "acsgn - 1")], [RNG, X("2 + int(acr1*4); 0", "v acsgn", "v acsgd")])]),
+            V("acsgn", "acsgn - 1")], [RNG, X("2 + int(acr1*4); 0", "v acsgn", "v acsgd")]),
         RNG,
-        Arm("ac-sgtick", "if(acgt15 < 0.01, 1500, if(acsgn > 0, if(acsgd > 0, acsgd*0.92, 300), "
-                         "(2500 + acr3*7000) * (1.4 - 0.6*acdeff)))",
-            stop="ac-playstop"),
-    ])
+        Arm("ac-sgtick", "if(acsgn > 0, if(acsgd > 0, acsgd*0.92, 300), (2500 + acr3*7000) * (1.4 - 0.6*acdeff))",
+            stop="ac-playstop")],
+        [Arm("ac-sgtick", "1500", stop="ac-playstop")])])
     # ghost input mode: a played onset rings the next bell note
     # data texture: bursts of blips on chord tones
     proc(c, "ac-ttick", [RNG, If("acgatm > 0.01 && acatmcur == 1 && acr1 < 0.4", [Send("ac-thunder")]),

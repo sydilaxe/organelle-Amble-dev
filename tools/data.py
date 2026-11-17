@@ -54,6 +54,9 @@ TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3
             LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18)
 TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur", "echoes", "whisper",
             "leaves", "brook", "bubbles", "crickets", "harp", "song"]
+# a piece picks its textures among the first 12 (so a seed, and a saved piece, plays what it always did); the
+# later ones are chosen by hand (SETUP SOUNDS, the textures' page)
+TEX_AUTO = 12
 DRONES = ["pure", "analog", "organ", "fm", "frost"]
 CHARACTERS = ["clean", "chorus", "tape", "ring", "crush"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect
