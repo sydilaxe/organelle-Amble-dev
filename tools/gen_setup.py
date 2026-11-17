@@ -10,7 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
-from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES
+from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
                acrtb=0, acoutroot=-1, acclkon=0, actrange=0,
@@ -50,9 +50,10 @@ LAYER_PAGES = [("DRONE", "acmdrone", "acsdrone", "acmxd", "acsndd"), ("SUB", "ac
                ("PADS", "acmpad", "acspad", "acmxp", "acsndp"), ("BELLS", "acmbell", "acsbell", "acmxb", "acsndb"),
                ("MOTION", "acmmotion", "acsmot", "acmxm", "acsndm"), ("TEXTURES", "acmtex", "acstex", "acmxt", "acsndt"),
                ("ATMOSPHERE", "acmatm", "acsatm", "acmxa", "acsnda"), ("CLOUD", "acmcloud", None, "acmxc", "acsndc")]
-QUICK_NAMES = ["CHORD"] + [n for n, *_ in LAYER_PAGES]
+QUICK_NAMES = ["CHORD"] + [n for n, *_ in LAYER_PAGES] + ["INPUT"]
 CHORD_PAGE = NSET                          # (acsetpg)
 LAYER_PAGE0 = NSET + 1                     # + the layer (gen_ui.LAYER_KEYS order)
+INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
 NALL = NSET + len(QUICK_NAMES)
 SCHPICK = ["next change", "now"]
 SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
@@ -408,6 +409,14 @@ def quick_pages():
             ("list 3 Level $1%", [("f", f"int({mx}*100)")]),
             ("list 4 Verb send $1%", [("f", f"int({snd}*100)")]) if snd else ("list 4 Verb send -", None),
         ]))
+    # INPUT (top G# held): what the input does (the mode: resonators, grains, tape, ghost bells, bands, vocoding,
+    # morphing - the pads carry its spectrum), how loud, how much it steers the composition, its reverb send
+    pages.append(("INPUT", [
+        ("list 1 Mode $1", [("s", "acinmode", INMODES)]),
+        ("list 2 In $1%", [("f", "int(acinput*100)")]),
+        ("list 3 Follow you $1%", [("f", "int(acfollow*100)")]),
+        ("list 4 Verb send $1%", [("f", "int(acsndi*100)")]),
+    ]))
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -451,6 +460,11 @@ def quick_knobs(item):
             If(at(pg, 2), [V("acsnew", "int(acsv*2.99)"), If(f"acsnew != {m}", [V(m, "acsnew"), V("acfade", LFADE),
                                                                                 Call("ac-layers")])]),
             If(at(pg, 3), knob(mx))] + ([If(at(pg, 4), knob(snd))] if snd else [])
+    st += [If(at(INPUT_PAGE, 1), [V("acsnew", f"int(acsv*{len(INMODES) - 0.01})"), If("acsnew != acinmode", [
+               V("acinmode", "acsnew"), Call("ac-inputupd"), Call("ac-scr5")])]),
+           If(at(INPUT_PAGE, 2), knob("acinput")),
+           If(at(INPUT_PAGE, 3), [V("acfollow", "acsv")]),
+           If(at(INPUT_PAGE, 4), knob("acsndi"))]
     return st
 
 

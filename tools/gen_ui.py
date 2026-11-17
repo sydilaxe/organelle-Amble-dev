@@ -45,7 +45,7 @@ LAYER_KEYS = [("acmdrone", "drone", "acgdrone"), ("acmsub", "sub", "acgsub"), ("
               ("acmbell", "bells", "acgbell"), ("acmmotion", "motion", "acgmotion"), ("acmtex", "textures", "acgtex"),
               ("acmatm", "atmosphere", "acgatm"), ("acmcloud", "cloud", "acgcloud")]
 TOP_KEYS = [f"{n} in/out | aux: {n} page" for _, n, _ in LAYER_KEYS] + [
-    "input mode | aux: capture", "Freeze | aux: ANCHOR", "start / stop | aux: COMPOSE / DRIFT",
+    "input mode | hold: INPUT page | aux: capture", "Freeze | aux: ANCHOR", "start / stop | aux: COMPOSE / DRIFT",
     "new piece | hold: COMPARE | + key: load | aux: SAVES"]
 SAVE_KEY = 83                           # top B: tap = new piece; held, a key loads its slot (aux: saves to it)
 ANCHOR_KEY = 81                         # top A: aux + tap = ANCHOR (set, then glide back), aux + hold = anchor here
@@ -53,6 +53,7 @@ FKEYS = LOW_KEYS + TOP_KEYS
 ROOT_KEY = 60 + LOW_KEYS.index("Root (hold)")
 MOTION_KEY = 72 + [n for _, n, _ in LAYER_KEYS].index("motion")      # top E
 BELLS_KEY = 72 + [n for _, n, _ in LAYER_KEYS].index("bells")        # top D#
+INPUT_KEY = 72 + len(LAYER_KEYS)                                     # top G#
 CHORD_KEY = 60 + LOW_KEYS.index("chord change now (hold: CHORD page)")
 SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
 
@@ -133,6 +134,9 @@ def keys():
                   [SendL("ac-fkey", ["ackn"])])])])],
         [If(f"ackn == {ROOT_KEY}", [V("acroothold", "0")]),
          If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", "0")]),
+         # top G# let go: a tap steps the input mode; a hold already opened the INPUT page
+         If(f"ackn == {INPUT_KEY} && acinkh >= 0", [Send("ac-inhstop"), If("acinkh == 0", [Call("ac-inmodestep")]),
+                                                  V("acinkh", "-1")]),
          # top B let go: a tap is a new piece (aux: the SAVES page); a hold was COMPARE, which ends
          If(f"ackn == {SAVE_KEY} && acbdown", [Send("ac-bstop"),
             If("acbcmp", [Call("ac-cmpoff")], [If("acbused == 0", [
@@ -174,8 +178,7 @@ def keys():
     for i, lk in enumerate(LAYER_KEYS):
         proc(c, f"ac-laykey{i}", layer(i, *lk))
     top = [[Call(f"ac-laykey{i}")] for i in range(len(LAYER_KEYS))] + [
-        [If("acauxheld", [Call("ac-capture")],
-            [V("acinmode", "(acinmode+1) % 8"), Call("ac-inputupd"), Call("ac-inmodetoast"), Call("ac-scr5")])],
+        [If("acauxheld", [Call("ac-capture")], [V("acinkh", "0"), Arm("ac-inhold", "500", stop="ac-inhstop")])],
         [If("acauxheld", [X("1; 0", "v acanp", "v acanheld"), Arm("ac-ancheld", "800", stop="ac-ancstop")],
             [Call("ac-freezetoggle")])],
         [If("acauxheld", [Call("ac-modetoggle")], [Call("ac-startstop")])],
@@ -202,6 +205,10 @@ def keys():
     proc(c, "ac-ancheld", [V("acanheld", "1"), Call("ac-anchorset")])
     proc(c, "ac-rootset", [V("acpend", "acrootn"), Send("ac-keytoast"), Call("ac-chordnext")])
     # low A held 0.5 s: the CHORD page (knob 1 picks the next chord; gen_setup)
+    proc(c, "ac-inmodestep", [V("acinmode", "(acinmode+1) % 8"), Call("ac-inputupd"), Call("ac-inmodetoast"),
+                              Call("ac-scr5")])
+    # top G# held 0.5 s: the INPUT page (gen_setup)
+    proc(c, "ac-inhold", [V("acinkh", "1"), V("acsetup", "1"), V("acsetpg", str(_S.INPUT_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordhold", [V("acrr", "1"), V("acsetup", "1"), V("acsetpg", str(_S.CHORD_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordnow", [Call("ac-change"), Toast("chord change")])
     proc(c, "ac-resolvetoggle", [V("acres", "1 - acres"), Call("ac-resolveupd")])

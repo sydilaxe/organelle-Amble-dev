@@ -100,7 +100,12 @@ FKEY_DESC = {
     "next section (hold: hold section)": "A tap (on its release): jump to the next section of the form. Held "
                                          "0.6 s: hold the section - it plays past its length (HOLD shows); hold "
                                          "again and the piece moves on within 2 s.",
-    "input mode | aux: capture": "Step through the input modes (see Audio input). Aux: record 8 s of the input "
+    "input mode | hold: INPUT page | aux: capture": "A tap (on its release): step through the input modes (see "
+                                  "Audio input). Held half a second: the INPUT page - knob 1 the mode (what the "
+                                  "input does: resonators, grains, tape, ghost bells, bands, the vocoder and morph "
+                                  "cross-synthesis with the pads), knob 2 In (its level), knob 3 Follow you (how much "
+                                  "what you play or sing steers the chords), knob 4 its reverb send; aux leaves. "
+                                  "Aux: record 8 s of the input "
                                  "into the cloud and keep it as a memory.",
     "Freeze": "The reverb tail and the cloud hold still; again to release.",
     "start / stop | aux: COMPOSE / DRIFT": "Start a ready piece, or stop: an 8 s fade that freezes the piece where "

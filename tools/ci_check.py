@@ -1011,6 +1011,14 @@ log, _ = run([(50, "ac-setseed 7"), (1000, "aux 1"), (1050, "notesRaw 76 100"), 
 ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
 check(ts == ["motion 5/12", "bells waltz", "bells auto"], f"aux + top E / D# + a low key: rhythms ({ts})")
 
+# top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
+log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
+              (2800, "notesRaw 80 0"), (3000, "knob1 0.8"), (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
+             prints=("ac-sett0", "ac-sett1", "ac-sett3"))
+ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+check(ts == ["input reso"] and "ac-sett0: list INPUT" in log and "ac-sett1: 1 Mode vocode" in log
+      and "ac-sett3: 3 Follow you 90%" in log, f"top G#: tap = next input mode ({ts}), held = the INPUT page")
+
 # 56. the input stage computes only while In is up: at In 0 it hears nothing (its level stays 0), raised it listens
 def lvprobe(c):
     m = c.obj("metro 1000", 1200, 20)
@@ -1259,8 +1267,8 @@ for pg in range(21):
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
 t += 2000
-for k in [None] + list(range(72, 80)):       # CHORD (low A held), then aux + each layer key
-    ev += [(t, f"notesRaw 69 100"), (t + 700, f"notesRaw 69 0")] if k is None else \
+for k in [None, 80] + list(range(72, 80)):   # CHORD (low A held), INPUT (top G# held), aux + each layer key
+    ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80) else \
         [(t, "aux 1"), (t + 50, f"notesRaw {k} 100"), (t + 100, f"notesRaw {k} 0"), (t + 150, "aux 0")]
     for j in range(4):
         ev += [(t + 800 + 200 * j, f"knob{j + 1} 0.999"), (t + 900 + 200 * j, f"knob{j + 1} 0.001")]

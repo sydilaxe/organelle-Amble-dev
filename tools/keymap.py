@@ -59,7 +59,8 @@ TOP = {k: (n.upper(), ["tap: in / out", "aux + tap: its page"]
            + (["aux + held + low key:", "its rhythm (C-B)"] if n in ("motion", "bells") else []), "layer")
        for k, n in LAYERS.items()}
 TOP.update({
-    "input mode | aux: capture": ("INPUT", ["tap: next input mode", "aux + tap: capture", "8 s into the cloud"], "control"),
+    "input mode | hold: INPUT page | aux: capture": ("INPUT", ["tap: next input mode", "hold: INPUT page", "aux + tap: capture",
+                                                               "8 s into the cloud"], "control"),
     "Freeze | aux: ANCHOR": ("FREEZE", ["tap: freeze reverb + cloud", "aux + tap: ANCHOR (set,", "then glide back)",
                                         "aux + hold 0.8 s: anchor here"], "control"),
     "start / stop | aux: COMPOSE / DRIFT": ("START / STOP", ["tap: start or stop", "aux + tap: COMPOSE / DRIFT"],
