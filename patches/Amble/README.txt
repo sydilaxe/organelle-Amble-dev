@@ -108,6 +108,8 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   F held: the GLIDE page - knob 1 chord glide, 2 Morph, 3 Anchor glide,
       4 Memory glide (the same settings as in SETUP); aux leaves
   D / D# / E held: SETUP COLOUR / GROOVE / FORM as a quick page; aux leaves
+  C / C# / F# / G# held: SETUP WRITING / PHRASE / DIALOGUE / HARMONY as a
+      quick page (C: Writing still / moving at once); aux leaves
   A   tap: chord change now (to the next chord shown); hold: the CHORD
       page - knob 1 picks the next chord from the key's chords, knob 3 up:
       the piece picks another, knob 4 On pick: next change / now; aux leaves

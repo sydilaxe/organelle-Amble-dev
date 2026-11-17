@@ -700,8 +700,8 @@ log, _ = run([(50, "ac-setseed 7")] + sp(0.1) + [(1000 + 400 * i, "ac-section ba
 after = log.split("h-mark")[-1]
 vs = flav_vals(after)
 chs = [float(l.split()[1]) for l in after.splitlines() if l.startswith("ac-g-ch")]
-check(len(vs) >= 20 and set(vs) <= {1, 3, 4, 5} and len(set(vs)) >= 3 and chs and max(chs) == 0,
-      f"SOUNDS Pads raw: only vox / partials / fold / pulsar ({sorted(set(vs))}), no character")
+check(len(vs) >= 20 and set(vs) <= set(__import__("data").RAW_FLAVOURS) and len(set(vs)) >= 3 and chs and max(chs) == 0,
+      f"SOUNDS Pads raw: only vox / partials / fold / pulsar / chip ({sorted(set(vs))}), no character")
 log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 4"), (400, f"ac-setknob 1 {(GS.SDRONES.index('fm') + 0.5) / len(GS.SDRONES)}"),
               (450, f"ac-setknob 2 {(GS.STEXS.index('wind') + 0.5) / len(GS.STEXS)}"),
               (500, f"ac-setknob 3 {(GS.SCHARS.index('tape') + 0.5) / len(GS.SCHARS)}"), (550, "acsetup 0"), (2000, "ac-section bang")], 4,
@@ -1548,7 +1548,7 @@ for v, nm in ((1, "1/f"), (2, "grow"), (3, "mutate")):
 # Answer motion: the bells and the motion take turns (2 bars each); Answer you: the bells only after you play
 log, _, b_, m_, _ = wr([("acans", 1)], 60)
 check(not errors(log) and len(m_) < 0.75 * len(mb) and b_, f"Answer motion: they take turns ({len(m_)} motion notes, {len(mb)} before)")
-log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=sum([[(t, "ac-livenote 64 100 1"), (t + 500, "ac-livenote 64 0 1")]
+log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=sum([[(t, "ac-livenote 1 64 100"), (t + 500, "ac-livenote 1 64 0")]
                                                     for t in (20000, 32000, 44000)], []))
 check(not errors(log) and b_ and len(b_) < len(b60[2]), f"Answer you: the bells answer what you play ({len(b_)} bell "
       f"notes, {len(b60[2])} before)")
@@ -1635,6 +1635,64 @@ check(not errors(log) and band(82.4) > 3 * np.median(S[(fr > 60) & (fr < 120)]) 
       f"over its neighbours), {rms_db(seg):.1f} dB")
 log, seg = inmode(fmt_, "voice")
 check(not errors(log) and rms_db(seg) > -45, f"input formant: the chord sings with the voice ({rms_db(seg):.1f} dB)")
+
+# 79. phrases drive the form (sections change at a phrase's end, call and response by its halves, the calm
+#     sections), counterpoint (no parallel 5ths / octaves with the bells), leading-tone cadences, the echo of what
+#     you play, the factory pieces of the writing
+def fprobe(c):
+    # each section's start and each chord: the chord's place in its phrase, the motion's turn, the scale, calm
+    for r, tag in (("ac-section", "SEC"), ("ac-flash", "PH")):
+        ex = ["acphpos", "acansm", "acsci", "acsecalm", "acrole", "acdeg"]
+        e = c.ch(c.obj("r " + r), "t b", "expr " + "; ".join(ex))
+        pk = c.obj("pack " + " ".join(["f"] * len(ex)))
+        for i in range(len(ex) - 1, -1, -1):
+            c.c(e, i, pk, i)
+        c.c(pk, 0, c.obj("print " + tag), 0)
+d = build_tmp()
+rows = lambda log, tag: [[float(x) for x in l.split(":", 1)[1].split()] for l in log.splitlines()[
+    max(k for k, l in enumerate(log.splitlines()) if l.startswith("ac-setseed")):] if l.startswith(tag + ":")]
+# (seed 7: Db dorian - a closing phrase's V borrows melodic minor's leading tone)
+log, _ = run([(10, "actide 0"), (10, "aclen 0"), (10, "acmbell 2"), (10, "acmmotion 2"),
+              (50, "ac-setseed 7")], 300, prints=("ac-bell", "ac-mnote"), d=d, extra=fprobe)
+secs, phs = rows(log, "SEC"), rows(log, "PH")
+# (a section that starts after a phrase's last chord: the chord sounding then was the phrase's 4th, index 3)
+ends = [r[0] for r in secs[1:]]
+check(not errors(log) and len(secs) >= 3 and all(e == 3 for e in ends),
+      f"sections change at a phrase's end ({len(secs)} sections; the chord before each: {ends})")
+halves = {(int(r[0]), int(r[1])) for r in phs if r[0] >= 0}
+check(halves and all(m == (p >= 2) for p, m in halves), f"Answer motion by the phrase's halves (place, turn: {sorted(halves)})")
+calm = {(int(r[4]), int(r[3])) for r in secs}
+check(all(c_ == (rl in (0, 5, 7)) for rl, c_ in calm), f"calm sections: emerge, break, dissolve ({sorted(calm)})")
+# (dorian: a closing phrase's V borrows melodic minor, and its I is dorian again)
+lt = [(int(a_[2]), int(b_[2])) for a_, b_ in zip(phs, phs[1:]) if a_[2] == 13]
+check(lt and all(b_ == 1 for _, b_ in lt), f"leading-tone cadences: melodic minor on the V, dorian after ({lt})")
+# no parallel 5ths or octaves: a motion note after the bells moved never repeats the perfect interval it made
+L_ = log.splitlines()
+L_ = L_[max(k for k, l in enumerate(L_) if l.startswith("ac-setseed")):]
+bell, prev, par, n_ = None, None, 0, 0
+for l in L_:
+    if l.startswith("ac-bell:"):
+        bell = float(l.split()[1])
+    elif l.startswith("ac-mnote:") and bell is not None:
+        m = float(l.split()[1])
+        iv = int(m - bell) % 12
+        if prev and prev[1] != bell and prev[0] != m and prev[2] == iv and iv in (0, 7):
+            par += 1
+        n_ += 1
+        prev = (m, bell, iv)
+check(n_ > 50 and par <= n_ * 0.02, f"counterpoint: parallel 5ths / octaves with the bells {par} in {n_} motion notes")
+# the echo: three notes played, the bells answer with them (in the key, an octave up) before the motif
+log, _ = run([(10, "acmbell 2"), (10, "acans 2"), (50, "ac-setseed 7")] + sum(
+    [[(20000 + 400 * i, f"ac-livenote 1 {n} 100"), (20200 + 400 * i, f"ac-livenote 1 {n} 0")] for i, n in enumerate((61, 66, 68))], [])
+    + [(21200, "h-mark bang")], 40, prints=("ac-bell", "h-mark"), d=d)
+after = [float(l.split()[1]) for l in log.split("h-mark: bang")[-1].splitlines() if l.startswith("ac-bell:")]
+# (seed 7: Db dorian, the register spaced - 84-103: Db Gb Ab come back two octaves up)
+sub_ = lambda xs, want: (lambda it: all(w in it for w in want))(iter(xs))
+check(sub_(after[:6], [85.0, 90.0, 92.0]), f"Answer you: the bells echo your phrase, in the key and register ({after[:6]})")
+# the factory pieces of the writing load from slots 7-9
+log, _ = run([(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {(6 + 0.5) / GS.NSLOTS}"),
+              (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")], 3, d=d)
+check("slot 7: Chorale" in log.replace("\\ ", " "), "factory piece Chorale loads from slot 7")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

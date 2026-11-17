@@ -75,7 +75,9 @@ SCAND = [("1/2 beat", 0.5), ("1 beat", 1), ("2 beats", 2), ("1 bar", 0)]
 # how often; secondary dominants (a chord's own V, major, just before it); New types: a piece's own picks also take
 # the types added later (pads, textures, drones, rhythms, scales) - off, a piece picks only the original ones
 SMOVM = ["in key", "mediants", "tonnetz", "both"]
-SMOVP = [("rare", 0.1), ("some", 0.25), ("often", 0.5)]
+# (by form: where the form wants tension - often while intensifying and at the climax, now and then while
+# establishing and developing, never in the return)
+SMOVP = [("rare", 0.1), ("some", 0.25), ("often", 0.5), ("by form", 0)]
 SSECD = [("off", 0), ("some", 0.25), ("often", 0.5)]
 # PHRASE: phrases of 4 or 8 chords in pairs, the first ending open (IV then V), the second closed (V then I); the
 # pad voices take the nearest chord tone (common tones held) instead of one each; the key plan of a COMPOSE piece
@@ -127,7 +129,8 @@ GLIDE_PAGE = SHAPE_PAGE0 + len(LAYER_PAGES)
 QUICK_NAMES += ["GLIDE"]
 # hold pages (a knob-page key held 0.5 s): a SETUP page as a quick page - its rows, and its knobs do what they do
 # there; aux leaves. (SETUP page, the low key: D, D#, E)
-MIRRORS = [("COLOUR", 2), ("GROOVE", 3), ("FORM", 4)]
+# (and how the piece writes: low C WRITING, C# PHRASE, F# DIALOGUE, G# HARMONY)
+MIRRORS = [("COLOUR", 2), ("GROOVE", 3), ("FORM", 4), ("WRITING", 0), ("PHRASE", 1), ("DIALOGUE", 6), ("HARMONY", 8)]
 MIRROR0 = GLIDE_PAGE + 1
 QUICK_NAMES += [n for n, _ in MIRRORS]
 NALL = NSET + len(QUICK_NAMES)
@@ -166,7 +169,7 @@ CC_DEFAULTS = [2, 1, 1, 1, 6, 0, 3]          # mod = vibrato, 2 / 7 / 11 = breat
 TARGETS = ["off", "breath", "vibrato", "voice tone", "voice level", "voice type", "hold", "density", "colour",
            "reverb", "swell", "motion", "resolve", "root", "next section", "chord now", "glide",
            "anchor", "compare", "macro 1", "macro 2", "macro 3", "macro 4", "journey step", "sink", "blur",
-           "swell all", "harm", "sparkle"]
+           "swell all", "harm", "sparkle", "writing"]
 TARGET_KNOB = {7: "acdens", 8: "accolor", 9: "acrvmix", 11: "acmotion",       # piece targets: the knob they move
                24: "acsink", 25: "acblur", 26: "acswell", 27: "acharmx"}
 CCSEL = "if(acccsel == 0, 1, " + ", ".join(f"if(acccsel == {j}, {n}" for j, n in enumerate(CCS) if j) + ", 0" + ")" * 7

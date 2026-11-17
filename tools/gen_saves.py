@@ -20,6 +20,7 @@ def factory_rows():
     d.update({n: v for p in PAGES for _, n, v in p})
     d.update({n: 1 for n in ("acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud")})
     d.update(dict(SAVE_EXTRA))
+    d.update(dict(SAVE_MORE))
     lists = dict(acsform=SFORMS, acsclc=SSCALES, acchdc=SCHORDS, acsatm=SATMS, acsdrone=SDRONES, acspad=SPADS,
                  acsbell=SBELLS, acsmot=SMOTS, acstempo=STEMPOS, acssub=SSUBS)
     arrdef = dict(acsroles=8, acslens=1, acssp=0, acsst=0, acslv=1)
@@ -33,7 +34,7 @@ def factory_rows():
             row += [arrdef[name_]] * n
         row += [v[n] for n, _ in SAVE_EXTRA]
         row += [0] * sum(n for _, n in SAVE_TAIL)
-        row += [d_ for _, d_ in SAVE_MORE]
+        row += [v[n] for n, _ in SAVE_MORE]
         assert len(row) == SAVE_LEN
         rows.append(" ".join(f"{x:g}" for x in row) + ";")
     return "\n".join(rows) + "\n"

@@ -109,7 +109,8 @@ def engine(layer, kind):
                       "low-pass gate, the filter and the level closing together like a vactrol",
                "gong": "Gong: FM as on the DX7's bells - two modulators at inharmonic ratios (1.41, 2.83); the "
                        "index swells for 0.12 s after the strike, then falls slower than the level (a tam-tam's bloom)",
-               "chip": "Chip: a game console's pulse - a narrow pulse for hard notes, a square for soft ones, its "
+               "chip": "Chip: a game console's pulse - a narrow pulse for hard notes, a square for soft ones (on the motion, "
+                       "each note an arpeggio: root, 5th, octave, 18 times a second), its "
                        "level stepping down in 16 steps (4-bit), a short tick of pitch at the start"}[kind])
     # the length of the layer's notes: the bells ring their full decay; the motion follows the piece's ping
     # decay (250-950 ms) times the engine's own factor
@@ -247,6 +248,8 @@ def engine(layer, kind):
             s.c(tk, 0, pk, 0)
             fv = s.ch(s.m(pk, "$1, $2 25"), "vline~")
             pl = s.obj("expr~ ($v1 < $v2)*2 - 1")
+            if layer == "motion":     # (the console arpeggio: each note runs root, 5th, octave, 18 times a second)
+                fv = mul(s, fv, s.ch(s.obj("phasor~ 18"), "expr~ if($v1 < 0.333, 1, if($v1 < 0.667, 1.4983, 2))"))
             s.c(s.to(fv, "phasor~"), 0, pl, 0)
             s.c(s.to(du, "sig~"), 0, pl, 1)
             e = s.to(_env(s, vel, hz, 1.0, 1, dec, slen), "expr~ floor($v1*15)/15")

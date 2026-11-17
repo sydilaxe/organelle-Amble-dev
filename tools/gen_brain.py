@@ -33,6 +33,9 @@ GLOBALS = dict(
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
     acmdg=0, acbdir=0, acbpl=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
+    acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0,
+    acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
+    acyon=0, acyoi=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
     acbi=0, acbc=0, acdropi=0, acbright=0.5, acbp=0, acgdurv=300, acr1=0.5, acr2=0.5, acr3=0.5, acr4=0.5,
     acknown0=0, acknown1=0, acknown2=0, acknown3=0, acinprev=0, acghost=0,
     # form
@@ -51,7 +54,7 @@ ARRAYS = dict(acsroles=12, acslens=12, acssp=12, acsst=96, acslv=96, acscale=16,
               acparams=4 * len(PAGES), acraw=4, acflav=4, acroles=16, acflpick=40, acbelpk=40, acmotpk=40, acfmrpick=40, acpapick=40, acscn=50,
               acscrole=24, acatmrole=8, ackeyp=16, acprog=8, acrmask=48, acrtide=8,
               acrtempo=8, acrpulse=8, acaway=8, aceuk=len(EUCLID), aceun=len(EUCLID), acmeters=6, acmratios=6, acbrper=4, actlo=5, acthi=5,
-              acmtur=8, acvu=4, acvl=4, acmdt=5)
+              acmtur=8, acvu=4, acvl=4, acmdt=5, acmimit=3, acyou=6, acyout=6)
 
 # the piece tempo: its place (actpos) in the tempo range chosen in SETUP
 # (SETUP FORM Tempo: a fixed tempo instead, the same in every section)
@@ -483,6 +486,8 @@ def section():
         V("acrole", "if(acmode==1, acroles[int(acsec)], if(acr1<0.25, 1, if(acr1<0.55, 2, "
                     "if(acr1<0.8, 3, 5))))"),
         V("acenergy", "if(acmode==1, acplan[int(acsec)], 0.3 + acr2*0.7)"),
+        # (PHRASE Breath, while moving: the opening, the break and the ending stay mostly held - sparse bells and motion)
+        V("acsecalm", "(acrests*acwrite) > 0 && (acrole == 0 || acrole == 5 || acrole == 7)"),
         V("acfam", f"if(acchdc > 0, acchdc - 1, if(acrole==6, acfamA, if(acr3<0.55, acfamA, if(acr3<0.88, acfamB, if(fmod(acr4*9.7, 1) < acharmx, int(acr4*{NF}), acplfam[int(acr4*{len(PLEASING_FAMS)})])))))"),
         RNG,
         V("actidef", "acrtide[int(acrole)] * (0.85 + acr1*0.3)"),
@@ -577,7 +582,13 @@ def section():
         If("acmode==1 && acsechold < 3 && (acnow - acbreatht < 4000 || acheld > 0)", [
             V("acsechold", "acsechold + 1"), Arm("ac-nextsec", "30000*actime", stop="ac-secstop"),
             Toast("holding: you play")],
-           [V("acsechold", "0"), V("acsec", "acsec+1"), Call("ac-section")])])])
+           # (with Phrases, while moving: the section waits for the phrase to close - at most 60 s - and changes
+           # near the end of its last chord, after the breath)
+           [If("(acphr*acwrite) > 0 && acsecwait == 0 && acrun", [X("1; 1", "v acsecdue", "v acsecwait"),
+                                                    Arm("ac-nextsec", "60000*actime", stop="ac-secstop")],
+               [X("0; 0; 0", "v acsechold", "v acsecdue", "v acsecwait"), V("acsec", "acsec+1"), Call("ac-section")])])])])
+    proc(c, "ac-secgo", [If("acrun", [X("0; 0; 0", "v acsechold", "v acsecdue", "v acsecwait"), V("acsec", "acsec+1"),
+                                      Call("ac-section")])])
     proc(c, "ac-rvback", [Send("ac-rvin", "1 5000")])
     # the end of a composition: fade out, then switch the layers off
     fin_off = c.obj("delay")
@@ -680,7 +691,8 @@ def layers():
         elif name != "tex":
             mx = {"pad": "acmxp", "cloud": "acmxc"}[name]
             # (SETUP PHRASE Breath: the pads dip while the bells and the motion rest)
-            dip = "*(1 - 0.7*acrestp)" if name == "pad" else ""
+            dip = (f"*(1 - 0.7*acrestp)*(1 + (acphpos >= 0)*(0.2*(acphpos == 4*(acphr*acwrite) - 2) - 0.12*(acphpos == 4*(acphr*acwrite) - 1)))"
+                   if name == "pad" else "")
             steps += [SendL("ac-g-" + name, [f"acmg{mx[-1]}*acsl{name}*acg{name}{dip}", "acfade"])]
     # the atmosphere: auto = the section's, and off with the textures (as before); on = always
     steps += [V("acgatm", "(acshed < 1)*(aceatm>0)*(1-acended)*if(aceatm==2, 1, acfatm*(acetex>0))*(0.55 + 0.45*min(1, acdeff*2))")]
@@ -820,9 +832,12 @@ def rhythm():
             If("actick % (24*acmeter) == 0", [Call("ac-bar")]),
         ]),
     ])
+    proc(c, "ac-ansturn", [If("acansm == 0 && acansmp == 1 && (acmelm*acwrite) == 4 && acvc >= 3",
+                              [X("3; int(acvc) % 3", "v acbim", "v acbis")]), V("acansmp", "acansm")])
     proc(c, "ac-bar", [SendL("ac-dpulse", [f"60000/{BPMH}*acmeter"]), If("acgdlock && acgcloud > 0", [Send("ac-cloud-on")]),
                        # SETUP DIALOGUE Answer motion: the motion plays 2 bars, then the bells 2
-                       If("(acans*acwrite) == 1", [V("acbarn", "acbarn + 1"), V("acansm", "int(acbarn/2) % 2 == 0")]),
+                       If("(acans*acwrite) == 1 && ((acphr*acwrite) > 0) == 0", [V("acbarn", "acbarn + 1"), V("acansm", "int(acbarn/2) % 2 == 0"),
+                                                                                 Call("ac-ansturn")]),
                        # SETUP PHRASE Breath: a rest counts down; or one may start (bells, motion, or both with the
                        # pads dipping)
                        If("(acrests*acwrite) > 0", [If("acrestb > 0", [V("acrestb", "acrestb - 1"), If("acrestb == 0 && acrestp", [
@@ -831,7 +846,9 @@ def rhythm():
                                X("1 + int(acr2*2); int(acr3*3)", "v acrestb", "v acrestl"),
                                If("acrestl == 2", [X("1; 2500", "v acrestp", "v acfade"), Call("ac-layers")])])])])])])
     # (SETUP DIALOGUE Answer motion: the motion's turn; PHRASE Breath: not resting)
-    go = "((acans*acwrite) != 1 || acansm) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 0) && ((acendp*acwrite) == 0 || acfinm == 0)"
+    go = ("((acans*acwrite) != 1 || acansm) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 0) && ((acendp*acwrite) == 0 || acfinm == 0)"
+          # (a phrase's last chord, and a calm section: every other step)
+          " && ((acphpos != 4*(acphr*acwrite) - 1 || acphpos < 0) && acsecalm == 0 || int(acstep/acmdiv) % 2 == 0)")
     proc(c, "ac-step", shared=True, steps=[If(f"acgmotion > 0.01 && acrun && int(acstep) % int(acmdiv) == 0 && {go}", [
         V("acms", "int(acstep/acmdiv)"),
         If("((int(acms + acmrot) % int(acmn)) * int(acmk)) % int(acmn) < acmk", [
@@ -860,8 +877,20 @@ def rhythm():
                            "acmotif[(int(acvc) + 1) % 5] - acmotif[int(acvc) % 5])"),
                 V("acmdg", "if(acmdg > 9, 18 - acmdg, if(acmdg < -3, -6 - acmdg, acmdg))"),
                 V("acmdg", "if(int(acms) % int(acmn) == 0, 2*floor(acmdg/2 + 0.5), acmdg)"),
+                # (a step may pass between chord tones; a leap lands on one - an even degree from the root)
+                V("acmdg", "if(abs(acmdg - acmdgl) > 1, 2*floor(acmdg/2 + 0.5), acmdg)"),
                 V("acmp", f"{deg2p('acdeg + acmdg + 4*((acans*acwrite) == 1)')} + 12 + acmoct"),
                 V("acmp", "if(acmp > 100, acmp - 12*ceil((acmp - 100)/12), acmp)"),
+                # (no parallel 5ths or octaves: the bells moved, the motion moved, and the same perfect interval
+                # again - the motion takes the step above instead)
+                If("acbpl != acmbpl && acmp != acmpl && acmivl == ((int(acmp - acbpl) % 12) + 12) % 12 && "
+                   "(acmivl == 0 || acmivl == 7)", [
+                    V("acmdg", "acmdg + 1"),
+                    V("acmp", f"{deg2p('acdeg + acmdg + 4*((acans*acwrite) == 1)')} + 12 + acmoct"),
+                    V("acmp", "if(acmp > 100, acmp - 12*ceil((acmp - 100)/12), acmp)")]),
+                X("((int(acmp - acbpl) % 12) + 12) % 12; acmp; acbpl; acmdg", "v acmivl", "v acmpl", "v acmbpl", "v acmdgl"),
+                # (its last three degrees, for the bells to imitate)
+                T("acmimit", "int(acvc) % 3", "acmdg"),
                 V("acmai", "(int(acmdg) % 4 + 4) % 4")]),
             If("(acmelm*acwrite) > 0", [V("acvc", "acvc + 1")]),
             V("acmp", "if(acmp>100, acmp-12, acmp)"),
@@ -972,6 +1001,14 @@ def change():
     # the chord's name now, and the next chord picked and named (the screen shows both)
     steps += [V("acchgt", "acnow"), X("actonic; acdeg; acres", "v acqt", "v acqd", "v acqr"), Call("ac-chordname"),
               V("acchn", "acqn"), V("acsdnow", "acsdg >= 0"),
+              # (Phrases, while moving: the sounding chord's place in its phrase - the section waits for the last;
+              # Answer motion: the bells call in the phrase's first half, the motion answers in the second; the
+              # pads swell into the phrase's V and settle on its last chord)
+              V("acphpos", "if((acphr*acwrite) > 0, acphc, -1)"),
+              If("(acphr*acwrite) > 0", [
+                  If("acsecdue && acphpos == 4*(acphr*acwrite) - 1", [V("acsecdue", "0"), Arm("ac-secgo", "acchsec*900*actime", stop="ac-secstop")]),
+                  If("(acans*acwrite) == 1", [V("acansm", "acphpos >= 2*(acphr*acwrite) || acphpos < 0"), Call("ac-ansturn")]),
+                  V("acfade", "acchsec*400*actime"), Call("ac-layers")]),
               If("acbrq", [V("acbrq", "0"), Arm("ac-breathgo", "acchsec*500*actime", stop="ac-chgstop")]),
               Call("ac-chordnext")]
     steps += [Later("ac-grains", 13), Later("ac-change2", 29, stop="ac-chgstop")]
@@ -1012,13 +1049,18 @@ def change():
             V("acphc", "(acphc + 1) % (4*(acphr*acwrite))"),
             If(cad, [
                 V("acxdeg", "if(acphc == 4*(acphr*acwrite) - 1, if(acphn % 2, 0, acphd), if(acphn % 2, acphd, if(acphs >= 0, acphs, acxdeg)))"),
+                # (a closed phrase's V borrows the leading tone - aeolian from harmonic minor, dorian from melodic
+                # minor, mixolydian from ionian, lydian dominant from lydian - and its I takes the scale back)
+                If("acphc == 4*(acphr*acwrite) - 2 && acphn % 2 == 1 && acsclc == 0 && acphrs == 0", [V("acltx", "if(acsci == 2, 17, if(acsci == 1, 13, if(acsci == 3, 4, if(acsci == 12, 0, -1))))"), If("acltx >= 0", [
+                    X("acsci; 1; 1; acltx", "v acphsc", "v acphrs", "v acxscf", "v acxsci")])]),
+                If("acphc == 4*(acphr*acwrite) - 1 && acphrs", [X("0; 1; acphsc", "v acphrs", "v acxscf", "v acxsci")]),
                 If("acphc == 4*(acphr*acwrite) - 1 && acphn % 2 == 1", [V("acbrq", "1")]),
                 If("acphc == 4*(acphr*acwrite) - 1", [V("acphn", "acphn + 1")])])],
             [V("acphc", "-1")])]),
         # key moves of the piece's own: a chromatic mediant (the major or minor key a 3rd away, the chord keeping
         # its kind) or a tonnetz step (P: the parallel; R: the relative; L: the leading-tone exchange - major turns
         # minor and back). The new key's tonic chord comes, in ionian or aeolian
-        If(f"(acmovm*acwrite) > 0 && acsfit && acphd >= 0 && ({ok}) && ((acphr*acwrite) == 0 || ({cad}) == 0)", [RNG, If(f"acr1 < {_S._pick('achmvp', _S.SMOVP)}", [
+        If(f"(acmovm*acwrite) > 0 && acsfit && acphd >= 0 && ({ok}) && ((acphr*acwrite) == 0 || ({cad}) == 0)", [RNG, If(f"acr1 < if(achmvp == 3, if(acrole == 3 || acrole == 4, 0.4, if(acrole == 1 || acrole == 2, 0.05, 0)), {_S._pick('achmvp', _S.SMOVP)})", [
             X("int(acchn/6); acchn % 6; if((acmovm*acwrite) == 3, 1 + int(acr2*2), (acmovm*acwrite))", "v acmvr", "v acmvq", "v acmvo"),
             If("acmvq <= 1", [
                 If("acmvo == 1", [V("acmvo", "if(acr3 < 0.25, 3, if(acr3 < 0.5, 4, if(acr3 < 0.75, 8, 9)))")],
@@ -1100,6 +1142,9 @@ def players():
     # with its rhythm, harmony and canon - moved by octaves near your last note, while you play and after, fading
     # out 4-12 s after your last note; Register spaced: 84-103)
     play = [V("acbp", bellp), If("(acans*acwrite) == 2", [V("acbp", "acbp + 12*floor((acant + 12 - acbp)/12 + 0.5)")]),
+            # (Answer motion, motif melody: the bells' turn opens with the motion's last three notes, imitated)
+            If("acbim > 0", [V("acbp", f"{deg2p('acdeg + acmimit[int(acbis + 3 - acbim) % 3]')} + 24"),
+                             V("acbim", "acbim - 1")]),
             V("acbp", "if(acbp<67, acbp+12, if(acbp>96, acbp-12, acbp))"),
             If("(acreg*acwrite)", [V("acbp", "acbp + 12*ceil(max(0, 84 - acbp)/12) - 12*ceil(max(0, acbp - 103)/12)")]),
             # (Answer you: full for 4 s after your last note, then fading out over 8 s)
@@ -1122,6 +1167,18 @@ def players():
                                V("acbh", "if(acbh == acbp, acbh + 12, acbh)"),
                                SendL("ac-bell", ["acbh", "acbv*0.6", "1 - acbpan"])]),
             If("acbrat > 0", [RNG, If("acr1 < acbrat", [Arm("ac-bratch", "110 + acr2*70", stop="ac-playstop")])])]
+    # a note snapped to the key: the scale tone nearest it
+    proc(c, "ac-yquant", [X("0; 99", "v acyqd", "v acyqb"), Loop("acn", "acyj", [
+        If("abs(fmod(acyq - actonic - acscale[int(acyj)] + 1206, 12) - 6) < acyqb", [
+            X("abs(fmod(acyq - actonic - acscale[int(acyj)] + 1206, 12) - 6); fmod(acyq - actonic - acscale[int(acyj)] + 1206, 12) - 6",
+              "v acyqb", "v acyqd")])]), V("acyq", "acyq - acyqd")])
+    # Answer you: once you have been quiet 0.8 s, the bells echo your phrase - its notes in the key, an octave up,
+    # in its own rhythm, side to side - then go on with the motif near your last note
+    proc(c, "ac-yecho", [If("(acans*acwrite) == 2 && acrun && (acmbell > 0)", [Loop("acyon", "aci", [
+        V("acyq", "acyou[int(aci)]"), Call("ac-yquant"),
+        V("acyq", "acyq + 12 + 12*(acyq < 55)"), V("acyq", "if(acyq<67, acyq+12, if(acyq>96, acyq-12, acyq))"),
+        If("(acreg*acwrite)", [V("acyq", "acyq + 12*ceil(max(0, 84 - acyq)/12) - 12*ceil(max(0, acyq - 103)/12)")]),
+        SendL("ac-blater", ["acyq", "0.55", "0.3 + 0.4*(int(aci) % 2)", "acyout[int(aci)]"])])]), V("acyon", "0")])
     proc(c, "ac-bratch", [If("acrun", [SendL("ac-bell", ["acbp", "acbv*0.5", "acbpan"])])])
     proc(c, "ac-bghost", [If("acgbell > 0.01 && acrun", [
         RNG, V("acbgp", f"{deg2p('acdeg + acmotif[int(acr1*5)]')} + 24"),
@@ -1132,7 +1189,8 @@ def players():
         If("acgbell > 0.01 && acrun && (acroute != 3 || acnow - aclnt > 8000)", [
             RNG,
             # (SETUP DIALOGUE Answer: the bells' turn, or after you play; PHRASE Breath: not resting)
-            If("acr1 > 0.18 && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && acansm == 0) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
+            # (a calm section: the bells play less than half as often)
+            If("acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.6) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && acansm == 0) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
                "acnow - acanst < 12000)) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 1) && ((acendp*acwrite) == 0 || acfinb == 0)", play),
             V("acbi", "(acbi+1) % 5"),
             If("acbi==0 && acr3<0.6", [RNG, T("acmotif", "int(acr1*5)", "acmotif[int(acr1*5)] + int(acr2*5) - 2")]),
@@ -1203,8 +1261,13 @@ def players():
         Arm("ac-dtick", "if(acdb > 0, 45 + acr2*80, 1200 + acr3*6000)", stop="ac-playstop"),
     ])
     # input onsets: counted for the class; in ghost mode (and for plucked sounds in auto) they ring a bell
+    # Answer you: your notes recorded (up to 6; after 3 s of quiet a new phrase starts), for the bells to echo
+    proc(c, "ac-yrec", [If("acnow - acanst > 3000 || acyon == 0", [X("0; acnow", "v acyon", "v acyt0")]),
+                        If("acyon < 6 && acyrn > 0", [T("acyou", "acyon", "acyrn"), T("acyout", "acyon", "acnow - acyt0"),
+                                                      V("acyon", "acyon + 1")]),
+                        Arm("ac-yecho", "800", stop="ac-playstop")])
     proc(c, "ac-inonset", [Call("ac-inonset2"),
-                           If("(acans*acwrite) == 2", [X("acnow; if(acinp > 0, acinp, acant)", "v acanst", "v acant")]),
+                           If("(acans*acwrite) == 2", [V("acyrn", "acinp"), Call("ac-yrec"), X("acnow; if(acinp > 0, acinp, acant)", "v acanst", "v acant")]),
                            If("(acinmode==4 || (acinmode==0 && acinclass==2)) && acinput > 0.05",
                               [Call("ac-bellnow"), RNG, If("acr1 < 0.08 && acinmode==4", [Call("ac-change")])])])
     return c

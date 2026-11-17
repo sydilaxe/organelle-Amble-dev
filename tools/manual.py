@@ -73,7 +73,8 @@ for _n, _lab in (("acmxd", "drone"), ("acmxs", "sub"), ("acmxp", "pads"), ("acmx
                               "down in even steps (about 0.5 dB a percent) to -24 dB at 5 %, then out.")
 
 FKEY_DESC = {
-    "SHAPE page": "Knobs: Dens, Tide, Colr, In.",
+    "SHAPE page": "Knobs: Dens, Tide, Colr, In. Held half a second: the WRITING page as a quick page (Writing still / "
+                  "moving, Pads carry, Drone level, Ending - SETUP WRITING's rows); aux leaves.",
     "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once. Held half a second: the GLIDE page "
                     "too - the glide times together while you play: knob 1 the chord Glide (SETUP VOICES), 2 Morph "
                     "and 3 Anchor glide (SETUP RECALL), 4 the Memory glide (SETUP MEMORY). They are the same "
@@ -89,11 +90,14 @@ FKEY_DESC = {
                   "(pre-delay, era, sparkle - SETUP COLOUR's rows); aux leaves.",
     "PIECE page": "Knobs: Len, Weird, Mot, Rhy. Held half a second: the FORM page as a quick page (form, tempo, "
                   "meter, atmosphere - SETUP FORM's rows); aux leaves.",
-    "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view.",
+    "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view. Held half a second: "
+                  "the PHRASE page as a quick page (phrases, voicing, key plan, breath); aux leaves.",
     "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view. Held "
                   "half a second: the GROOVE page as a quick page (pump, duck - SETUP GROOVE's rows); aux leaves.",
-    "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view).",
-    "SENDS 2 page": "Knobs: the reverb sends of textures, cloud, atmosphere, input (MIX view).",
+    "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view). Held half a second: the "
+                    "DIALOGUE page as a quick page (motif, answer, phasing, register); aux leaves.",
+    "SENDS 2 page": "Knobs: the reverb sends of textures, cloud, atmosphere, input (MIX view). Held half a second: the "
+                    "HARMONY page as a quick page (moves, how often, dominants, new types); aux leaves.",
     "Root (hold)": "Hold it and press an Organelle key, play a MIDI note or turn knob 1: that note is the next key "
                    "(it arrives with the next chord change). While it is not held, MIDI notes play as usual.",
     "Resolve": "The harmony moves to the tonic as open fifths (root, 5th, octave, 12th) and stays there - no "
@@ -252,7 +256,9 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
               "major or minor key a 3rd away), a tonnetz step (P: the parallel, R: the relative, L: the leading-tone "
               "exchange; major turns minor and back), or both. Not with a fixed key or scale, nor in a scale that is "
               "not near 12-tone or has no 5th."),
-    "How often": (", ".join(n for n, _ in S.SMOVP), "How often a chord change becomes such a key move."),
+    "How often": (", ".join(n for n, _ in S.SMOVP), "How often a chord change becomes such a key move. by form: "
+                  "where the form wants tension - often while intensifying and at the climax, now and then while "
+                  "establishing and developing, never in the return."),
     "Dominants": (", ".join(n for n, _ in S.SSECD), "Secondary dominants: before a chord (not the tonic) its own V "
                   "comes, a major chord a 5th above it, the drone staying on the key. Only in a 12-tone scale of 7 "
                   "notes or more; a pentatonic piece ignores them."),
@@ -260,26 +266,35 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
                   "rhythms, the 6thdim scale). Off: only the original ones."),
     "Phrases": (", ".join(S.SPHR), "The chords come in phrases of 4 or 8, in pairs: the first ends open (IV, then V), "
                 "the second closed (V, then I) - and after a closed phrase the bells and the motion breathe (Breath). "
-                "A key move starts a new phrase; a scale without a 5th ignores them."),
+                "The closing V borrows the leading tone in a minor-ish mode (aeolian from harmonic minor, dorian "
+                "from melodic minor, mixolydian from ionian). While moving, the phrases shape the piece: a section "
+                "changes only at a phrase's end, the motion thins on its last chord, the pads swell into its V and "
+                "settle on its I, and with Answer motion the bells call in its first half, the motion answers in the "
+                "second. A key move starts a new phrase; a scale without a 5th ignores them."),
     "Voicing": (", ".join(S.SVLEAD), "smooth: each pad voice takes the free chord tone nearest to it, so common tones "
                 "stay and the others move by step."),
     "Key plan": (", ".join(S.SKPLAN), "The keys of a COMPOSE piece's sections: the piece's own (auto), home only, "
                  "or each section away from home a 5th or a major 3rd further. The opening, the return and the end "
                  "stay home."),
-    "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the bells and the motion rest a bar as a section "
+    "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
+               "bells and motion; the bells and the motion rest a bar as a section "
                "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
                "the pads hold through."),
     "Motif": (", ".join(S.SMDEV), "develops: away from the opening and the return, each section may also play the "
               "motif backwards, slower, faster, or in fragments (its first two notes, sequenced up)."),
     "Answer": (", ".join(S.SANS), "Call and response. motion: the motion and the bells take 2 bars each in turn. you: "
                "the bells answer what you play (MIDI notes, or the sung or played input) with the piece's motif near "
-               "your note, while you play and after, fading out 4-12 s after your last note."),
+               "your note, while you play and after, fading out 4-12 s after your last note. Once you have been quiet "
+               "0.8 s, they first echo your phrase (up to 6 notes): its notes in the key, an octave up, in its "
+               "rhythm. With Melody motif and Answer motion, the bells open their turn imitating the motion's last "
+               "three notes."),
     "Phasing": (", ".join(n for n, _ in S.SPHASE), "A second motion voice on the other side plays the same notes, "
                 "drifting later a little each step around the whole pattern, until they meet again (as in Reich)."),
     "Register": (", ".join(S.SREG), "spaced: each layer in its own octaves - the pads up to 76, the motion 67-84, the "
                  "bells 84-103 - so the lines stay clear of one another."),
     "Writing": (", ".join(S.SWRITE), "still: none of LINES, HARMONY, PHRASE, DIALOGUE or WRITING act - the static, "
-                "droning piece - and your choices there are kept for moving again. moving: they act."),
+                "droning piece - and your choices there are kept for moving again. moving: they act. Also low C held "
+                "(the WRITING page), and a CC mapped to writing (up: moving)."),
     "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
                    "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
                    "through it - the motif, very slowly, under the active bells and motion."),

@@ -20,6 +20,7 @@ SCALES = [
     ("slendro",  [0, 2.4, 4.8, 7.2, 9.6]),                      # 5-tone equal
     ("pelog",    [0, 1.2, 2.7, 5.4, 6.8, 7.9, 10.4]),
     ("6thdim",   [0, 2, 4, 5, 7, 8, 9, 11]),                    # Barry Harris: major 6th + diminished 7th
+    ("harmmin",  [0, 2, 3, 5, 7, 8, 11]),                       # harmonic minor (an aeolian cadence's V borrows it)
 ]
 SCALE_AUTO = 16            # (a piece picks among the first 16; the later ones by hand, or with SETUP HARMONY New types)
 
@@ -67,8 +68,9 @@ DRONE_AUTO = 5             # (a piece picks among the first 5; the later ones by
 SUBTYPES = ["sine", "warm", "pulse", "fm"]
 CHARACTERS = ["clean", "chorus", "tape", "ring", "crush", "rotor", "dim"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect
-RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr")]
-RAW_EXPR = "if(acr1<0.25, %d, if(acr1<0.5, %d, if(acr1<0.75, %d, %d)))" % tuple(RAW_FLAVOURS)
+RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr", "chip")]
+RAW_EXPR = "".join(f"if(acr1<{(i + 1) / len(RAW_FLAVOURS):.3f}, {f}, " for i, f in enumerate(RAW_FLAVOURS[:-1])) + \
+    str(RAW_FLAVOURS[-1]) + ")" * (len(RAW_FLAVOURS) - 1)
 SUBMODES = ["pedal", "bassline", "both"]
 INMODES = ["auto", "reso", "cloud", "tape", "ghost", "bands", "vocode", "morph", "octave", "formant"]
 NOTE_NAMES = "C Db D Eb E F Gb G Ab A Bb B".split()
@@ -259,4 +261,12 @@ FACTORY = [
                         acchdc="wide", acsclc="dorian")),
     ("Frost", 6610, dict(acmodesel=1, acsdrone="frost", acspad="beat", acjour=1, acjpad=1, acblur=0.3,
                          acsclc="lydian", acchdc="triad")),
+    # the writing: a chorale (phrases of 8, smooth voices, the pads carrying the motif, bowls answering); a canon
+    # (the motion answers each bell, phasing, the motif as counterpoint); chip (the raw console sounds, growing)
+    ("Chorale", 1207, dict(acmodesel=0, acsform="arch", acphr=2, acvlead=1, acpadm=1, acmelm=0, acans=0, acmotion=0.25,
+                           acspad="choir", acsbell="bowl", acchdc="triad", aclen=0.5, acsclc="aeolian")),
+    ("Canon", 3907, dict(acmodesel=0, acmelm=4, accanon=4, acphase=1, acsmot="lpg", acsbell="crystal", acrhythm=0.6,
+                         acmotion=0.6, acchdc="open")),
+    ("Chip", 8086, dict(acmodesel=0, acspad="chip", acsbell="chip", acsmot="chip", acmelm=2, acstempo="110 bpm",
+                        acrhythm=0.8, accolor=0.7, acchdc="triad", acschar=1)),
 ]
