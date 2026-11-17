@@ -51,9 +51,9 @@ MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat"]          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,
-            LEAVES_G=0.2, BROOK_G=0.5)
+            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18)
 TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur", "echoes", "whisper",
-            "leaves", "brook"]
+            "leaves", "brook", "bubbles", "crickets", "harp", "song"]
 DRONES = ["pure", "analog", "organ", "fm", "frost"]
 CHARACTERS = ["clean", "chorus", "tape", "ring", "crush"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect

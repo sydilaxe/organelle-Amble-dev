@@ -40,7 +40,9 @@ LAYERS AND THEIR RHYTHMS (one clock, 40-72 BPM by default, meter 3-7)
   Textures rain (hiss, patter, plops), wind, embers, chirps, radio (static and a
            tuning whistle), data (blip bursts), buzz (electric hum on the tonic),
            murmur (ghostly distant voices), echoes (alien blips in bending
-           echoes), whisper, leaves (rustling trees), brook (babbling water)
+           echoes), whisper, leaves (rustling trees), brook (babbling water),
+           bubbles (rising drops), crickets, harp (strings sung by the wind),
+           song (a gliding voice) - the last four tuned to the chord
   Cloud    grains of the recent sound or your input; locked to the beat in
            intense sections, free otherwise
   Atmosphere (about half the pieces, mostly in emerge, break, dissolve):
@@ -202,7 +204,8 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
                character effect
     Drone      auto / pure / analog / organ / fm
     Texture    auto / rain / wind / ember / chirp / radio / data / buzz /
-               murmur / echoes / whisper / leaves / brook
+               murmur / echoes / whisper / leaves / brook / bubbles /
+               crickets / harp / song
     Character  auto / clean / chorus / tape / ring / crush
   page 6, MUSIC (a fixed choice stays: no modulation, no scale change):
     Key        auto / C .. B (applies at once, with a chord change)

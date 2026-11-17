@@ -30,7 +30,7 @@ GLOBALS = dict(
     acmtr=2, acbld=1, acblp=0.5, acvauto=1, acvsec=1, acvtype=1, acrvsize=1,
     # rhythm
     acbpm0=56, acbpm=56, actpos=0.5, acmeter=4, actick=0, acstep=0, acms=0, acmk=5, acmn=8, acmei=0, acmrot=0, acmdiv=1,
-    acmarp=0, acshed=0, acmai=0, acmoct=12, acmswing=0, acgdlock=0, acmp=60, acdtype=0, acdtype2=1, acdcur=0, acsubm=0, acsubx=0, acchar=0, accheff=0, acflstag=4200, acres=0, acbela=0, acmota=1, acdauto=0, actex1a=0, actex2a=1, acspad=0, acsdrone=0, acstex=0, acschar=0, acsnew=0, acchamt=0.5, acavoc=0, acgvoc=0, acdb=0, acgt4=0, acgt5=0, acgt6=0, acgt7=0, acgt8=0, acgt9=0, acgt10=0, acgt11=0, acgsub=0, acatm=0, acatmT=0, acatmT2=1, acfatm=0, acatmcur=0, acgatm=0, acscene=0, acmono=0, acwidth=1, acpanmot=0.8, acfd=-1, acgbands=0, acgres=0, ackn=0, ackv=0,
+    acmarp=0, acshed=0, acmai=0, acmoct=12, acmswing=0, acgdlock=0, acmp=60, acdtype=0, acdtype2=1, acdcur=0, acsubm=0, acsubx=0, acchar=0, accheff=0, acflstag=4200, acres=0, acbela=0, acmota=1, acdauto=0, actex1a=0, actex2a=1, acspad=0, acsdrone=0, acstex=0, acschar=0, acsnew=0, acchamt=0.5, acavoc=0, acgvoc=0, acdb=0, acgt4=0, acgt5=0, acgt6=0, acgt7=0, acgt8=0, acgt9=0, acgt10=0, acgt11=0, acgt12=0, acgt13=0, acgt14=0, acgt15=0, acbbn=0, acbbv=0, acsgn=0, acsgd=0, acgsub=0, acatm=0, acatmT=0, acatmT2=1, acfatm=0, acatmcur=0, acgatm=0, acscene=0, acmono=0, acwidth=1, acpanmot=0.8, acfd=-1, acgbands=0, acgres=0, ackn=0, ackv=0,
 )
 for page in PAGES:
     for _, name, d in page:
@@ -283,7 +283,7 @@ def piece():
                              Toast("COMPOSE new arc")],
                [Call("ac-section"), Call("ac-change"), Toast("DRIFT endless")])]),
         Call("ac-scr"), Send("ac-led")])
-    proc(c, "ac-playgo", [Send(t) for t in ("ac-ctick", "ac-rtick", "ac-btick", "ac-dtick", "ac-ttick", "ac-etick")])
+    proc(c, "ac-playgo", [Send(t) for t in ("ac-ctick", "ac-rtick", "ac-btick", "ac-dtick", "ac-ttick", "ac-etick", "ac-bbtick", "ac-sgtick")])
     # the form: an archetype's energy curve over 6-12 sections, then a role for each section
     arch = ARCH_EXPR.replace("X", "((aci+0.5)/acnsec)")
     proc(c, "ac-plan", [
@@ -803,6 +803,10 @@ def change():
         RNG,
         SendL("ac-dharm", ["2 + int(acr1*5)", "6000"]),
         SendL("ac-wind", ["mtof(acnew[1]+24)", "mtof(acnew[3]+12)", "5000"]),
+        # crickets: a chord tone moved up by octaves into 3-6 kHz; the harp's strings: chord tones below 600 Hz
+        SendL("ac-cric", ["mtof(acnew[2]) * pow(2, ceil(log(3000/mtof(acnew[2]))/log(2)))", "3000"]),
+    ] + [SendL(f"ac-harp{k}", [f"1000/(mtof(acnew[{k}]) / pow(2, max(0, ceil(log(mtof(acnew[{k}])/600)/log(2)))))",
+                               "1500"]) for k in range(3)] + [
         X("acchg + 1; 0", "v acchg", "v acfirst"),
         Arm("ac-change", "acchsec*1000*actime", stop="ac-chgstop"),
         Later("ac-scr2", 37), Later("ac-scr3", 43), Send("ac-flash"), Call("ac-outchord"),
@@ -858,6 +862,27 @@ def players():
         RNG,
         If("acgt8 > 0.01", [SendL("ac-echo", ["mtof(min(100, acch[int(acr1*4)] + 24 + 12*int(acr2*2)))", "acr3"])]),
         Arm("ac-etick", "(1800 + acr4*5000) * (1.4 - 0.6*acdeff)", stop="ac-playstop"),
+    ])
+    # bubbles: bursts of drops on chord tones (higher = shorter), three voices in turn
+    proc(c, "ac-bbtick", [
+        If("acgt12 > 0.01", [If("acbbn > 0", [
+            RNG, V("acbbv", "(acbbv + 1) % 3"),
+            SendL("ac-bub", ["acbbv", "mtof(min(108, acch[int(acr1*4)] + 24 + 12*int(acr2*2)))", "25 + acr3*90",
+                             "0.15 + acr4*0.35", "fmod(acr1*7.3, 1)"]),
+            V("acbbn", "acbbn - 1")], [RNG, V("acbbn", "2 + int(acr1*8)")])]),
+        RNG,
+        Arm("ac-bbtick", "if(acbbn > 0, 40 + acr2*180, (800 + acr3*4000) * (1.4 - 0.6*acdeff))", stop="ac-playstop"),
+    ])
+    # song: phrases of 2-5 notes on chord tones, each gliding from the last, then a rest
+    proc(c, "ac-sgtick", [
+        If("acgt15 > 0.01", [If("acsgn > 0", [
+            RNG, V("acsgd", "900 + acr4*2200"),
+            SendL("ac-song", ["mtof(acch[int(acr1*4)] + 12*int(acr2*2))", "150 + acr3*700", "acsgd"]),
+            V("acsgn", "acsgn - 1")], [RNG, X("2 + int(acr1*4); 0", "v acsgn", "v acsgd")])]),
+        RNG,
+        Arm("ac-sgtick", "if(acgt15 < 0.01, 1500, if(acsgn > 0, if(acsgd > 0, acsgd*0.92, 300), "
+                         "(2500 + acr3*7000) * (1.4 - 0.6*acdeff)))",
+            stop="ac-playstop"),
     ])
     # ghost input mode: a played onset rings the next bell note
     # data texture: bursts of blips on chord tones

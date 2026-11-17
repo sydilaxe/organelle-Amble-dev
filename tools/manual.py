@@ -289,7 +289,11 @@ TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few h
             "echoes": "alien blips on chord tones in ping-pong echoes that bend in pitch as they repeat",
             "whisper": "whispers: breath shaped into fast syllables, one each side",
             "leaves": "leaves rustling in the trees, swelling with gusts",
-            "brook": "a rippling, babbling brook"}
+            "brook": "a rippling, babbling brook",
+            "bubbles": "water drops tuned to the chord - sines rising in pitch as they die (a bubble model)",
+            "crickets": "three crickets chirping on a high chord tone, each its own pace, one far off",
+            "harp": "an aeolian harp: three strings tuned to the chord, sung by gusts of wind (a string model)",
+            "song": "a distant FM voice singing slow gliding phrases on chord tones"}
 STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)",
                "fm": "FM pings: a carrier and a modulator at the piece's ratio, the index falling fast "
                      "(the motion's own)",

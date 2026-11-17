@@ -787,8 +787,9 @@ sh0 = [l.split()[1] for l in hall_part.splitlines() if l.startswith("ac-shim")][
 sh1 = [l.split()[1] for l in shim_part.splitlines() if l.startswith("ac-shim")][-1:]
 check(sh0 == ["0"] and sh1 and sh1 != ["0"], f"the shimmer runs only for Shimmer (Hall {sh0}, Shimmer {sh1})")
 
-# 35. textures: rain is rain (noise-like drops, not pitched bubbles - it sounded like chirps); the voices, echoes
-#     and nature textures play at the level of the others; radio has static on both sides
+# 35. textures: rain is rain (noise-like drops, not pitched bubbles - it sounded like chirps); the voices, echoes,
+#     nature and model textures play at the level of the others; bubbles, crickets, harp and song are pitched;
+#     radio has static on both sides
 from scipy.signal import welch
 def tex_only(name, secs=14):
     tx = TEXTURES.index(name)
@@ -803,10 +804,17 @@ band = (f > 1000) & (f < 8000)
 fl = np.exp(np.mean(np.log(P[band] + 1e-20))) / np.mean(P[band])
 check(fl > 0.5 and -48 < rms_db(x) < -34, f"rain: a noise-like patter, not pitched (spectral flatness {fl:.2f}; "
       f"the bubbles were 0.01), {rms_db(x):.1f} dB")
-for name in ("murmur", "echoes", "whisper", "leaves", "brook"):
+for name in ("murmur", "echoes", "whisper", "leaves", "brook", "bubbles", "crickets", "harp", "song"):
     x = tex_only(name)
     check(-48 < rms_db(x) < -34 and np.abs(x).max() < 0.5,
           f"texture {name}: {rms_db(x):.1f} dB (peak {np.abs(x).max():.2f})")
+# the oscillator and model textures are pitched (tuned to the chord), not noise: their spectra are far from flat
+for name in ("bubbles", "crickets", "harp", "song"):
+    x = tex_only(name)
+    f, P = welch(x[:, 0], SR, nperseg=8192)
+    band = (f > 100) & (f < 8000)
+    fl = np.exp(np.mean(np.log(P[band] + 1e-20))) / np.mean(P[band])
+    check(fl < 0.25, f"texture {name}: pitched, not noise (spectral flatness {fl:.3f}; rain about 0.9)")
 x = tex_only("radio")
 check(np.corrcoef(x[:, 0], x[:, 1])[0, 1] < 0.9, f"radio: static on both sides (L/R {np.corrcoef(x[:, 0], x[:, 1])[0, 1]:.2f})")
 

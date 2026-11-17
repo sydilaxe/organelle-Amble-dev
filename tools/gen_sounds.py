@@ -490,7 +490,122 @@ def tex_brook():
     return s
 
 
-NEW_TEXTURES = (tex_radio, tex_data, tex_buzz, tex_murmur, tex_echoes, tex_whisper, tex_leaves, tex_brook)
+# ---------------------------------------------------------------- textures 12..15: oscillators and models
+def tex_bubbles():
+    s, ln = switched("bubbles", "ac-g-tex12")
+    s.comment("Bubbles: water drops tuned to the chord - a sine whose pitch rises as it dies (the bubble model: a "
+              "small bubble rings high and short), three at a time, each placed in the stereo field")
+    r = s.ch(s.recv("ac-bub"), "route 0 1 2")       # voice, hz, ms, amp, pan
+    L, R = s.obj("+~"), s.obj("+~")
+    for v in range(3):
+        up = s.to((r, v), "unpack f f f f")
+        # the pitch: f, then 1.9 f over the life; the level: amp, then a fast decay (squared)
+        pk = s.obj("pack f f f")
+        tf = s.to((up, 0), "t f f")
+        s.c(s.to((tf, 1), "* 1.9"), 0, pk, 1)
+        s.c(tf, 0, pk, 0)
+        s.c((up, 1), 0, pk, 2)
+        fq = s.ch(s.m(pk, "$1, $2 $3"), "vline~")
+        ep = s.obj("pack f f")              # (ms, amp: the amp arrives first, into the cold inlet)
+        s.c((up, 2), 0, ep, 1)
+        s.c((up, 1), 0, ep, 0)
+        env = s.ch(s.m(ep, "$2, 0 $1"), "vline~")
+        sig = mul(s, s.to(fq, "osc~"), mul(s, env, env))
+        pn = s.to((up, 3), "expr cos($f1*1.5708); sin($f1*1.5708)")
+        gl, gr = s.obj("*~"), s.obj("*~")
+        s.c(sig, 0, gl, 0)
+        s.c(sig, 0, gr, 0)
+        s.c(pn, 0, gl, 1)
+        s.c(pn, 1, gr, 1)
+        s.c(gl, 0, L, 0)
+        s.c(gr, 0, R, 0)
+        s.col(240)
+    hp = lambda x: s.ch(x, "hip~ 150", f"*~ {TEXG['BUBBLE_G']}")
+    throws(s, mul(s, hp(L), ln), mul(s, hp(R), ln), mix=0.7, send=0.45)
+    return s
+
+
+def tex_crickets():
+    s, ln = switched("crickets", "ac-g-tex13")
+    s.comment("Crickets: three of them, each a sine (high, on a chord tone) pulsed into chirps of three or four "
+              "pulses; each its own pace, drifting - one near each side, one far off in the reverb")
+    hz = s.ch(s.recv("ac-cric"), "line~")              # a chord tone, 3-5.5 kHz
+    outs = []
+    for k, (pulse, chirp, ratio, drift) in enumerate(((31, 1.7, 1.0, 0.07), (27, 1.25, 1.12, 0.05), (35, 2.3, 0.89, 0.09))):
+        # the chirp gate: on for the first 0.22 of each chirp cycle, smoothed; its pace drifts slowly
+        rate = s.ch(s.obj(f"osc~ {drift}"), f"*~ {chirp * 0.15}", f"+~ {chirp}")
+        gate = s.ch(s.to(rate, "phasor~"), "-~ 0.22", "*~ -100", "clip~ 0 1", "lop~ 60")
+        # the pulses inside: a raised cosine of each pulse, sharpened
+        pl = s.ch(s.obj(f"phasor~ {pulse}"), "cos~", "*~ -0.5", "+~ 0.5", "pow~ 3")
+        car = s.ch(mul(s, hz, s.ch(pl, "*~ 0.006", f"+~ {ratio}")), "osc~")        # (a little pitch drop per pulse)
+        outs.append(mul(s, car, mul(s, gate, pl)))
+        s.col(240)
+    far = s.to(outs[2], "*~ 0.35")
+    L = add(s, s.to(outs[0], "*~ 0.8"), add(s, s.to(outs[1], "*~ 0.25"), far))
+    R = add(s, s.to(outs[1], "*~ 0.8"), add(s, s.to(outs[0], "*~ 0.25"), far))
+    g = f"*~ {TEXG['CRICKET_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.6, send=0.5)
+    return s
+
+
+def tex_harp():
+    s, ln = switched("harp", "ac-g-tex14")
+    s.comment("Aeolian harp: three strings tuned to the chord (delay lines fed back through a gentle low-pass - "
+              "a plucked-string model), sung by the wind: a soft breath of band-passed air, gusting, sweeps "
+              "through their overtones")
+    gust = s.ch(add(s, s.obj("osc~ 0.037"), s.ch(s.obj("osc~ 0.061"), "*~ 0.6")), "*~ 0.5", "+~ 0.5", "max~ 0")
+    outs = []
+    for k in range(3):
+        per = s.ch(s.recv(f"ac-harp{k}"), "line~")       # the string's period, ms (below 690 Hz: a block's delay)
+        air = s.obj("vcf~ 3")
+        s.c(s.ch(s.obj("noise~"), "*~ 0.4"), 0, air, 0)
+        s.c(s.ch(s.obj(f"osc~ {0.05 + 0.02 * k}"), "*~ 900", f"+~ {1400 + 500 * k}"), 0, air, 1)
+        exc = mul(s, air, s.ch(gust, f"pow~ {1.5 + 0.5 * k}"))
+        name = f"$0-harp{k}"
+        rd = s.obj(f"vd~ {name}")
+        s.c(per, 0, rd, 0)
+        fb = s.ch(rd, "lop~ 2500", "*~ 0.994")
+        s.to(add(s, exc, fb), f"delwrite~ {name} 30")
+        outs.append(s.ch(rd, "hip~ 80"))
+        s.col(240)
+    L = add(s, outs[0], s.to(outs[1], "*~ 0.5"))
+    R = add(s, outs[2], s.to(outs[1], "*~ 0.5"))
+    g = f"*~ {TEXG['HARP_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.6, send=0.5)
+    return s
+
+
+def tex_song():
+    s, ln = switched("song", "ac-g-tex15")
+    s.comment("Song: a distant voice of pure FM singing slow phrases on chord tones - each note glides from the "
+              "last, its vibrato and brightness growing as it is held; it wanders across the stereo field")
+    up = s.to(s.recv("ac-song"), "unpack f f f")       # hz, glide ms, note ms
+    pf = s.obj("pack f f")
+    s.c((up, 1), 0, pf, 1)
+    s.c((up, 0), 0, pf, 0)
+    fq = s.ch(s.m(pf, "$1 $2"), "vline~")
+    # the note's swell: up over a third of it, down at its end; the brightness and the vibrato follow it
+    ex = s.to((up, 2), "expr $f1*0.33; $f1*0.67")
+    ep = s.obj("pack f f")
+    s.c(ex, 1, ep, 1)
+    s.c(ex, 0, ep, 0)
+    env = s.ch(s.m(ep, "1 $1, 0 $1 $2"), "vline~")
+    vd = mul(s, s.ch(s.obj("osc~ 4.6"), "*~ 0.012"), env)
+    f2 = mul(s, fq, s.to(vd, "+~ 1"))
+    mod = mul(s, s.to(f2, "osc~"), s.ch(env, "*~ 1.6"))
+    car = s.obj("osc~")
+    s.c(add(s, f2, mul(s, mod, f2)), 0, car, 0)
+    voice = s.ch(mul(s, car, mul(s, env, env)), "lop~ 3000")
+    pos = s.ch(s.obj("osc~ 0.021"), "*~ 0.35", "+~ 0.5")
+    from gen_dsp import span
+    L, R = span(s, voice, pos)
+    g = f"*~ {TEXG['SONG_G']}"
+    throws(s, mul(s, s.to(L, g), ln), mul(s, s.to(R, g), ln), mix=0.5, send=0.8)
+    return s
+
+
+NEW_TEXTURES = (tex_radio, tex_data, tex_buzz, tex_murmur, tex_echoes, tex_whisper, tex_leaves, tex_brook,
+                tex_bubbles, tex_crickets, tex_harp, tex_song)
 
 
 # ---------------------------------------------------------------- character on the pads (inlet 0 L, 1 R)
