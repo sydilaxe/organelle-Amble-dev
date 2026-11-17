@@ -355,7 +355,14 @@ def voice():
     tf = v.ch(pk2, "line 0 40", "t f f")
     dsig = v.ch(v.m(v.to((tf, 1), "expr 1000/mtof($f1) - 0.012"), "$1 40"), "line~")
     fsig = v.ch(v.m(v.to((tf, 0), "mtof"), "$1 40"), "line~")
-    drift = v.ch(v.recv("$0-ld"), "osc~", "*~ 0")
+    # a smooth random wander (value noise: a new random target every 2.5-4 s, smoothed twice - as Perlin noise
+    # moves), its own per voice; with the cycle it drifts the pitch (by Mot) and the orbit around the voice's home
+    wrate = v.to(v.ch(v.obj("loadbang"), "f $1", "expr 0.25 + 0.04*$f1"), "phasor~")
+    wsh = v.obj("samphold~")
+    v.c(v.obj("noise~"), 0, wsh, 0)
+    v.c(wrate, 0, wsh, 1)
+    wander = v.ch(wsh, "lop~ 0.3", "lop~ 0.3", "*~ 1.6")
+    drift = v.to(add(v, v.to(v.recv("$0-ld"), "osc~"), v.to(wander, "*~ 0.7")), "*~ 0")
     ctl(v, drift, "ac-motion", "0.005*$f1")
     f2 = mul(v, v.to(drift, "+~ 1"), fsig)
     v.col()
@@ -410,7 +417,7 @@ def voice():
     # around it on its own slow cycle, as far as ac-pandepth. The voice's own stereo is kept (balance pan).
     home = v.ch(v.recv("ac-v$1-home"), "line~")
     v.c(v.m(v.ch(v.obj("loadbang"), "f $1", "expr 0.08 + 0.28*$f1"), "$1 10"), 0, home, 0)
-    orb = v.to(v.to((lu, 0), "* 0.37"), "osc~")
+    orb = add(v, v.to(v.to((lu, 0), "* 0.37"), "osc~"), v.to(wander, "*~ 0.8"))
     dep = v.to(orb, "*~ 0.2")
     v.c(v.recv("ac-pandepth"), 0, dep, 1)
     posn = v.to(add(v, dep, home), "clip~ 0.02 0.98")
