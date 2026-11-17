@@ -359,8 +359,36 @@ def flav_lissa():
     return s
 
 
+def flav_chip():
+    s, ln = switched("chip-pad", "$0-fw22")
+    s.comment("Chip: a game console's channels, raw - left a pulse whose duty steps between 12.5, 25 and 50 % "
+              "(as the hardware does, never smoothly), unfiltered; right the 4-bit triangle (16 steps); brightness "
+              "brings the pulse across. A vibrato that comes in late, and the sample rate held down a little")
+    f, b = _flav_inlets(s, 2)
+    vib = s.ch(s.obj("osc~ 5.6"), "*~ 0.004")
+    late = s.ch(s.obj("osc~ 0.09"), "*~ 0.5", "+~ 0.5")       # (the vibrato's depth, slowly in and out)
+    fv = mul(s, f, s.to(mul(s, vib, late), "+~ 1"))
+    ph = s.to(fv, "phasor~")
+    duty = s.ch(s.recv("$0-lb"), "osc~", "expr~ if($v1 < -0.33, 0.125, if($v1 < 0.33, 0.25, 0.5))")
+    pulse = s.obj("expr~ ($v1 < $v2)*2 - 1")
+    s.c(ph, 0, pulse, 0)
+    s.c(duty, 0, pulse, 1)
+    tri = s.to(ph, "expr~ floor((1 - abs($v1*4 - 2))*7.99)/7.5 - 1")
+    # the sample rate held down: a new value every 4 samples (about 11 kHz)
+    hold = s.obj("phasor~ 11025")
+    outs = []
+    for sig, other in ((pulse, None), (tri, pulse)):
+        x = sig if other is None else add(s, sig, mul(s, s.to(other, "*~ 0.6"), b))
+        sh = s.obj("samphold~")
+        s.c(x, 0, sh, 0)
+        s.c(hold, 0, sh, 1)
+        outs.append(s.ch(sh, "hip~ 20", "*~ 0.18"))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
 NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat,
-             flav_reed, flav_organ, flav_air, flav_cz, flav_choir, flav_vosim, flav_whistle, flav_lissa)
+             flav_reed, flav_organ, flav_air, flav_cz, flav_choir, flav_vosim, flav_whistle, flav_lissa, flav_chip)
 
 
 # ---------------------------------------------------------------- drone designs 1..3 (0 is the original)

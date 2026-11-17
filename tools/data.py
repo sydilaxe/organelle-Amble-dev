@@ -51,7 +51,7 @@ MOVES_P = [3, -3, 4, -4, 3, -4, 2, -2, 2, -2, 5, -1]
 MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 
 FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat",
-            "reed", "organ", "air", "cz", "choir", "vosim", "whistle", "lissa"]
+            "reed", "organ", "air", "cz", "choir", "vosim", "whistle", "lissa", "chip"]
 FLAV_AUTO = 14             # (a piece picks among the first 14; the later ones by hand)          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,

@@ -389,6 +389,8 @@ FLAV_DESC = {
     "vosim": "VOSIM: trains of fading sin-squared pulses at a formant - vowel-like, a little nasal; brighter, higher",
     "whistle": "the chord whistled two octaves up: an unsteady pure tone with breath and a growing vibrato",
     "lissa": "Lissajous: the note on one side, its fifth on the other slowly turning in phase - the image rotates",
+    "chip": "raw chiptune: a console's pulse stepping between 12.5, 25 and 50 % duty, unfiltered, and the 4-bit "
+            "stepped triangle on the other side - the sample rate held down a little",
     "cz": "phase distortion (the Casio CZ): a cosine through a bent phase - from a sine towards a saw with brightness, "
           "and on the right the resonant wave, its resonance sweeping slowly",
 }
