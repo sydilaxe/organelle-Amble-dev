@@ -54,8 +54,8 @@ LOW = {
                                           "music"),
 }
 # top octave, for each name in gen_ui.TOP_KEYS
-LAYERS = {f"{n} in/out | aux: {n} page": n for _, n, _ in U.LAYER_KEYS}
-TOP = {k: (n.upper(), ["tap: in / out", "aux + tap: its page"]
+LAYERS = {f"{n} in/out | hold: {n} SHAPE | aux: {n} page": n for _, n, _ in U.LAYER_KEYS}
+TOP = {k: (n.upper(), ["tap: in / out", "hold: SHAPE page", "aux + tap: its page"]
            + (["aux + held + low key:", "its rhythm (C-B)"] if n in ("motion", "bells") else []), "layer")
        for k, n in LAYERS.items()}
 TOP.update({

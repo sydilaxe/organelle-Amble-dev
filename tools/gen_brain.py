@@ -17,7 +17,7 @@ GLOBALS = dict(
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
-    acmxq=0, acsgms=200, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
+    acmxq=0, acsgms=200, acshdt=0.5, acshdd=0, acshdw=0.5, acshst=0.5, acshsd=0, acshsw=0.5, acshpt=0.5, acshpd=0, acshpw=0.5, acshbt=0.5, acshbd=0, acshbw=0.5, acshmt=0.5, acshmd=0, acshmw=0.5, acshtt=0.5, acshtd=0, acshtw=0.5, acshat=0.5, acshad=0, acshaw=0.5, acshct=0.5, acshcd=0, acshcw=0.5, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
     acfdrone=1, acfpad=1, acftex=1, acfcloud=1, acfbell=1, acfmotion=0, actex1=0, actex2=1, actexA=0, actexB=1,
     acpal1=0, acpal2=1, acpal3=3, acpartI=0, acbellI=0, acsecbright=0.8, actidef=1, acpow=1,
     acpsum=1, acfirst=1, acmodflag=0, acD=0, acp0=0, acp1=0, aci=0, acchg=0, acfade=8000,
@@ -651,6 +651,14 @@ def verb():
     ])
     from data import SEND_BUS
     # (200 ms glides, but 30 ms while a SENDS knob turns: acsgms)
+    # the layers' SHAPE stages (gen_dsp.shaped): tone 0..1 (50 % open: below, a low-pass from 20 kHz down to 300 Hz;
+    # above, a high-pass from 5 Hz up to 2 kHz), drive, width (x2)
+    from gen_dsp import SHAPE_LAYERS
+    proc(c, "ac-shpupd", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
+                                                f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
+                                                f"acsh{x}d", f"2*acsh{x}w"]) for x in SHAPE_LAYERS])
+    # (after the defaults: ac-init's other receivers set them, in no set order)
+    c.c(c.to(c.recv("ac-init"), "delay 20"), 0, c.obj("s ac-shpupd"), 0)
     proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])
     c.c(c.to(c.recv("ac-init"), "t b"), 0, c.obj("s ac-sendupd"), 0)
     proc(c, "ac-revupd", [

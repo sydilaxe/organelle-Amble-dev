@@ -116,9 +116,12 @@ FKEY_DESC = {
     "new piece | aux: SAVES": "A new piece with a new seed (ready, if stopped). Aux: the SAVES page.",
 }
 for _var, _name, _g in U.LAYER_KEYS:
-    FKEY_DESC[f"{_name} in/out | aux: {_name} page"] = (
-        f"Bring the {_name} in (on at its MIX level, whatever the piece does) if it is silent, or take it out if "
-        "it plays. The fade takes SETUP LIVE Key fade. Aux + tap: the layer's page - knob 1 its sound (auto: the "
+    FKEY_DESC[f"{_name} in/out | hold: {_name} SHAPE | aux: {_name} page"] = (
+        f"A tap (on its release): bring the {_name} in (on at its MIX level, whatever the piece does) if it is "
+        "silent, or take it out if it plays. The fade takes SETUP LIVE Key fade. Held half a second: its SHAPE "
+        "page - knob 1 its sound, knob 2 Tone (50 % open; down darkens with a low-pass, up thins with a "
+        "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider); "
+        "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (
             " Aux and this key held, a low key picks the motion's rhythm, C-B: the Euclidean patterns 3/8, 5/8, 5/12, "

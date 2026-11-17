@@ -53,7 +53,10 @@ LAYER_PAGES = [("DRONE", "acmdrone", "acsdrone", "acmxd", "acsndd"), ("SUB", "ac
 QUICK_NAMES = ["CHORD"] + [n for n, *_ in LAYER_PAGES] + ["INPUT"]
 CHORD_PAGE = NSET                          # (acsetpg)
 LAYER_PAGE0 = NSET + 1                     # + the layer (gen_ui.LAYER_KEYS order)
+SHAPE_X = "dspbmtac"                       # each layer's letter (its SHAPE values acsh<x>t/d/w), LAYER_KEYS order
 INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
+SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the layer key held)
+QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
 NALL = NSET + len(QUICK_NAMES)
 SCHPICK = ["next change", "now"]
 SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
@@ -145,7 +148,8 @@ SAVE_ARRAYS = [("acsroles", 12), ("acslens", 12), ("acssp", 12), ("acsst", 96), 
 SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("acpump", 0), ("acpumpd", 0.5),
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
               ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
-              ("acmeisel", 0), ("acbrsel", 0)]
+              ("acmeisel", 0), ("acbrsel", 0)] + \
+             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -417,6 +421,15 @@ def quick_pages():
         ("list 3 Follow you $1%", [("f", "int(acfollow*100)")]),
         ("list 4 Verb send $1%", [("f", "int(acsndi*100)")]),
     ]))
+    # each layer's SHAPE (its key held): its sound, then tone, drive and width (gen_dsp.shaped)
+    for (name, m, t, mx, snd), x in zip(LAYER_PAGES, SHAPE_X):
+        pages.append((name + " SHAPE", [
+            ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
+            ("list 2 Tone $1 $2%", [("s", f"if(acsh{x}t < 0.49, 0, if(acsh{x}t > 0.51, 2, 1))", ["dark", "open", "thin"]),
+                                     ("f", f"int(abs(acsh{x}t - 0.5)*200)")]),
+            ("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
+            ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")]),
+        ]))
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -460,6 +473,12 @@ def quick_knobs(item):
             If(at(pg, 2), [V("acsnew", "int(acsv*2.99)"), If(f"acsnew != {m}", [V(m, "acsnew"), V("acfade", LFADE),
                                                                                 Call("ac-layers")])]),
             If(at(pg, 3), knob(mx))] + ([If(at(pg, 4), knob(snd))] if snd else [])
+    for j, ((name, m, t, mx, snd), x) in enumerate(zip(LAYER_PAGES, SHAPE_X)):
+        pg = SHAPE_PAGE0 + j
+        st += ([If(at(pg, 1), type_act(t))] if t else []) + [
+            If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call("ac-shpupd")]),
+            If(at(pg, 3), [V(f"acsh{x}d", "acsv"), Call("ac-shpupd")]),
+            If(at(pg, 4), [V(f"acsh{x}w", "acsv"), Call("ac-shpupd")])]
     st += [If(at(INPUT_PAGE, 1), [V("acsnew", f"int(acsv*{len(INMODES) - 0.01})"), If("acsnew != acinmode", [
                V("acinmode", "acsnew"), Call("ac-inputupd"), Call("ac-scr5")])]),
            If(at(INPUT_PAGE, 2), knob("acinput")),
@@ -625,11 +644,14 @@ def setup():
     ])
     # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
     proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
-        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [Send("ac-setl0q")])])])
+        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")],
+                                                                 [Send("ac-setl0q")])])])])
     Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
     Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
                                                 ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
-    Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:])], "ac-sett0")(c)
+    Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
+         "ac-sett0")(c)
+    Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()
     for k, *rows in setup_rows():

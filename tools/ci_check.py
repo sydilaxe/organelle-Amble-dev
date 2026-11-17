@@ -1011,6 +1011,26 @@ log, _ = run([(50, "ac-setseed 7"), (1000, "aux 1"), (1050, "notesRaw 76 100"), 
 ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
 check(ts == ["motion 5/12", "bells waltz", "bells auto"], f"aux + top E / D# + a low key: rhythms ({ts})")
 
+# a layer key held: its SHAPE page - Tone down darkens, up thins, Width 0 is mono; a tap still takes it in / out
+import numpy as np
+def centroid(x):
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    P = np.abs(np.fft.rfft(x)) ** 2
+    return (f * P).sum() / P.sum()
+base = [(50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+       [(311, "acmpad 2"), (311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10")]
+held = [(1000, "notesRaw 74 100"), (1700, "notesRaw 74 0")]
+sh = {}
+for name, ev in (("open", []), ("dark", held + [(1800, "knob2 0.1")]), ("thin", held + [(1800, "knob2 0.9")]),
+                 ("mono", held + [(1800, "knob4 0")])):
+    log, a = run(base + ev, 6, prints=("ac-sett0",))
+    x = a[3 * SR:]
+    sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log)
+check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150 and sh["open"][1] < 0.95
+      and sh["mono"][1] > 0.99 and all(v[2] for k, v in sh.items() if k != "open"),
+      f"pads key held: the PADS SHAPE page; tone {sh['dark'][0]:.0f} < {sh['open'][0]:.0f} < {sh['thin'][0]:.0f} Hz, "
+      f"width 0 mono (L/R {sh['mono'][1]:.2f}, as designed {sh['open'][1]:.2f})")
+
 # top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
               (2800, "notesRaw 80 0"), (3000, "knob1 0.8"), (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
@@ -1267,8 +1287,10 @@ for pg in range(21):
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
 t += 2000
-for k in [None, 80] + list(range(72, 80)):   # CHORD (low A held), INPUT (top G# held), aux + each layer key
+for k in [None, 80] + list(range(72, 80)) + [-k for k in range(72, 80)]:   # CHORD (low A held), INPUT (top G#
+    # held), aux + each layer key, each layer key held (its SHAPE page)
     ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80) else \
+        [(t, f"notesRaw {-k} 100"), (t + 700, f"notesRaw {-k} 0")] if k < 0 else \
         [(t, "aux 1"), (t + 50, f"notesRaw {k} 100"), (t + 100, f"notesRaw {k} 0"), (t + 150, "aux 0")]
     for j in range(4):
         ev += [(t + 800 + 200 * j, f"knob{j + 1} 0.999"), (t + 900 + 200 * j, f"knob{j + 1} 0.001")]

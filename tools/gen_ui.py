@@ -44,7 +44,7 @@ LOW_KEYS = ["SHAPE page", "MIX 1 page", "SPACE page", "MIX 2 page", "PIECE page"
 LAYER_KEYS = [("acmdrone", "drone", "acgdrone"), ("acmsub", "sub", "acgsub"), ("acmpad", "pads", "acgpad"),
               ("acmbell", "bells", "acgbell"), ("acmmotion", "motion", "acgmotion"), ("acmtex", "textures", "acgtex"),
               ("acmatm", "atmosphere", "acgatm"), ("acmcloud", "cloud", "acgcloud")]
-TOP_KEYS = [f"{n} in/out | aux: {n} page" for _, n, _ in LAYER_KEYS] + [
+TOP_KEYS = [f"{n} in/out | hold: {n} SHAPE | aux: {n} page" for _, n, _ in LAYER_KEYS] + [
     "input mode | hold: INPUT page | aux: capture", "Freeze | aux: ANCHOR", "start / stop | aux: COMPOSE / DRIFT",
     "new piece | hold: COMPARE | + key: load | aux: SAVES"]
 SAVE_KEY = 83                           # top B: tap = new piece; held, a key loads its slot (aux: saves to it)
@@ -134,6 +134,9 @@ def keys():
                   [SendL("ac-fkey", ["ackn"])])])])],
         [If(f"ackn == {ROOT_KEY}", [V("acroothold", "0")]),
          If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", "0")]),
+         # a layer key let go: a tap takes it in / out; a hold already opened its SHAPE page
+         If("acshk >= 0 && ackn - 72 == acshk", [Send("ac-shpstop"), If("acshkh == 0", [
+             If(f"acshk == {i}", [Call(f"ac-laytog{i}")]) for i in range(len(LAYER_KEYS))]), V("acshk", "-1")]),
          # top G# let go: a tap steps the input mode; a hold already opened the INPUT page
          If(f"ackn == {INPUT_KEY} && acinkh >= 0", [Send("ac-inhstop"), If("acinkh == 0", [Call("ac-inmodestep")]),
                                                   V("acinkh", "-1")]),
@@ -157,11 +160,12 @@ def keys():
     c.col()
 
     def layer(i, var, label, g):
-        # tap: in (always on) if it's silent now, out if it plays; aux + tap: the layer's page (its sound, in / out
-        # / auto, level, reverb send)
+        # a tap (on its release): in (always on) if it's silent now, out if it plays; held 0.5 s: its SHAPE page;
+        # aux + tap: the layer's page (its sound, in / out / auto, level, reverb send)
+        proc(c, f"ac-laytog{i}", [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")]),
+                                  V("acfade", _S.LFADE), Call("ac-layers")])
         return [If("acauxheld", [V("acsetup", "1"), V("acsetpg", str(_S.LAYER_PAGE0 + i)), Call("ac-oledsetup")],
-                   [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")]),
-                    V("acfade", _S.LFADE), Call("ac-layers")])]
+                   [X(f"{i}; 0", "v acshk", "v acshkh"), Arm("ac-shphold", "500", stop="ac-shpstop")])]
 
     def page(p):
         return [V("acpage", str(p)), If("acsetup", [V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")]),
@@ -205,6 +209,8 @@ def keys():
     proc(c, "ac-ancheld", [V("acanheld", "1"), Call("ac-anchorset")])
     proc(c, "ac-rootset", [V("acpend", "acrootn"), Send("ac-keytoast"), Call("ac-chordnext")])
     # low A held 0.5 s: the CHORD page (knob 1 picks the next chord; gen_setup)
+    proc(c, "ac-shphold", [V("acshkh", "1"), V("acsetup", "1"), V("acsetpg", f"{_S.SHAPE_PAGE0} + acshk"),
+                           Call("ac-oledsetup")])
     proc(c, "ac-inmodestep", [V("acinmode", "(acinmode+1) % 8"), Call("ac-inputupd"), Call("ac-inmodetoast"),
                               Call("ac-scr5")])
     # top G# held 0.5 s: the INPUT page (gen_setup)

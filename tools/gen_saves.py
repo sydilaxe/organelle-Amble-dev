@@ -123,7 +123,7 @@ def saves():
     steps += [Call("ac-verbcut"), V("acmdur", f"if(acstopped, 0, {_pick('acmorph', SMORPH)})"), Call("ac-morphgo"),
               Call("ac-basesetto"), V("acancs", "0"), V("acslotcur", "acslot"),
               V("acknown0", "0"), V("acknown1", "0"), V("acknown2", "0"), V("acknown3", "0"),
-              Call("ac-sendupd"), Call("ac-revupd"), Call("ac-stereo"), Call("ac-rvcolour"), Call("ac-sinkupd"),
+              Call("ac-sendupd"), Call("ac-shpupd"), Call("ac-revupd"), Call("ac-stereo"), Call("ac-rvcolour"), Call("ac-sinkupd"),
               Call("ac-pumpupd"), Call("ac-sparkupd"), Call("ac-jourupd"), Call("ac-sndovr"), Call("ac-padpick"), V("acfade", "3000"),
               Call("ac-layers"),
               # a piece: from its seed, ready while stopped, playing otherwise
