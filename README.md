@@ -68,6 +68,7 @@ The layers and their rhythms:
 - **Two screens:** the play view (the chord now and the next one coming, a live score, the voices that sound) and
   the MIX view (levels and sends, the column you turn framed with its value), which takes over while a MIX or
   SENDS page is open. SETUP DISPLAY can turn the play view's middle into a scope of the output, and the LED into a light that blinks with the drone's beating.
+- **How the piece writes** (SETUP 24-28: LINES, HARMONY, PHRASE, DIALOGUE, WRITING): one motif carried between the bells, the motion (as counterpoint, in canon, in call and response) and, held and slow, the pads; phrases that close (IV-V, then V-I) and breathe; mediant and tonnetz key moves, secondary dominants, smooth voicing, a key plan, phasing, spaced registers; an ending by phrase and a subtle drone. On by default; WRITING Writing still turns it all off for the static, droning piece. A feature the scale can't carry steps aside.
 - **Listening:**
   - A held or sung pitch pulls the next chord to contain it.
   - A note held for 6 s becomes the key centre.

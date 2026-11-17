@@ -1345,7 +1345,7 @@ check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet
       f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
-#     what is there. SETUP's 23 pages, the quick pages (CHORD, the layers', GLIDE, the hold pages), the 8 knob pages, keys and toasts,
+#     what is there. SETUP's pages, the quick pages (CHORD, the layers', GLIDE, the hold pages), the 8 knob pages, keys and toasts,
 #     the profile's parts
 import re
 ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
@@ -1461,9 +1461,9 @@ check("list COLOUR aux: back" in mir and "200 ms" in pd_,
       f"low D held: the COLOUR page as a quick page, knob 1 sets its Pre-delay ({pd_})")
 check(len(leds) >= 6 and {l.split()[1] for l in leds} >= {"0"}, f"LED beat: the LED blinks with the bed ({len(leds)} changes in 3 s)")
 
-# 77. how the piece writes (SETUP LINES, HARMONY, PHRASE, DIALOGUE): each one does what it says; all off, a piece
-#     plays as before (checked against the build before them when they came); saved with a piece, an older line
-#     loads them off
+# 77. how the piece writes (SETUP LINES, HARMONY, PHRASE, DIALOGUE, WRITING): each one does what it says (from all
+#     off: the piece as it was); Writing still is all of them off; the defaults carry the motif between the layers;
+#     saved with a piece, an older line takes the defaults
 def chprobe(c):
     # each chord as it sounds: its name, the key, the scale, the degree, a secondary dominant, the 4 pad voices
     ex = ["acchn", "actonic", "acsci", "acdeg", "acsdnow", "acch[0]", "acch[1]", "acch[2]", "acch[3]"]
@@ -1475,9 +1475,12 @@ def chprobe(c):
 import os
 k = lambda i, n: (i + 0.5) / n
 d = build_tmp()
-W = ("ac-bell", "ac-mnote", "ac-dronep")
-def wr(sets, secs=150, seed=11, ev=()):
-    log, _ = run([(10, "actide 0"), (10, "acmbell 2"), (10, "acmmotion 2")] + [(20, f"{n} {v}") for n, v in sets]
+W = ("ac-bell", "ac-mnote", "ac-dronep", "ac-v3-pitch", "h-mark") + tuple(f"ac-g-drone{i}" for i in ["", 1, 2, 3, 4, 5, 6, 7])
+OFF = [(n, 0) for n in ("acmelm", "accanon", "acmovm", "acsecd", "acphr", "acvlead", "acrests", "acmdev", "acans",
+                        "acphase", "acreg", "acpadm", "acdrsub", "acendp")] + [("acwrite", 1)]
+def wr(sets, secs=150, seed=11, ev=(), base=OFF):
+    log, _ = run([(10, "actide 0"), (10, "acmbell 2"), (10, "acmmotion 2")] + [(15, f"{n} {v}") for n, v in base]
+                 + [(20, f"{n} {v}") for n, v in sets]
                  + [(50, f"ac-setseed {seed}")] + list(ev), secs, prints=W, d=d, extra=chprobe)
     L = log.splitlines()
     i = max(k for k, l in enumerate(L) if l.startswith("ac-setseed"))     # (the seeded piece, not the start-up one)
@@ -1569,7 +1572,44 @@ log, _ = run([(50, "acmelm 0"), (50, "acphr 0"), (50, "acans 0")] + ld(2), 2, d=
 got = [l for l in log.splitlines() if l.startswith("P:")][-1]
 log2, _ = run([(50, "acmelm 3"), (50, "acphr 1"), (50, "acans 2")] + ld(3), 2, d=dd, extra=pr)
 got2 = [l for l in log2.splitlines() if l.startswith("P:")][-1]
-check(got == "P: 221" and got2 == "P: 0", f"saved with the piece ({got}); an older line loads them off ({got2})")
+check(got == "P: 221" and got2 == "P: 411", f"saved with the piece ({got}); an older line takes the defaults ({got2})")
+# Writing still: every feature off at once (the defaults on, still = all off); the defaults: the motion's line is the
+# motif against the bells (mostly contrary motion), the pads' top voice carries it (suspensions), the drone subtle
+def ev_(L, w=("ac-bell", "ac-mnote", "ac-v3-pitch")):
+    L = L.splitlines()          # (from the seeded piece: the start-up one is seeded by the clock)
+    L = L[max(k for k, l in enumerate(L) if l.startswith("ac-setseed")):]
+    return [l for l in L if l.startswith(w)]
+still = wr([("acwrite", 0)], 90, base=[])
+check(ev_(still[0]) == ev_(wr([], 90)[0]), "Writing still: the piece as with every feature off")
+log, ch, b_, m_, _ = wr([], 150, base=[])
+mlog = [l for l in log.splitlines() if l.startswith(("ac-bell:", "ac-mnote:"))]
+# (each motion step after a bell that moved: against the bell's direction?)
+cm = tot = bd = 0
+bl = ml = None
+for l in mlog:
+    x = float(l.split()[1])
+    if l.startswith("ac-bell:"):
+        bd, bl = (0 if bl is None else (x > bl) - (x < bl)), x
+    else:
+        if bd and ml is not None and x != ml:
+            tot += 1
+            cm += (x - ml) * bd < 0
+        ml = x
+v3 = [l for l in log.splitlines() if l.startswith("ac-v3-pitch")]
+gd = [float(l.split()[1]) for l in ev_(log, "ac-g-drone")]
+full = wr([("acdrsub", 0)], 150, base=[])[0]
+gd0 = [float(l.split()[1]) for l in ev_(full, "ac-g-drone")]
+check(not errors(log) and m_ and b_ and cm > 0.4 * max(1, tot),
+      f"defaults: the motion answers the bells with the motif, mostly against their direction ({cm} of {tot})")
+check(len(v3) > len(ch), f"Pads carry motif: the top voice's suspensions resolve ({len(v3)} moves for {len(ch)} chords)")
+check(gd and len(gd) == len(gd0) and all(abs(a_ - 0.5 * b_) < 1e-4 for a_, b_ in zip(gd, gd0)) and max(gd0) > 0,
+      f"Drone subtle: half the level, the same piece ({max(gd):.2f} against {max(gd0):.2f} full)")
+# Ending by phrase: the motion stops, the bells play on 9 s, everything fades
+log, _, b_, m_, _ = wr([("acendp", 1)], 60, ev=[(30000, "h-mark bang"), (30000, "ac-fin bang"), (39500, "h-mark bang")])
+pre, mid, post = (log.split("h-mark: bang") + ["", ""])[:3]
+cnt = lambda t, w: sum(1 for l in t.splitlines() if l.startswith(w))
+check(cnt(mid, "ac-mnote:") == 0 and cnt(mid, "ac-bell:") > 0 and cnt(post, "ac-bell:") == 0,
+      f"Ending by phrase: the motion stops, the bells play on, then stop ({cnt(mid, 'ac-bell:')} bells in 9 s)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

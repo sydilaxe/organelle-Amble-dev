@@ -187,7 +187,7 @@ def live():
         SendL("ac-lvbr", ["acvi", "if(acbrmode, max(acbrch[int(aclch)], acbrch[1]), 1)"]),
         If("acroute == 0", [SendL("ac-lvon", ["acvi", "aclnote + acbendt[int(aclch)]", "aclvel/127"])]),
         V("aclnt", "acnow"),
-        If("acans == 2", [X("acnow; aclnote", "v acanst", "v acant")]),     # (SETUP DIALOGUE Answer you)
+        If("(acans*acwrite) == 2", [X("acnow; aclnote", "v acanst", "v acant")]),     # (SETUP DIALOGUE Answer you)
         T("achpc", "int(aclnote) % 12", "achpc[int(aclnote) % 12] + 1"),
         X("int(aclnote) % 12; acnow; 0", "v acfocus", "v acfocust", "v acfkdone"),
         # SETUP Notes to: chords / drone / bells / cloud

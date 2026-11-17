@@ -301,6 +301,22 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 23, DISPLAY: Hints (a held key says what holding does), Scope
   (the play view's middle draws the output), Scope gain, LED (state /
   beat: blinks with the drone's beating)
+  pages 24-28, how the piece writes - one motif carried between the
+  bells, the motion and (held, slowly) the pads, in phrases that close
+  and breathe:
+  page 24, LINES: Melody (arp, 1/f, grow, mutate, motif), Mutate,
+  Canon (8va, 5th, 15ma, or by the motion), Canon delay
+  page 25, HARMONY: Moves (mediants, tonnetz), How often, Dominants
+  (secondary), New types (a piece's picks take the later types too)
+  page 26, PHRASE: Phrases (4 / 8 chords, open then closed), Voicing
+  (smooth), Key plan (home, fifths, thirds), Breath (rests after a
+  closed phrase)
+  page 27, DIALOGUE: Motif (develops), Answer (motion, you), Phasing,
+  Register (spaced)
+  page 28, WRITING: Writing (still: the static, droning piece; moving),
+  Pads carry (the motif), Drone level (subtle), Ending (by phrase)
+  A feature the scale can't carry (no 5th, not 12-tone, pentatonic for
+  the dominants) steps aside.
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
 lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,

@@ -235,6 +235,57 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "LED": (", ".join(S.SLEDM), "state: the LED shows the piece (green drifting, blue composing, white on a chord "
             "change). beat: it blinks with the beating of the drone and sub, lit while they swell above their "
             "average."),
+    # LINES, HARMONY, PHRASE, DIALOGUE, WRITING: how the piece writes (all act only while WRITING Writing is moving)
+    "Melody": (", ".join(S.SMELM), "What the motion plays. arp: the chord tones (as Rhy and the rhythm pick them). 1/f: "
+               "a melody of mostly small steps and now and then a leap (three dice changing at 1, 2 and 4 steps). grow: "
+               "the arpeggio adds a note each round (1, 12, 123, 1234). mutate: an 8-step loop of chord tones whose "
+               "steps change now and then (Mutate). motif: the bells' motif as counterpoint - its intervals, moving "
+               "against the bells, a chord tone on the pattern's first step; with Answer motion, a 5th up, as the "
+               "answer to the bells' subject."),
+    "Mutate": (", ".join(n for n, _ in S.SMUTP), "With Melody mutate: how often a step of the loop changes (locked: "
+               "never - the loop repeats)."),
+    "Canon": (", ".join(S.SCANON), "Each bell note again, later (Canon delay), on the other side: an octave up, a 5th "
+              "up (in a 7-note scale; otherwise the octave), two octaves up - or played by the motion an octave down, "
+              "so the line passes from one layer to the other."),
+    "Canon delay": (", ".join(n for n, _ in S.SCAND), "How much later the canon's voice comes in."),
+    "Moves": (", ".join(S.SMOVM), "Key moves the piece makes of its own between chords: a chromatic mediant (to the "
+              "major or minor key a 3rd away), a tonnetz step (P: the parallel, R: the relative, L: the leading-tone "
+              "exchange; major turns minor and back), or both. Not with a fixed key or scale, nor in a scale that is "
+              "not near 12-tone or has no 5th."),
+    "How often": (", ".join(n for n, _ in S.SMOVP), "How often a chord change becomes such a key move."),
+    "Dominants": (", ".join(n for n, _ in S.SSECD), "Secondary dominants: before a chord (not the tonic) its own V "
+                  "comes, a major chord a 5th above it, the drone staying on the key. Only in a 12-tone scale of 7 "
+                  "notes or more; a pentatonic piece ignores them."),
+    "New types": ("off, on", "On: a piece's own picks also take the types added later (pads, textures, drones, "
+                  "rhythms, the 6thdim scale). Off: only the original ones."),
+    "Phrases": (", ".join(S.SPHR), "The chords come in phrases of 4 or 8, in pairs: the first ends open (IV, then V), "
+                "the second closed (V, then I) - and after a closed phrase the bells and the motion breathe (Breath). "
+                "A key move starts a new phrase; a scale without a 5th ignores them."),
+    "Voicing": (", ".join(S.SVLEAD), "smooth: each pad voice takes the free chord tone nearest to it, so common tones "
+                "stay and the others move by step."),
+    "Key plan": (", ".join(S.SKPLAN), "The keys of a COMPOSE piece's sections: the piece's own (auto), home only, "
+                 "or each section away from home a 5th or a major 3rd further. The opening, the return and the end "
+                 "stay home."),
+    "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the bells and the motion rest a bar as a section "
+               "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
+               "the pads hold through."),
+    "Motif": (", ".join(S.SMDEV), "develops: away from the opening and the return, each section may also play the "
+              "motif backwards, slower, faster, or in fragments (its first two notes, sequenced up)."),
+    "Answer": (", ".join(S.SANS), "Call and response. motion: the motion and the bells take 2 bars each in turn. you: "
+               "the bells answer what you play (MIDI notes, or the sung or played input) with the piece's motif near "
+               "your note, while you play and after, fading out 4-12 s after your last note."),
+    "Phasing": (", ".join(n for n, _ in S.SPHASE), "A second motion voice on the other side plays the same notes, "
+                "drifting later a little each step around the whole pattern, until they meet again (as in Reich)."),
+    "Register": (", ".join(S.SREG), "spaced: each layer in its own octaves - the pads up to 76, the motion 67-84, the "
+                 "bells 84-103 - so the lines stay clear of one another."),
+    "Writing": (", ".join(S.SWRITE), "still: none of LINES, HARMONY, PHRASE, DIALOGUE or WRITING act - the static, "
+                "droning piece - and your choices there are kept for moving again. moving: they act."),
+    "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
+                   "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
+                   "through it - the motif, very slowly, under the active bells and motion."),
+    "Drone level": (", ".join(S.SDRSUB), "subtle: the drone 6 dB lower while the piece is moving."),
+    "Ending": (", ".join(S.SENDP), "fade: everything stops and fades over 30 s. by phrase: the chords stop, the motion "
+               "stops, the bells play on 9 s, then the pads and the drone fade last."),
     "Clear sec": ("turn up", "Fully up: forget what the playing section kept."),
     "Clear all - turn up": ("turn up", "Fully up: forget every section's knobs."),
     "Compare": ("yours, saved", "Up: the slot as loaded or saved; down: yours again (as holding top B)."),
