@@ -148,7 +148,7 @@ def perflog():
         Send("ac-chgstop"), Send("ac-secstop"), V("acsetup", "0"), Call("ac-oledall"),
         X("1; 0; aclogon", "v acprof", "v acprst", "v aclogwas"), Send("ac-logrun", "1"), V("acflxf", "50"),
         Loop("4", "aci", [T("acprfl", "aci", "acflav[int(aci)]")]),
-        Send("ac-profclear"), Later("ac-profgo", 9000), Toast("profile: 7 min silent")])])     # (after the stop's fade)
+        Send("ac-profclear"), Later("ac-profgo", 9000), Toast(f"profile: {PROFILE_MIN} min silent")])])     # (after the stop's fade)
     pc = c.obj("t b b")
     c.c(c.recv("ac-profclear"), 0, pc, 0)
     c.c(c.m((pc, 0), "list part load peak"), 0, c.obj("text set acprofile 1e+06"), 0)
@@ -246,3 +246,7 @@ def audiometer():
         V("aclgdcs", "aclgdcs + acamsl + acamsr"), V("aclgmn", "aclgmn + 1"), V("aclgclip", "aclgclip + acamsc"),
         If("acamp < 0.001 && acrun && acstopped == 0 && acprof == 0", [V("aclgq", "aclgq + 1")])])])
     return c
+
+
+# the profile's length: 9 s, then 6 s for each part (the toast and the docs say it in minutes)
+PROFILE_MIN = round((9 + 6 * len(_parts())) / 60)

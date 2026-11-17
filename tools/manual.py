@@ -160,7 +160,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Arp octave": ("C1-C5", "Where the arp chord starts (MIDI out, base channel + 5)."),
     "CPU": ("shown; knob fully up = profile", "Amble's CPU load now, and the CPU guard's level (lite 0-3). Turning "
             "its knob fully up runs the profile: the piece stops and every part plays alone for 6 s, silently, about "
-            "7 minutes in all; each part's load goes into logs/profile-NNNN.txt (see CPU)."),
+            "about 9 minutes in all; each part's load goes into logs/profile-NNNN.txt (see CPU)."),
     "CPU guard": ("off, on, off + log, on + log", "When on, Amble gets lighter under overload (see CPU). With log, "
                   "a line every 5 s goes into logs/perf-NNNNPP.txt: the load, the worst moment, what was playing."),
     "Pads": ("auto, raw, " + ", ".join(DT.FLAVOURS), "The pad types. auto: the piece's palette, new picks each "
@@ -687,7 +687,7 @@ def story():
                "effects, the page), and the sound: its level, loudest sample, bass, treble and sub-bass, any DC "
                "offset, samples the output had to cut, near-silence while playing, and how far Pd fell behind "
                "real time (a dropout risk). A file holds 10 minutes; it is written each minute and when the piece stops. "
-               "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 7 minutes, "
+               "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 9 minutes, "
                "silent) writes <b>logs/profile-NNNN.txt</b>, then the piece is back as it was, stopped. Copy the "
                "logs folder off the card; tools/perf_report.py reads it and says what is cheap enough to make "
                "richer and what is worth optimising. Logging itself is light: a sum every 100 ms and a small file "

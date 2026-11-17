@@ -270,7 +270,7 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
 - **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
   cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
-  every part alone for 6 s (about 7 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
+  every part alone for 6 s (about 9 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
   `python3 tools/perf_report.py path/to/logs`: the spikes and what caused them, what each thing costs while playing,
   and what is cheap enough to make richer or worth optimising.
 

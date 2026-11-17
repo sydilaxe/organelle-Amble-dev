@@ -202,7 +202,7 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 4: MIDI notes (all / harmony: no bells or motion / arp only),
   Arp octave (C1-C5, where the arp chord starts), CPU (the load now and
   the guard's level; turn its knob fully up for the profile: every
-  part alone, about 7 min, into logs/profile-NNNN.txt), CPU guard (off,
+  part alone, about 9 min, into logs/profile-NNNN.txt), CPU guard (off,
   on, off + log, on + log: with log, a line every 5 s into
   logs/perf-NNNNPP.txt - the load and what was playing).
   page 5, SOUNDS (each auto = the piece chooses; a choice applies at

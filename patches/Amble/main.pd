@@ -15477,7 +15477,7 @@
 #X obj 1170 860 s ac-profclear;
 #X obj 1170 884 delay 9000;
 #X obj 1170 908 s ac-profgo;
-#X msg 1170 932 list profile: 7 min silent;
+#X msg 1170 932 list profile: 9 min silent;
 #X obj 1170 956 s ac-toast;
 #X obj 1400 20 t b b;
 #X obj 1400 44 r ac-profclear;

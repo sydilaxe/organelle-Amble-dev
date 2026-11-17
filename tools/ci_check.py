@@ -1215,7 +1215,8 @@ pf = glob.glob(os.path.join(d, "logs", "perf-*.txt"))
 pl = [l for l in open(pf[0]).read().split(";") if l.strip()] if pf else []
 check(len(pl) >= 12 and pl[0].split() == [n for n, _ in LG.FIELDS] and len(pl[3].split()) == len(LG.FIELDS)
       and pl[3].split()[4] == "1", f"perf log: {len(pf)} file, {len(pl)} lines (header + one per 5 s), playing")
-log, a = run([(50, "ac-setseed 7"), (500, "ac-profile bang"), (470000, "ac-start bang")], 480, d=d)
+_pend = 500 + 9000 + 6000 * len(LG._parts()) + 5000          # (9 s, then 6 s a part)
+log, a = run([(50, "ac-setseed 7"), (500, "ac-profile bang"), (_pend, "ac-start bang")], _pend / 1000 + 10, d=d)
 pr = glob.glob(os.path.join(d, "logs", "profile-*.txt"))
 rows = [l.split() for l in open(pr[0]).read().split(";") if l.strip()] if pr else []
 names = [r[0] for r in rows[1:]]
@@ -1228,7 +1229,7 @@ rep = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspa
 check(rep.returncode == 0 and "The profile" in rep.stdout and "The session" in rep.stdout, "perf_report reads both")
 log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"), (400, "ac-setknob 2 0.5"),
               (500, "ac-setknob 2 1"), (600, "ac-setknob 2 0.95")], 12, prints=("ac-toast",))
-starts = sum("profile: 7 min" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
+starts = sum(f"profile: {LG.PROFILE_MIN} min" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
 check(starts == 1, f"SETUP 4 knob 3 fully up starts the profile once ({starts})")
 
 # 70. MIX knobs: the level follows while the knob turns, in even steps (about 1.5 dB per 50 ms here), 50 % = x1;
