@@ -171,10 +171,10 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Notes to": (", ".join(S.ROUTES), "What MIDI notes play: voice = the live voice; chords "
                  "= the notes you hold are the pad chord; drone = the drone and sub on your note; bells = a bell per "
                  "note; cloud = each note tunes a grain stream. The notes still steer the harmony (Follow you)."),
-    "Breath to": (", ".join(S.BRTOS), "What breath does: voice+piece = the live voice's level and tone and the "
+    "Breath": (", ".join(S.BRTOS), "What breath does: voice+piece = the live voice's level and tone and the "
                   "piece's density; voice or density alone; brightness, reverb (the sends) or swell (the whole "
                   "level, like an expression pedal). After 10 s without breath it lets go."),
-    "Pressure to": ("a target (see CC)", "What channel and poly pressure do (default breath)."),
+    "Press": ("a target (see CC)", "What channel and poly pressure do (default breath)."),
     "CC": (", ".join(str(n) for n in S.CCS), "Knob 1 picks a CC to set; row 2 shows what it does. Defaults: 1 vibrato, "
            "2 / 7 / 11 breath, 64 hold, 71 off, 74 voice tone."),
     "to": (", ".join(S.TARGETS), "off; breath (into the breath path, see Breath to); vibrato (the live voices' vibrato depth); voice tone and voice level (per note: the voice on the CC's channel, channel 1 = all, so MPE controllers shape each note); voice type (the live voices' synthesis type, across the 12 pad types); hold (a sustain pedal: released notes keep sounding until it lets go); density, colour, reverb, motion (move that knob); swell (the whole level); resolve (held at 64 and up: the tonic as open fifths, see C#)."),
@@ -245,7 +245,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Mix CCs": (", ".join(S.SMIXCC), "A bank of 16 CCs for a controller: the first 8 set the levels of drone, sub, "
                 "pads, bells, motion, textures, atmosphere, cloud (the layer keys' order); the next 8 are their in/out "
                 "buttons (64 and up = a press, as the layer keys)."),
-    "Prog change": (", ".join(S.SPGM), "A program change 1-16 loads that save slot."),
+    "Program": (", ".join(S.SPGM), "A program change 1-16 loads that save slot."),
     "Key fade": (", ".join(n for n, _ in S.SLFADE), "How long a layer key (or a Mix CC button) takes to bring a "
                  "layer in or out."),
     "Entry fade": (", ".join(n for n, _ in S.SSFADE), "How long a section's layer takes to come in or go out at "
@@ -645,7 +645,7 @@ def story():
                "guard's level and can turn the guard off. The CPU reading is an average over a second; short spikes "
                "inside it are absorbed by the audio buffer, which Amble sets to 25 ms in <b>pd-opts.txt</b> "
                "(the Organelle starts Pd with 6 ms)."),
-          para("<b>Logs.</b> To find what costs what on your Organelle, set the CPU guard to <i>on, log</i> and "
+          para("<b>Logs.</b> To find what costs what on your Organelle, set the CPU guard to <i>on + log</i> and "
                "play as usual: every 5 s a line goes into <b>logs/perf-NNNNPP.txt</b> in the patch folder - the "
                "average and the worst 100 ms of the load, what was on (layers, pad types, engines, journey, "
                "effects, the page), and the sound: its level, loudest sample, bass, treble and sub-bass, any DC "

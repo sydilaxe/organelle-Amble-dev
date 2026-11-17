@@ -45,9 +45,24 @@ def Box(x, y, w, h, c=1):
 FLIP = Send(OSC, "/oled/gFlip 3")
 
 
+CHAR_W = 6          # the OLED's 8-pixel font: 21 characters across
+
+
+def fit(c, src, x):
+    """a text cut to what fits from x to the screen's edge: the OLED wraps a longer one onto the line below, over
+    whatever is there. (fudiformat spells the message out - 'list ' first - list split keeps the first characters,
+    fudiparse reads them back.)"""
+    n = (128 - x) // CHAR_W
+    f = c.ch(src, "list", "fudiformat -u", f"list split {n + 5}")
+    p = c.obj("fudiparse")
+    c.c(f, 0, p, 0)
+    c.c(f, 2, p, 0)
+    return p
+
+
 def text_at(c, recv, x, y):
-    """[r recv] (a list) -> printed at x, y"""
-    lp = c.to(c.recv(recv), f"list prepend /oled/gPrintln 3 {x} {y} 8 1")
+    """[r recv] (a list) -> printed at x, y (cut to fit)"""
+    lp = c.to(fit(c, c.recv(recv), x), f"list prepend /oled/gPrintln 3 {x} {y} 8 1")
     c.c(c.to(lp, "list trim"), 0, c.obj("s " + OSC), 0)
 
 
@@ -61,7 +76,7 @@ def gated_text(c, recv, cond, x, y, clear=None):
         t2 = c.to(sp, "t a b")
         run_steps(c, (t2, 1), [Fill(*clear, 0)])
         sp = t2
-    lp = c.to(sp, f"list prepend /oled/gPrintln 3 {x} {y} 8 1")
+    lp = c.to(fit(c, sp, x), f"list prepend /oled/gPrintln 3 {x} {y} 8 1")
     c.c(c.to(lp, "list trim"), 0, c.obj("s " + OSC), 0)
 
 
@@ -290,7 +305,8 @@ def mixview(c, mixv):
     # the column a knob turns: framed, its value on top, while the header names it
     cols += [If("actoastt > 0 && acmixc >= 0", [
         Box("16*acmixc", 9, 16, 45),
-        SendL(OSC, ["1 + 16*acmixc", "int(acparams[int(aclastk)]*100)"], "/oled/gPrintln 3 $1 10 8 1 $2")])]
+        SendL(OSC, ["min(1 + 16*acmixc, 128 - 3*6)", "int(acparams[int(aclastk)]*100)"],
+              "/oled/gPrintln 3 $1 10 8 1 $2")])]
     proc(c, "ac-oledmixbars", [If(mixv, [Fill(0, 9, 128, 45, 0)] + cols)])
     proc(c, "ac-oledmix", [If(mixv, [
         Fill(0, 0, 128, 64, 0), Call("ac-oledmixhead"), Call("ac-oledmixbars"),
@@ -298,7 +314,7 @@ def mixview(c, mixv):
         # the four the knobs turn: underlined
         Fill("if(acpage == 3 || acpage == 5, 0, 64)", 63, 64, 1),
         FLIP])])
-    Line("ac-oledmixhead", "list $1 - $2 of $3 $4",
+    Line("ac-oledmixhead", "list $1 $2/$3 $4",           # (21 characters at most: SENDS 1 3/6 intensify)
          [("s", "acpage", PAGE_NAMES), ("f", "acsec + 1"), ("f", "acnsec"), ("s", "acrole", ROLES)], "ac-oledmixh")(c)
     gated_text(c, "ac-oledmixh", mixv + " && actoastt == 0", 0, 0, clear=(0, 0, 128, 9))
     for recv, colset in (("ac-oledmixl", MIX_COLS), ("ac-oledsndl", SEND_COLS)):

@@ -308,7 +308,7 @@ check(rms_db(a[12 * SR:18 * SR]) > -45 and rms_db(a[6 * SR:int(8.5 * SR)]) < -55
 # 14. breath holds a section, then the form goes on
 ev = [(40, "actime 0.02"), (50, "ac-setseed 12"), (305, "aclen 0")] + [(t, "ac-livebreath 1 90") for t in range(300, 16000, 200)]
 log, _ = run(ev, 30)
-check("ac-toast: list holding - you are playing" in log and "FIN" in log, "breath holds sections; the piece still ends")
+check("ac-toast: list holding: you play" in log and "FIN" in log, "breath holds sections; the piece still ends")
 
 # 15. MIDI clock out (24 a beat, Start), notes out, following an external clock
 log, _ = run([(50, "ac-setseed 7"), (310, "ac-secstop bang")], 10, prints=("ac-midibyte", "ac-bpm"))
@@ -591,8 +591,8 @@ F = [(2100, "notesRaw 81 100"), (2150, "notesRaw 81 0")]
 F2 = [(2300, "notesRaw 81 100"), (2350, "notesRaw 81 0")]
 cases = [toasts(C), toasts(C + C2), toasts([(2000, "aux 1")] + C + [(2500, "aux 0")]), toasts(F), toasts(F + F2)]
 check(cases[0] in (["cloud in"], ["cloud out"]) and len(cases[1]) == 2 and cases[1][0] != cases[1][1]
-      and cases[2] == ["cloud auto"] and cases[3] == ["freeze - reverb and cloud"]
-      and cases[4] == ["freeze - reverb and cloud", "freeze released"],
+      and cases[2] == ["cloud auto"] and cases[3] == ["freeze: verb + cloud"]
+      and cases[4] == ["freeze: verb + cloud", "freeze released"],
       f"top G = cloud in / out, aux + top G = auto, top A = Freeze, again = released ({cases})")
 mt = toasts([(40, "acsync 1"), (2000, "ac-rtin 252"), (4000, "ac-rtin 250")])
 check("stopped - A# to start" in mt and "playing again" in mt, "following a clock: MIDI Stop / Start stop and start")
@@ -909,7 +909,7 @@ check(s0 and s1 and s5 and len(g0) == 4 and max(g0) == 0 and max(d0) == 0 and 0 
 
 # 50. live play: the piece waits ready until top A# (as on the Organelle)
 log, a = run([(50, "ac-setseed 7"), (6000, "notesRaw 82 100"), (6050, "notesRaw 82 0")], 12, autostart=False)
-check("ac-txt1: list READY COMPOSE - A# start" in log and rms_db(a[1 * SR:5 * SR]) < -90
+check("ac-txt1: list READY COMPOSE - A# go" in log and rms_db(a[1 * SR:5 * SR]) < -90
       and "ac-toast: list start - playing" in log and rms_db(a[8 * SR:12 * SR]) > -45,
       f"starts ready and silent ({rms_db(a[1 * SR:5 * SR]):.0f} dB), top A# starts it ({rms_db(a[8 * SR:12 * SR]):.0f} dB)")
 
@@ -1044,7 +1044,7 @@ check("loaded slot 3" in toasts_of(log) and pv(log)[-1] == [555.0],
 # 61. PERFORM (low F), SENDS 1 (low F#) and SENDS 2 (low G#) pages; SINK takes the highs away
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 65 100"), (1050, "notesRaw 65 0"), (2000, "notesRaw 66 100"),
               (2050, "notesRaw 66 0"), (3000, "notesRaw 68 100"), (3050, "notesRaw 68 0")], 4, prints=("ac-oledpg2", "ac-oledmixh"))
-pages = [l.split("list ", 1)[-1].split(" - ")[0].replace("page ", "").replace("\\ ", " ") for l in log.splitlines()
+pages = [re.split(r" \d+/\d+ ", l.split("list ", 1)[-1])[0].replace("page ", "").replace("\\ ", " ") for l in log.splitlines()
          if l.startswith(("ac-oledpg2", "ac-oledmixh"))]
 pages = [x for i, x in enumerate(pages) if i == 0 or x != pages[i - 1]]
 check(pages == ["PERFORM", "SENDS 1", "SENDS 2"] and "ac-txt4: list Sink 0 Blur 0" in log,
@@ -1131,7 +1131,7 @@ auto = [r for r in rows if r.startswith("3 ")]
 check(auto and auto[0].split(" ", 1)[1].replace("\\ ", " ").split()[1] in [n for n, _ in _SC] and "4 Ember" in rows
       and "5 Deep" in rows, f"slot names: auto (key and scale), a chosen word, a factory piece ({sorted(rows)})")
 
-# 69. the performance log (CPU guard "on, log"): a header and a line every 5 s in logs/perf-*.txt; the profile run:
+# 69. the performance log (CPU guard "on + log"): a header and a line every 5 s in logs/perf-*.txt; the profile run:
 #     every part, a line each, in logs/profile-*.txt, and the piece back as it was (plays again); the report reads both
 import glob, os, subprocess
 import gen_log as LG
@@ -1154,7 +1154,7 @@ rep = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspa
 check(rep.returncode == 0 and "The profile" in rep.stdout and "The session" in rep.stdout, "perf_report reads both")
 log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"), (400, "ac-setknob 2 0.5"),
               (500, "ac-setknob 2 1"), (600, "ac-setknob 2 0.95")], 12, prints=("ac-toast",))
-starts = sum("profile 1/" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
+starts = sum("profile: 7 min" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
 check(starts == 1, f"SETUP 4 knob 3 fully up starts the profile once ({starts})")
 
 # 70. MIX knobs: the level follows while the knob turns, in even steps (about 1.5 dB per 50 ms here), 50 % = x1;
@@ -1205,6 +1205,28 @@ check(calm and loud and all(-45 < col("rms", r) < -8 and col("pk", r) < 0 and co
       and all(col("clip", r) > 1000 and col("pk", r) > 0 for r in loud),
       f"audio log: a piece at {[col('rms', r) for r in calm]} dBFS, nothing cut; over full scale: cut "
       f"{[col('clip', r) for r in loud]}, peak {[col('pk', r) for r in loud]} dBFS")
+
+# 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
+#     what is there. SETUP's 21 pages, the 8 knob pages, keys and toasts, the profile's parts
+import re
+ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
+t = 2000
+for pg in range(21):
+    ev += [(t, "aux 1"), (t + 50, "aux 0"), (t + 400, f"ac-setknob 0 {0.999 * (pg % 3) / 2}")]
+    t += 700
+ev += [(t, "aux 1"), (t + 1300, "aux 0")]
+t += 2000
+for k in (60, 61, 62, 63, 64, 65, 66, 68, 70, 72, 80, 81, 67):
+    ev += [(t, f"notesRaw {k} 100"), (t + 50, f"notesRaw {k} 0"), (t + 300, "knob2 0.9"), (t + 400, "knob2 0.1")]
+    t += 900
+ev += [(t, "ac-profile bang")]
+log, _ = run(ev, t / 1000 + 40, prints=("oscOut",))
+over = set()
+for l in log.splitlines():
+    m = re.search(r"gPrintln 3 (-?[0-9.]+) [0-9.]+ 8 1 (.*)$", l)
+    if m and float(m.group(1)) + 6 * len(m.group(2).replace("\\ ", " ")) > 128:
+        over.add(f"x={m.group(1)}: {m.group(2)}")
+check(not over and log.count("gPrintln") > 300, f"OLED: every printed text fits its line ({sorted(over)[:6]})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

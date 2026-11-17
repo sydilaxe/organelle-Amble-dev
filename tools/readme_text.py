@@ -169,7 +169,7 @@ THE MIX VIEW (while a MIX or SENDS page is open)
 
 SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
 1 s to leave, save)
-  1 MIDI out   off / tempo only / tempo+notes / notes only
+  1 MIDI out   off / tempo only / tempo+note / notes only
      tempo: MIDI clock, 24 a beat at the piece's tempo, Start/Stop with it
      notes, by channel from the base channel (page 2):
        base  the chord as voiced (held)     +1  the tonic (held)
@@ -215,9 +215,9 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
                chords (your held notes are the pad chord) / drone (drone
                and sub on your note) / bells (a bell per note) / cloud
                (each note tunes a grain stream)
-    Breath to  voice+piece / voice / density / brightness / reverb /
+    Breath     voice+piece / voice / density / brightness / reverb /
                swell (the whole level, like an expression pedal)
-    Pressure to  what channel / poly pressure does (a target, below)
+    Press      what channel / poly pressure does (a target, below)
     Breath in  the breath level arriving now
   page 8, CC MAP (knob 1 picks a CC: 1 2 7 11 64 71 74; knob 2 its target):
     targets    off / breath (into Breath to) / vibrato / voice tone /
@@ -257,7 +257,7 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 14, LIVE:
     Mix CCs    off / CC 20-35 / CC 102-117: 8 layer levels, then 8 in/out
                buttons, for a controller's faders and pads
-    Prog change  off / loads a slot (program 1-16)
+    Program    off / load slot (program 1-16)
     Key fade   0.5-20 s: a layer key bringing a layer in or out
     Entry fade 2-40 s: a section's layer coming in or going out
   page 15, RECALL: Morph (cut .. 2 min: how a load glides in), Recall

@@ -22,7 +22,7 @@ any crackle. If it crackles below 78 %, raise `-audiobuf` in `pd-opts.txt` (25 n
 
 ### Logs to upload
 
-Before step 1, set SETUP 4's CPU guard to `on, log`; the steps then land in `logs/perf-*.txt` as you go. After the
+Before step 1, set SETUP 4's CPU guard to `on + log`; the steps then land in `logs/perf-*.txt` as you go. After the
 session, turn SETUP 4's CPU knob fully up once and leave it about 7 minutes (silent; the toast counts the parts) for
 `logs/profile-*.txt`. Copy the `logs` folder off the card and send it: `tools/perf_report.py` reads it. The log
 also meters the sound, so if you hear a crackle, note roughly when: the report lists cut samples and moments the

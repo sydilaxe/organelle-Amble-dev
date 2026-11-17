@@ -267,7 +267,7 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
   lighter in steps: 1, cloud and atmosphere off; 2, textures and the pad character off; 3, the automatic
   vocoder off. Below 50 % for 20 s it steps back. The pads, drone, sub, bells, motion and reverb never change.
   SETUP page 4 shows the load and the guard's level, and can turn the guard off.
-- **Performance logs.** Set the CPU guard to *on, log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
+- **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
   cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
   every part alone for 6 s (about 7 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run

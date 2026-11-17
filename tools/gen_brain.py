@@ -270,7 +270,7 @@ def piece():
         Send("ac-master", "0 0"), Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
         Call("ac-scr"), Send("ac-led"),
     ])])
-    proc(c, "ac-newkey", [If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece ready - A# start")],
+    proc(c, "ac-newkey", [If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
     # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
     # while playing, it switches at once
@@ -343,7 +343,7 @@ def piece():
     proc(c, "ac-formset", [If("acsform == 6", [Call("ac-customcopy")]),
                            If("acstopped", [V("acready", "1"), SendL("ac-setseed", ["acseed"])],
                               [If("acsform == 6", [Call("ac-customapply"), Toast("form: custom")],
-                                  [Toast("form: from the next piece")])])])
+                                  [Toast("form: next piece")])])])
 
     # the piece's motif (5 scale degrees, a random walk) and its rhythm
     proc(c, "ac-motif0", [Loop("5", "aci", [
@@ -461,7 +461,7 @@ def section():
     proc(c, "ac-nextsec", [If("acsecfz", [Arm("ac-nextsec", "2000", stop="ac-secstop")], [
         If("acmode==1 && acsechold < 3 && (acnow - acbreatht < 4000 || acheld > 0)", [
             V("acsechold", "acsechold + 1"), Arm("ac-nextsec", "30000*actime", stop="ac-secstop"),
-            Toast("holding - you are playing")],
+            Toast("holding: you play")],
            [V("acsechold", "0"), V("acsec", "acsec+1"), Call("ac-section")])])])
     proc(c, "ac-rvback", [Send("ac-rvin", "1 5000")])
     # the end of a composition: fade out, then switch the layers off
