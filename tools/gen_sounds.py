@@ -189,7 +189,59 @@ def flav_beat():
     return s
 
 
-NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat)
+def flav_reed():
+    s, ln = switched("reed", "$0-fw14")
+    s.comment("Reed: a clarinet-like tone - a sine driven into soft clipping (odd harmonics, more with brightness), "
+              "a slow breathy vibrato, a gentle low-pass; the right side a hair sharp")
+    f, b = _flav_inlets(s, 2)
+    drive = s.ch(b, "*~ 5", "+~ 1.5")
+    outs = []
+    for d, rate in ((1.0, 4.3), (1.0012, 4.7)):
+        vib = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.003", f"+~ {d}")
+        x = mul(s, s.ch(mul(s, f, vib), "osc~"), drive)
+        clip = s.obj("/~")                       # x / (1 + |x|): odd harmonics
+        s.c(x, 0, clip, 0)
+        s.c(s.ch(x, "abs~", "+~ 1"), 0, clip, 1)
+        outs.append(s.ch(clip, "lop~ 2600", "*~ 0.42"))
+    _out(s, outs[0], ln, add(s, s.to(outs[0], "*~ 0.5"), s.to(outs[1], "*~ 0.65")))
+    return s
+
+
+def flav_organ():
+    s, ln = switched("organ", "$0-fw15")
+    s.comment("Organ: drawbars 16' 8' 5 1/3' 4' 2' (harmonics 1 2 3 4 8, the upper ones drawn out with brightness) "
+              "and a slow rotary swell, opposite on the two sides")
+    f, b = _flav_inlets(s, 2)
+    sm = s.obj("*~ 0.3")
+    for h, a, br in ((1, 0.5, 0), (2, 0.45, 0), (3, 0.3, 0.5), (4, 0.25, 0.8), (8, 0.12, 1)):
+        o = s.ch(s.to(f, f"*~ {h}"), "osc~", f"*~ {a}")
+        s.c(mul(s, o, s.ch(b, f"*~ {br}", f"+~ {1 - br * 0.7:.2f}")) if br else o, 0, sm, 0)
+    rot = s.ch(s.obj("osc~ 0.7"), "*~ 0.25")
+    _out(s, mul(s, sm, s.to(rot, "+~ 0.75")), ln, mul(s, sm, s.ch(rot, "*~ -1", "+~ 0.75")))
+    return s
+
+
+def flav_air():
+    s, ln = switched("air", "$0-fw16")
+    s.comment("Air: a flute - a pure tone with breath around it (noise through a narrow band on the note, more "
+              "with brightness) and a slow vibrato that grows in; each side its own breath")
+    f, b = _flav_inlets(s, 2)
+    vib = s.ch(s.obj("osc~ 5.1"), "*~ 0.004", "+~ 1")
+    fv = mul(s, f, vib)
+    tone = s.ch(fv, "osc~", "*~ 0.35")
+    outs = []
+    for side in range(2):
+        v = s.obj("vcf~ 9")
+        s.c(s.obj("noise~"), 0, v, 0)
+        s.c(fv, 0, v, 1)
+        br = mul(s, v, s.ch(b, "*~ 0.6", "+~ 0.25"))
+        outs.append(add(s, tone, s.to(br, "*~ 0.9")))
+    _out(s, outs[0], ln, outs[1])
+    return s
+
+
+NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat,
+             flav_reed, flav_organ, flav_air)
 
 
 # ---------------------------------------------------------------- drone designs 1..3 (0 is the original)
@@ -286,7 +338,70 @@ def drone_frost():
     return s
 
 
-NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost)
+def drone_choir():
+    s, ln = switched("drone-choir", "ac-g-drone5")
+    s.comment("Choir drone: three voices (the note, a hair sharp, and the fifth) - narrow glottal pulses through "
+              "two vowel formants that move slowly between ah, oh and oo")
+    f = _drone_freq(s)
+    # the vowel: F1 450-750 Hz and F2 800-1150 Hz, wandering together
+    vw = s.ch(s.obj("osc~ 0.023"), "*~ 0.5", "+~ 0.5")
+    f1, f2 = s.ch(vw, "*~ 300", "+~ 450"), s.ch(vw, "*~ 350", "+~ 800")
+    outs = []
+    for side, voices in enumerate((((1.0, 4.9), (1.5, 5.3)), ((1.003, 5.1), (1.5, 5.6)))):
+        src = s.obj("*~ 1")
+        for ratio, vr in voices:
+            vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.004", f"+~ {ratio}")
+            pulse = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~", "pow~ 8")
+            s.c(pulse, 0, src, 0)
+        sm = s.obj("+~")
+        for fm, q in ((f1, 6), (f2, 9)):
+            v = s.obj(f"vcf~ {q}")
+            s.c(src, 0, v, 0)
+            s.c(fm, 0, v, 1)
+            s.c(v, 0, sm, 0)
+        outs.append(s.to(sm, "*~ 1.1"))
+    _drone_out(s, outs[0], ln, outs[1])
+    return s
+
+
+def drone_bowed():
+    s, ln = switched("drone-bowed", "ac-g-drone6")
+    s.comment("Bowed drone: a cello on the note - a saw with a slow bow-pressure swell and a light vibrato, through "
+              "the body's resonances (about 200, 500 and 1300 Hz) and a soft low-pass")
+    f = _drone_freq(s)
+    outs = []
+    for d, vr, pr in ((1.0, 4.7, 0.11), (0.9985, 5.2, 0.09)):
+        vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.003", f"+~ {d}")
+        saw = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5")
+        press = s.ch(s.obj(f"osc~ {pr}"), "*~ 0.25", "+~ 0.75")
+        x = mul(s, saw, press)
+        sm = s.obj("*~ 1")
+        s.c(s.to(x, "lop~ 1600"), 0, sm, 0)
+        for hz, q, a in ((200, 4, 0.6), (500, 5, 0.5), (1300, 6, 0.3)):
+            bp = s.obj(f"bp~ {hz} {q}")
+            s.c(x, 0, bp, 0)
+            s.c(s.to(bp, f"*~ {a}"), 0, sm, 0)
+        outs.append(s.to(sm, "*~ 0.35"))
+    _drone_out(s, outs[0], ln, outs[1])
+    return s
+
+
+def drone_spectral():
+    s, ln = switched("drone-spectral", "ac-g-drone7")
+    s.comment("Spectral drone: eight harmonics, each swelling on its own slow cycle, so the spectrum keeps "
+              "shifting while the note holds; odd harmonics lean left, even right")
+    f = _drone_freq(s)
+    L, R = s.obj("*~ 0.32"), s.obj("*~ 0.32")
+    for n in range(1, 9):
+        sw = s.ch(s.obj(f"osc~ {0.013 * (1 + 0.37 * n):.4f}"), "*~ 0.5", "+~ 0.5")
+        p = mul(s, s.ch(s.to(f, f"*~ {n}"), "osc~"), s.to(sw, f"*~ {1 / n ** 0.7:.3f}"))
+        s.c(s.to(p, f"*~ {1.0 if n % 2 else 0.45}"), 0, L, 0)
+        s.c(s.to(p, f"*~ {0.45 if n % 2 else 1.0}"), 0, R, 0)
+    _drone_out(s, L, ln, R)
+    return s
+
+
+NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost, drone_choir, drone_bowed, drone_spectral)
 
 
 def sub():
@@ -296,7 +411,19 @@ def sub():
     f = s.ch(s.recv("ac-subp"), "line~")
     x = s.to(f, "osc~")
     sat = s.ch(x, "*~ 1.8", "clip~ -1 1")
-    y = add(s, s.to(x, "*~ 0.6"), s.to(sat, "*~ 0.25"))
+    y0 = add(s, s.to(x, "*~ 0.6"), s.to(sat, "*~ 0.25"))
+    # its sound (the sub's SHAPE page): sine (above), warm (a rounder saturation and the octave), pulse (a narrow
+    # pulse, low-passed), fm (a slow growl); each crossfaded in by its own gain
+    warm = add(s, s.ch(x, "*~ 3", "clip~ -1 1", "*~ 0.55"), s.ch(s.to(f, "*~ 2"), "osc~", "*~ 0.18"))
+    pulse = s.ch(f, "phasor~", "-~ 0.75", "*~ 1000", "clip~ -0.5 0.5", "lop~ 220", "lop~ 220", "*~ 1.6")
+    idx = s.ch(s.obj("osc~ 0.07"), "*~ 0.5", "+~ 1")
+    fm = s.ch(add(s, f, mul(s, mul(s, x, idx), f)), "osc~", "*~ 0.7")
+    y = s.obj("+~")
+    for k, sig in enumerate((y0, warm, pulse, fm)):
+        g = s.ch(s.recv("ac-subt"), f"expr $f1 == {k}", "pack f 200", "line~")
+        if k == 0:
+            s.c(s.m(s.obj("loadbang"), "1"), 0, g, 0)
+        s.c(mul(s, sig, g), 0, y, 0)
     env = s.ch(s.m(s.to(s.recv("ac-dpulse"), "expr max(100, $f1-450)"), "1 450, 0 $1 450"), "vline~")
     dep = s.to(env, "*~ 0")
     pu = s.to(s.recv("ac-pulse"), "t f f")

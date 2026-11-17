@@ -20,15 +20,18 @@ LAYERS AND THEIR RHYTHMS (one clock, 40-72 BPM by default, meter 3-7)
   Drone    one of 4 designs per piece (the break may switch): pure (tonic,
            beating twin, interval, breath tube), analog (saws and a square
            through a slow resonant sweep), organ (drawbars, rotary shimmer),
-           fm (an electric growl); swells on each bar in intense sections
+           fm (an electric growl), frost; by hand also choir, bowed (a
+           cello), spectral; swells on each bar in intense sections
   Sub      a sine under everything, softly saturated so small speakers hear
            it: the pedal an octave under the tonic, the chord root as a
-           bass line, or both (alternating by section)
+           bass line, or both (alternating by section); its sound (hold
+           its key: SHAPE) sine, warm, pulse or fm
   Pads     4 voices, 13 synthesis types: fm, vox, bow, part, fold, pulsr,
            saws (detuned analog ensemble), pwm (Juno-like), digi (ring mod,
            bit-crush), sync (hard-sync sweep), tine (an electric-piano bell
            that strikes itself), sine (harmonic sines), glass (glassy
-           wavetables); most are stereo inside. The electronic and
+           wavetables), beat; by hand also reed, organ, air; most are
+           stereo inside. The electronic and
            bell-like types come up most often. Voice-led; each breathes in
            its own cycle (7, 9, 11, 13 half-bars) so they phase
   Character  per piece on the pads: clean, chorus, tape (wow, saturation,
@@ -38,7 +41,8 @@ LAYERS AND THEIR RHYTHMS (one clock, 40-72 BPM by default, meter 3-7)
   Bells    the motif, phrased in beats with rubato, on struck bars or another
            engine. Engines (both layers, SETUP page 9): bars, fm, blip (a
            filtered analog blip), wood (marimba-like), wave (a glassy
-           wavetable), metal (a vibraphone-like metallophone)
+           wavetable), metal (a vibraphone-like metallophone); by hand
+           also kalimba, steel (a steel pan), pluck (a plucked string)
   Textures rain (hiss, patter, plops), wind, embers, chirps, radio (static and a
            tuning whistle), data (blip bursts), buzz (electric hum on the tonic),
            murmur (ghostly distant voices), echoes (alien blips in bending
@@ -204,7 +208,8 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 5, SOUNDS (each auto = the piece chooses; a choice applies at
   once, crossfaded, and stays for every section - for auditioning):
     Pads       auto / raw / one type for all four voices: fm vox bow part
-               fold pulsr saws pwm digi sync tine sine glass. raw = the dry, buzzy
+               fold pulsr saws pwm digi sync tine sine glass beat reed organ
+               air. raw = the dry, buzzy
                types of the first demos (vox, part, fold, pulsr), no
                character effect
     Drone      auto / pure / analog / organ / fm
@@ -237,8 +242,9 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
     Last CC    the last CC in and its value
     Vib rate   3-8 Hz
   page 9, VOICES (auto = the piece's; a choice applies at once):
-    Bells      auto / bars / fm / blip / wood / wave / metal
-    Motion     auto / bars / fm / blip / wood / wave / metal
+    Bells      auto / bars / fm / blip / wood / wave / metal / kalimba /
+               steel / pluck
+    Motion     the same
     Glide      off / fast / short / medium / long / slow - how the pad
                voices slide to a new chord (slow = up to 75 % of the time
                between changes; off = they jump, all together)

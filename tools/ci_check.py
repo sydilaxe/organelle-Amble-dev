@@ -369,6 +369,20 @@ ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")]
       (314, "acsubm 0"), (315, "ac-subp 41.2 0")]
 log, a = run(ev, 8)
 check(abs(f0(a[4 * SR:8 * SR, 0], lo=25, hi=200) - 41.2) < 1, f"sub alone at 41.2 Hz ({f0(a[4 * SR:8 * SR, 0], lo=25, hi=200):.1f})")
+# the sub's sounds (its SHAPE page): each near the sine's level, each its own spectrum
+from data import SUBTYPES
+sl = []
+for t in range(len(SUBTYPES)):
+    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+         [(311, "acmsub 2"), (311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10"), (400, f"ac-subt {t}"),
+          (500, "ac-subp 55 0")]
+    _, a = run(ev, 5)
+    x = a[2 * SR:5 * SR, 0]
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    P = np.abs(np.fft.rfft(x)) ** 2
+    sl.append((rms_db(x), (fr * P).sum() / P.sum()))
+check(all(abs(l - sl[0][0]) < 3 for l, _ in sl) and len({int(c) for _, c in sl}) == len(SUBTYPES),
+      f"sub sounds {SUBTYPES}: levels {[round(l, 1) for l, _ in sl]} dB, centroids {[int(c) for _, c in sl]} Hz")
 for tx in range(4, len(TEXTURES)):
     ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
          [(311, "acmtex 1"), (311, "acftex 1"), (311, "acdens 1"), (311, "acenergy 1"), (311, f"actex1 {tx}"),

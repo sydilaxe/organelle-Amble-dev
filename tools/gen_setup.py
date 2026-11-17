@@ -10,7 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
-from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES
+from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
                acrtb=0, acoutroot=-1, acclkon=0, actrange=0,
@@ -148,7 +148,7 @@ SAVE_ARRAYS = [("acsroles", 12), ("acslens", 12), ("acssp", 12), ("acsst", 96), 
 SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("acpump", 0), ("acpumpd", 0.5),
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
               ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
-              ("acmeisel", 0), ("acbrsel", 0)] + \
+              ("acmeisel", 0), ("acbrsel", 0), ("acsubt", 0)] + \
              [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
@@ -399,7 +399,7 @@ def setup_rows():
 
 def quick_pages():
     """the quick pages, as setup_pages(): CHORD, then a page per layer"""
-    types = dict(acsdrone=SDRONES, acssub=SSUBS, acspad=SPADS, acsbell=SBELLS, acsmot=SMOTS, acstex=STEXS, acsatm=SATMS)
+    types = dict(acsubt=SUBTYPES, acsdrone=SDRONES, acssub=SSUBS, acspad=SPADS, acsbell=SBELLS, acsmot=SMOTS, acstex=STEXS, acsatm=SATMS)
     pages = [("CHORD", [
         ("list 1 Next $1  $2/$3", [("s", "acnxn", CHORD_NAMES), ("f", "acxdeg + 1"), ("f", "acn")]),
         ("list 2 Now $1", [("s", "acchn", CHORD_NAMES)]),
@@ -423,6 +423,7 @@ def quick_pages():
     ]))
     # each layer's SHAPE (its key held): its sound, then tone, drive and width (gen_dsp.shaped)
     for (name, m, t, mx, snd), x in zip(LAYER_PAGES, SHAPE_X):
+        t = "acsubt" if t == "acssub" else t           # (the sub's page: its mode; its SHAPE: its sound)
         pages.append((name + " SHAPE", [
             ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
             ("list 2 Tone $1 $2%", [("s", f"if(acsh{x}t < 0.49, 0, if(acsh{x}t > 0.51, 2, 1))", ["dark", "open", "thin"]),
@@ -437,7 +438,7 @@ def quick_pages():
 def type_act(var):
     """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes"""
     opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
-                acssub=SSUBS, acsatm=SATMS)[var]
+                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
     if var in ("acspad", "acsdrone", "acstex", "acschar"):
         then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + [
             Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
@@ -445,6 +446,8 @@ def type_act(var):
         then = [V(var, "acsnew"), V("acfade", "600"), Call("ac-layers")]
     elif var == "acssub":
         then = [V(var, "acsnew")]
+    elif var == "acsubt":
+        then = [V(var, "acsnew"), SendL("ac-subt", ["acsubt"])]
     else:     # the atmosphere: from now (auto: the next section picks)
         then = [V(var, "acsnew"), If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
     return [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", then)]
@@ -475,6 +478,7 @@ def quick_knobs(item):
             If(at(pg, 3), knob(mx))] + ([If(at(pg, 4), knob(snd))] if snd else [])
     for j, ((name, m, t, mx, snd), x) in enumerate(zip(LAYER_PAGES, SHAPE_X)):
         pg = SHAPE_PAGE0 + j
+        t = "acsubt" if t == "acssub" else t
         st += ([If(at(pg, 1), type_act(t))] if t else []) + [
             If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call("ac-shpupd")]),
             If(at(pg, 3), [V(f"acsh{x}d", "acsv"), Call("ac-shpupd")]),

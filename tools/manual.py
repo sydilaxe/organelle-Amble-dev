@@ -129,7 +129,10 @@ for _var, _name, _g in U.LAYER_KEYS:
             "piece)." if _name == "motion" else
             " Aux and this key held, a low key picks the bells' phrase rhythm, C-B: even, long-short, short-long, "
             "gallop, waltz, dotted, clave, triplet, sparse, rush, swing, slow (the same key again: the piece's own; "
-            "kept in a saved piece)." if _name == "bells" else ""))
+            "kept in a saved piece)." if _name == "bells" else
+            " On its SHAPE page knob 1 is the sub's sound: sine (as always), warm (rounder, with the octave), pulse "
+            "(a narrow pulse, low-passed) or fm (a slow growl); on its page, the mode (pedal, bass line, both)."
+            if _name == "sub" else ""))
 
 SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "MIDI out": (", ".join(S.MOUT), "Tempo = MIDI clock (24 per beat) following the piece's tempo, with Start and "
@@ -294,6 +297,10 @@ FLAV_DESC = {
              "between them",
     "beat": "five partials, a touch stretched toward a bell, each pulsing at its own pace, a formant wandering "
             "across them (after Frasil's PARTIALS)",
+    "reed": "a clarinet-like reed: a sine driven into soft clipping (odd harmonics, more with brightness), a breathy "
+            "vibrato",
+    "organ": "drawbars 16' 8' 5 1/3' 4' 2', the upper ones drawn out with brightness, a slow rotary swell",
+    "air": "a flute: a pure tone with breath around it (more with brightness) and a slow vibrato",
 }
 TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few heavier plops",
             "wind": "filtered air", "ember": "crackling embers", "chirp": "bird-like chirps",
@@ -314,12 +321,19 @@ STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)
                "blip": "a filtered analog blip: a saw and a sub, a pitch flick, a resonant low-pass closing fast",
                "wood": "a wooden bar: a mallet knock and three short marimba modes",
                "wave": "a glassy wavetable that strikes bright and settles to its body",
-               "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo"}
+               "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo",
+               "kalimba": "a thumb piano: a warm tine, far overtones that fade quickly, the click of the thumb",
+               "steel": "a steel pan: the note, its octave and twelfth, a hair of pitch bend at the strike",
+               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner"}
 DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "analog": "saws and a square through a slow resonant sweep",
               "organ": "drawbars with a rotary shimmer", "fm": "an electric growl",
               "frost": "three drifting detuned saws through a note-tracking resonant low-pass, over noise through "
-                       "three glassy resonators on the note (after Frasil's CHOIR and BREATH)"}
+                       "three glassy resonators on the note (after Frasil's CHOIR and BREATH)",
+              "choir": "three voices (the note, a hair sharp, the fifth) through vowel formants moving between ah, "
+                       "oh and oo",
+              "bowed": "a cello: a bowed saw with a slow pressure swell and vibrato through the body's resonances",
+              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting"}
 CHAR_DESC = {"clean": "no effect", "chorus": "a wide chorus", "tape": "wow, flutter, saturation and a little hiss",
              "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush"}
 ATMOS_DESC = {"haze": "air shimmering on the chord", "deep": "low rumble with distant thunder",
