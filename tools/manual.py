@@ -74,7 +74,10 @@ for _n, _lab in (("acmxd", "drone"), ("acmxs", "sub"), ("acmxp", "pads"), ("acmx
 
 FKEY_DESC = {
     "SHAPE page": "Knobs: Dens, Tide, Colr, In.",
-    "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once.",
+    "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once. Held half a second: the GLIDE page "
+                    "too - the glide times together while you play: knob 1 the chord Glide (SETUP VOICES), 2 Morph "
+                    "and 3 Anchor glide (SETUP RECALL), 4 the Memory glide (SETUP MEMORY). They are the same "
+                    "settings as there. Aux leaves the page.",
     "Freeze | aux: ANCHOR": "Freeze: the reverb tail and the cloud hold still; again to release. Aux + A: ANCHOR - the "
                             "first time it keeps the sound as it is now (ANC shows); then each aux + A glides every "
                             "knob and the layer keys back there over Anchor glide (SETUP RECALL), while the piece plays "

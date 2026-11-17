@@ -56,6 +56,7 @@ BELLS_KEY = 72 + [n for _, n, _ in LAYER_KEYS].index("bells")        # top D#
 INPUT_KEY = 72 + len(LAYER_KEYS)                                     # top G#
 CHORD_KEY = 60 + LOW_KEYS.index("chord change now (hold: CHORD page)")
 SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
+GLIDE_KEY = 60 + LOW_KEYS.index("PERFORM page")    # low F: held 0.5 s, the GLIDE page
 
 
 def knobs():
@@ -152,6 +153,8 @@ def keys():
          # top A let go (aux + A): a tap glides back to the anchor (or sets it); a hold already anchored here
          If(f"ackn == {ANCHOR_KEY} && acanp", [Send("ac-ancstop"), If("acanheld == 0", [Call("ac-anchortap")]),
                                               X("0; 0", "v acanp", "v acanheld")]),
+         # low F let go: (a hold already opened the GLIDE page)
+         If(f"ackn == {GLIDE_KEY}", [Send("ac-glstop")]),
          # low A let go: a tap changes to the next chord now; a hold already opened the CHORD page
          If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")]),
          # low B let go: a tap is the next section; a hold (0.6 s) already held or released the section
@@ -175,6 +178,8 @@ def keys():
                 Call("ac-oledpage")]
 
     low = [page(LOW_PAGES[k]) if k in LOW_PAGES else None for k in range(12)]
+    # low F: the PERFORM page at once (as every page key); held 0.5 s, the GLIDE page too
+    low[GLIDE_KEY - 60] = page(LOW_PAGES[GLIDE_KEY - 60]) + [Arm("ac-glhold", "500", stop="ac-glstop")]
     low[7] = [V("acroothold", "1"), Toast("root: note or knob 1")]
     low[9] = [V("acrr", "0"), Arm("ac-chordhold", "500", stop="ac-rrstop")]
     low[10] = [Call("ac-resolvetoggle")]
@@ -218,6 +223,8 @@ def keys():
                               Call("ac-scr5")])
     # top G# held 0.5 s: the INPUT page (gen_setup)
     proc(c, "ac-inhold", [V("acinkh", "1"), V("acsetup", "1"), V("acsetpg", str(_S.INPUT_PAGE)), Call("ac-oledsetup")])
+    # low F held 0.5 s: the GLIDE page (the glide times; gen_setup)
+    proc(c, "ac-glhold", [V("acsetup", "1"), V("acsetpg", str(_S.GLIDE_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordhold", [V("acrr", "1"), V("acsetup", "1"), V("acsetpg", str(_S.CHORD_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordnow", [Call("ac-change"), Toast("chord change")])
     proc(c, "ac-resolvetoggle", [V("acres", "1 - acres"), Call("ac-resolveupd")])

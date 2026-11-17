@@ -1401,5 +1401,23 @@ ts = [l.split("list ", 1)[1] for l in seg[1].splitlines() if l.startswith("ac-to
 check(ld and ld[-1] > 0.85 and "memory: section 1" in ts,
       f"MEMORY: saved with the piece - slot 3 loaded, its section 1 recalls Dens ({ld[-1:]}, {ts[:3]})")
 
+# 74. GLIDE (low F held): a tap opens the PERFORM page only; held 0.5 s, the GLIDE page - its knobs set the same
+#     glide times as their SETUP rows (VOICES Glide, RECALL Morph / Anchor glide, MEMORY Glide); aux leaves
+k = lambda i, n: (i + 0.5) / n
+log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 65 100"), (1050, "notesRaw 65 0"), (1500, "h-mark bang"),
+              (2000, "notesRaw 65 100"), (2800, "notesRaw 65 0"), (3000, f"knob1 {k(5, len(GS.GLIDES))}"),
+              (3200, f"knob2 {k(6, len(GS.SMORPH))}"), (3400, f"knob3 {k(0, len(GS.SANCG))}"),
+              (3600, f"knob4 {k(4, len(GS.SMEMG))}"), (4000, "aux 1"), (4050, "aux 0"), (4500, "h-mark bang"),
+              (5000, "acsetup 1"), (5010, "acsetpg 8"), (5020, "ac-oledsetup bang"),
+              (5100, "acsetpg 14"), (5110, "ac-oledsetup bang"), (5200, "acsetpg 21"), (5210, "ac-oledsetup bang")], 6,
+             prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-sett3", "ac-sett4", "h-mark"))
+seg = log.replace("\\ ", " ").split("h-mark: bang")
+tap, held, after = (seg + ["", "", ""])[:3]
+check("GLIDE" not in tap and "Sink 0 Blur 0" in tap and "list GLIDE" in held and "1 Chords slow" in held
+      and "2 Morph 30 s" in held and "3 Anchor 2 s" in held and "4 Memory 20 s" in held,
+      "low F: tap = the PERFORM page; held = the GLIDE page, its four rows set")
+check("3 Glide slow" in after and "1 Morph 30 s" in after and "3 Anchor glide 2 s" in after and "2 Glide 20 s" in after,
+      "GLIDE page: the same values show on SETUP VOICES, RECALL and MEMORY")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

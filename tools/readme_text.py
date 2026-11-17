@@ -107,6 +107,8 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   G   ROOT: hold it and press a key, play a MIDI note or turn knob 1 -
       that note is the next key (while G is up, MIDI notes play)
   G#  SENDS 2 page (textures, cloud, atmosphere, input)
+  F held: the GLIDE page - knob 1 chord glide, 2 Morph, 3 Anchor glide,
+      4 Memory glide (the same settings as in SETUP); aux leaves
   A   tap: chord change now (to the next chord shown); hold: the CHORD
       page - knob 1 picks the next chord from the key's chords, knob 3 up:
       the piece picks another, knob 4 On pick: next change / now; aux leaves

@@ -61,6 +61,10 @@ SHAPE_X = "dspbmtac"                       # each layer's letter (its SHAPE valu
 INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
 SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the layer key held)
 QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
+# GLIDE (low F held): the glide times you set while playing, together - the same values as their SETUP rows (VOICES
+# Glide, RECALL Morph and Anchor glide, MEMORY Glide); nothing new is saved
+GLIDE_PAGE = SHAPE_PAGE0 + len(LAYER_PAGES)
+QUICK_NAMES += ["GLIDE"]
 NALL = NSET + len(QUICK_NAMES)
 SCHPICK = ["next change", "now"]
 SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
@@ -417,7 +421,7 @@ def setup_rows():
     return [(k + 1,) + tuple(rows[k] for _, rows in pages) for k in range(4)]
 
 def quick_pages():
-    """the quick pages, as setup_pages(): CHORD, then a page per layer"""
+    """the quick pages, as setup_pages(): CHORD, a page per layer, INPUT, a SHAPE page per layer, GLIDE"""
     types = dict(acsubt=SUBTYPES, acsdrone=SDRONES, acssub=SSUBS, acspad=SPADS, acsbell=SBELLS, acsmot=SMOTS, acstex=STEXS, acsatm=SATMS)
     pages = [("CHORD", [
         ("list 1 Next $1  $2/$3", [("s", "acnxn", CHORD_NAMES), ("f", "acxdeg + 1"), ("f", "acn")]),
@@ -450,6 +454,12 @@ def quick_pages():
             ("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
             ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")]),
         ]))
+    pages.append(("GLIDE", [
+        ("list 1 Chords $1", [("s", "acglide", GLIDES)]),
+        ("list 2 Morph $1", [("s", "acmorph", [n for n, _ in SMORPH])]),
+        ("list 3 Anchor $1", [("s", "acancg", [n for n, _ in SANCG])]),
+        ("list 4 Memory $1", [("s", "acmemg", [n for n, _ in SMEMG])]),
+    ]))
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -507,6 +517,10 @@ def quick_knobs(item):
            If(at(INPUT_PAGE, 2), knob("acinput")),
            If(at(INPUT_PAGE, 3), [V("acfollow", "acsv")]),
            If(at(INPUT_PAGE, 4), knob("acsndi"))]
+    st += [If(at(GLIDE_PAGE, 1), [V("acglide", f"int(acsv*{len(GLIDES) - 0.01})")]),
+           If(at(GLIDE_PAGE, 2), [V("acmorph", f"int(acsv*{len(SMORPH) - 0.01})")]),
+           If(at(GLIDE_PAGE, 3), [V("acancg", f"int(acsv*{len(SANCG) - 0.01})")]),
+           If(at(GLIDE_PAGE, 4), [V("acmemg", f"int(acsv*{len(SMEMG) - 0.01})")])]
     return st
 
 
@@ -672,13 +686,15 @@ def setup():
     ])
     # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
     proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
-        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")],
-                                                                 [Send("ac-setl0q")])])])])
+        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [
+            If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
+                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])
     Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
     Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
                                                 ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
     Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
          "ac-sett0")(c)
+    c.c(c.m(c.recv("ac-setl0g"), "list GLIDE  aux: back"), 0, c.obj("s ac-sett0"), 0)
     Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()
