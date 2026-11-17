@@ -104,8 +104,11 @@ def knobs():
         tb = c.to((rt, i), "t b f")
         c.c(tb, 1, c.obj("v " + n), 0)
         # (a value a morph or a macro offset moves is not your hand: it neither shows nor stops the morph)
+        # (your hand, not a morph or a macro: with MEMORY on, kept for the playing section)
+        mem = [] if n == "acinput" else [If("acmemon", [T("acsnapt", f"(int(acsec) % {_S.NSNAP})*{len(names)} + {i}", "1"),
+                                                         T("acsnapv", f"(int(acsec) % {_S.NSNAP})*{len(names)} + {i}", n)])]
         run_steps(c, (tb, 0), SIDE.get(i, []) + [If("acmorphing == 0", [T("acmtouch", i, "1"), V("aclastk", str(i)),
-                                                                        Call("ac-oledknob")]), Send("ac-dirty")])
+                                                                        Call("ac-oledknob")] + mem), Send("ac-dirty")])
         c.col(150)
     # the scaled length shown on the screen
     return c

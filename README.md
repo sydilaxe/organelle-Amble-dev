@@ -64,7 +64,7 @@ The layers and their rhythms:
 - **Performing:** a PERFORM knob page (low F) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
   other relationships drift in); ANCHOR (aux + top A) to come back to a sound; quick save and recall (hold top B
   and press a key), COMPARE (hold top B), loads that morph in; factory pieces in empty slots 1-6; JOURNEY (the
-  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT.
+  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP 22): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again.
 - **Two screens:** the play view (the chord now and the next one coming, a live score, the voices that sound) and
   the MIX view (levels and sends, the column you turn framed with its value), which takes over while a MIX or
   SENDS page is open.

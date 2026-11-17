@@ -214,6 +214,12 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Recall": (", ".join(S.SRECALL), "What a load brings: the piece (its seed, music, form and sections, and its sound), "
                "or the sound only - knobs, sounds, voices, layers, PERFORM - while the piece playing goes on."),
     "Anchor glide": (", ".join(n for n, _ in S.SANCG), "How long ANCHOR (aux + top A) takes to glide back."),
+    "Memory": ("off, on", "With Memory on, every knob you turn in a section is kept for that section; when the "
+               "section comes again - the piece replayed, or loaded from its slot - those knobs glide back to where you "
+               "left them (the others stay as they are). Saved with the piece; a new piece starts with an empty memory."),
+    "Glide": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
+    "Clear sec": ("turn up", "Fully up: forget what the playing section kept."),
+    "Clear all - turn up": ("turn up", "Fully up: forget every section's knobs."),
     "Compare": ("yours, saved", "Up: the slot as loaded or saved; down: yours again (as holding top B)."),
     "Pump": (", ".join(S.SPUMP), "PUMP: the bed (drone, sub, pads) drops on each period and comes back over 70 % of "
              "it - a sidechain breath on the grid."),

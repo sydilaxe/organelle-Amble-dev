@@ -281,7 +281,9 @@ def piece():
         V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel")])])
     proc(c, "ac-wakeup", [Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
                                                            Call("ac-verbsel")])])
-    proc(c, "ac-newkey", [If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
+    # (a new piece: its own memory, empty)
+    proc(c, "ac-newkey", [Call("ac-memclearall"),
+                          If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
     # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
     # while playing, it switches at once
@@ -517,7 +519,9 @@ def section():
         Later("ac-scr", 97),
         Send("ac-led"),
     ]
-    proc(c, "ac-section", [If("acmode==1 && acsec>=acnsec", [Call("ac-fin")], rest)])
+    # (MEMORY: the section's kept knobs, once its own settings are in)
+    proc(c, "ac-section", [If("acmode==1 && acsec>=acnsec", [Call("ac-fin")],
+                              rest + [If("acmemon", [Later("ac-memrecall", 30)])])])
     # the pad types of the 4 voices: the piece's palette, or SETUP SOUNDS (raw = the first demos' dry, buzzy types:
     # vox, partials, fold, pulsar; or one type for all four voices)
     steps = []

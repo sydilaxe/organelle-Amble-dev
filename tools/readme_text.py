@@ -293,6 +293,10 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
   page 21, CC OUT: 16 CCs of what moves inside (layer levels, energy,
   density, brightness, the way to the next chord ...), Channel, From CC,
   Rate
+  page 22, MEMORY: Memory on keeps the knobs you turn in each section;
+  when the section comes again (the piece replayed, or loaded from its
+  slot) they glide back over Glide; Clear sec / Clear all (turn up).
+  Saved with the piece; a new piece starts with an empty memory
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
 lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,

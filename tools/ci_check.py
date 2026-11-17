@@ -1343,12 +1343,12 @@ check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet
       f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
-#     what is there. SETUP's 21 pages, the quick pages (CHORD, the layers'), the 8 knob pages, keys and toasts,
+#     what is there. SETUP's 22 pages, the quick pages (CHORD, the layers'), the 8 knob pages, keys and toasts,
 #     the profile's parts
 import re
 ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
 t = 2000
-for pg in range(21):
+for pg in range(GS.NSET):
     ev += [(t, "aux 1"), (t + 50, "aux 0"), (t + 400, f"ac-setknob 0 {0.999 * (pg % 3) / 2}")]
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
@@ -1373,6 +1373,33 @@ for l in log.splitlines():
     if m and float(m.group(1)) + 6 * len(m.group(2).replace("\\ ", " ")) > 128:
         over.add(f"x={m.group(1)}: {m.group(2)}")
 check(not over and log.count("gPrintln") > 300, f"OLED: every printed text fits its line ({sorted(over)[:6]})")
+
+# 73. MEMORY (SETUP 22): with Memory on, a knob turned in a section is kept for it; when the piece plays again that
+#     section glides it back; the memory is saved with the piece (slot 3), and a new piece starts empty
+k = lambda i, n: (i + 0.5) / n
+d = build_tmp()
+dens = lambda t: [float(l.split()[2]) for l in t.splitlines() if l.startswith("ac-param: 0 ")]
+ev = [(50, "ac-setseed 7"), (300, "acmemon 1"), (1000, "knob1 0.1"), (1100, "knob1 0.9"), (2000, "ac-secnow bang"),
+      (3000, "knob1 0.5"), (3100, "knob1 0.2"),
+      (3500, "acsetup 1"), (3510, "acsetpg 12"), (3600, f"ac-setknob 0 {k(2, 16)}"), (3700, "ac-setknob 1 0.5"),
+      (3800, "ac-setknob 1 1"), (3900, "acsetup 0"),
+      (4000, "h-mark bang"), (5000, "ac-setseed 7"), (12000, "h-mark bang")]
+log, _ = run(ev, 13, d=d, prints=("ac-param", "h-mark"))
+seg = log.split("h-mark: bang")
+replay = dens(seg[1]) if len(seg) > 1 else []
+ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+check(replay and replay[0] < 0.3 and replay[-1] > 0.85 and "memory: section 1" in ts,
+      f"MEMORY: section 1's Dens glides back on a replay ({replay[:1]} -> {replay[-1:]})")
+# saved with the piece: a new piece empties the memory; loading slot 3 brings it back, so its section 1 recalls
+ev = [(50, "ac-setseed 99"), (300, "acmemon 1"), (500, "ac-newkey bang"), (1000, "h-mark bang"), (1500, "acsetup 1"),
+      (1510, "acsetpg 12"), (1600, f"ac-setknob 0 {k(2, 16)}"), (1700, "ac-setknob 2 0.5"), (1800, "ac-setknob 2 1"),
+      (1900, "acsetup 0"), (9000, "h-mark bang")]
+log, _ = run(ev, 10, d=d, prints=("ac-param", "h-mark"))
+seg = log.split("h-mark: bang")
+ld = dens(seg[1]) if len(seg) > 1 else []
+ts = [l.split("list ", 1)[1] for l in seg[1].splitlines() if l.startswith("ac-toast")] if len(seg) > 1 else []
+check(ld and ld[-1] > 0.85 and "memory: section 1" in ts,
+      f"MEMORY: saved with the piece - slot 3 loaded, its section 1 recalls Dens ({ld[-1:]}, {ts[:3]})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
