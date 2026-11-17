@@ -288,6 +288,10 @@ scales, sound types, input modes, tempo ranges and MIDI channels are read from t
 without a description in `manual.py` stops the build. Build it locally with `python3 tools/manual.py dev out.pdf`
 (needs reportlab and Pillow).
 
+**The key map** (`Amble-keymap-<version>.pdf`, also attached and inside the patch folder) draws both octaves of the
+Organelle with what each key does (tap, hold, aux), the SETUP pages under aux + key, the save slots and the knob
+pages. `tools/keymap.py` builds it from the same tables; a key without an entry there stops the build.
+
 ## Licence
 
 GPL-3.0 (see `LICENSE`), as is Conduit, whose Bloom reverb Amble ports.

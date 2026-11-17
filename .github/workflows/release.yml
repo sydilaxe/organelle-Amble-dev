@@ -62,7 +62,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v="${{ steps.v.outputs.version }}"
-          printf '## Install\nUnzip and copy the "Amble" folder into the Organelle Patches folder.\nThe manual is the PDF here (also inside the folder).\n' > notes.md
+          printf '## Install\nUnzip and copy the "Amble" folder into the Organelle Patches folder.\nThe manual and the key map are the PDFs here (also inside the folder).\n' > notes.md
           pre=""
           if [ "$v" = "dev" ]; then
             pre="--prerelease"
