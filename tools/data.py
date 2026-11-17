@@ -51,7 +51,7 @@ MOVES_P = [3, -3, 4, -4, 3, -4, 2, -2, 2, -2, 5, -1]
 MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 
 FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat",
-            "reed", "organ", "air"]
+            "reed", "organ", "air", "cz"]
 FLAV_AUTO = 14             # (a piece picks among the first 14; the later ones by hand)          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,
@@ -61,7 +61,7 @@ TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur",
 # a piece picks its textures among the first 12 (so a seed, and a saved piece, plays what it always did); the
 # later ones are chosen by hand (SETUP SOUNDS, the textures' page)
 TEX_AUTO = 12
-DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral"]
+DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral", "gendy"]
 DRONE_AUTO = 5             # (a piece picks among the first 5; the later ones by hand)
 # the sub's sound (its SHAPE page): sine as always, or warm, pulse, fm
 SUBTYPES = ["sine", "warm", "pulse", "fm"]
@@ -196,7 +196,7 @@ FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1
 # the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
-STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck"]
+STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg"]
 # (a piece's own pick, Auto, is among the first 6 - the weights below - so a seed plays what it did; the later
 # engines are chosen by hand: SETUP VOICES, the layer's page)
 # auto: what a piece picks (bells lean to bars and metal, motion to the FM pings and blips)
@@ -206,11 +206,22 @@ MOTION_ENGINE_WEIGHTS = [0.4, 2.0, 1.5, 0.9, 0.9, 0.5]
 # level and equal peaks (the short, spiky wood and blip would be too loud at equal level) - see tools/ci_check.py;
 # then the decay in ms on the bells, and the motion's decay as a factor of its piece decay (250-950 ms)
 STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2, kalimba=0.7, steel=0.9,
-                             pluck=0.85),
+                             pluck=0.85, bowl=1.0, plate=1.0, crystal=1.0, lpg=1.0),
                    motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0, kalimba=8.0, steel=8.0,
-                               pluck=8.0))
-STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000)
-STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0)
+                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=8.0))
+STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000,
+                  bowl=7000, plate=3800, crystal=5200, lpg=1500)
+STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
+                   bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8)
+# modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
+# impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
+# with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
+MODES = dict(
+    bowl=[(1, 0.45, 1.0, 0.6), (2.76, 0.26, 0.75, 1.1), (5.40, 0.13, 0.45, 0), (8.93, 0.07, 0.3, 0)],      # singing bowl
+    plate=[(1, 0.36, 1.0, 0), (1.59, 0.27, 0.8, 0), (2.14, 0.2, 0.65, 0), (2.30, 0.16, 0.6, 0), (2.65, 0.13, 0.5, 0),
+           (3.60, 0.07, 0.35, 0)],                                                                    # a thin plate
+    crystal=[(1, 0.5, 1.0, 0.4), (2.32, 0.17, 0.55, 0), (4.25, 0.08, 0.3, 0), (6.63, 0.04, 0.2, 0)],   # a wine glass
+)
 # the glassy wavetables (harmonic number: amplitude), shared by the glass pad and the wave engine
 WAVETABLES = dict(acwtA={1: 1, 2: 0.25, 3: 0.4, 4: 0.08, 5: 0.22, 7: 0.15, 9: 0.1},
                   acwtB={1: 0.6, 3: 0.15, 4: 0.35, 6: 0.3, 8: 0.38, 11: 0.25, 13: 0.2, 16: 0.12})

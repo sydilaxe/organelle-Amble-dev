@@ -381,6 +381,8 @@ FLAV_DESC = {
             "vibrato",
     "organ": "drawbars 16' 8' 5 1/3' 4' 2', the upper ones drawn out with brightness, a slow rotary swell",
     "air": "a flute: a pure tone with breath around it (more with brightness) and a slow vibrato",
+    "cz": "phase distortion (the Casio CZ): a cosine through a bent phase - from a sine towards a saw with brightness, "
+          "and on the right the resonant wave, its resonance sweeping slowly",
 }
 TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few heavier plops",
             "wind": "filtered air", "ember": "crackling embers", "chirp": "bird-like chirps",
@@ -404,7 +406,12 @@ STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)
                "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo",
                "kalimba": "a thumb piano: a warm tine, far overtones that fade quickly, the click of the thumb",
                "steel": "a steel pan: the note, its octave and twelfth, a hair of pitch bend at the strike",
-               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner"}
+               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner",
+               "bowl": "a singing bowl: its modes (1 : 2.76 : 5.4 : 8.9), the lower ones beating, long and soft",
+               "plate": "a thin metal plate: close, inharmonic modes - a gong-like shimmer, shorter",
+               "crystal": "a wine glass: pure, long modes (1 : 2.32 : 4.25 : 6.63), the fundamental beating slowly",
+               "lpg": "a west-coast pluck: a sine through a wavefolder and a low-pass gate - soft notes round, hard "
+                      "ones folded brighter, blooming and closing like a vactrol"}
 DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "analog": "saws and a square through a slow resonant sweep",
               "organ": "drawbars with a rotary shimmer", "fm": "an electric growl",
@@ -413,7 +420,9 @@ DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "choir": "three voices (the note, a hair sharp, the fifth) through vowel formants moving between ah, "
                        "oh and oo",
               "bowed": "a cello: a bowed saw with a slow pressure swell and vibrato through the body's resonances",
-              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting"}
+              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting",
+              "gendy": "Xenakis' stochastic synthesis, gently: a wave of 12 breakpoints, each taking small random "
+                       "steps, so the tone breathes and never repeats while the pitch holds"}
 CHAR_DESC = {"clean": "no effect", "chorus": "a wide chorus", "tape": "wow, flutter, saturation and a little hiss",
              "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush"}
 ATMOS_DESC = {"haze": "air shimmering on the chord", "deep": "low rumble with distant thunder",

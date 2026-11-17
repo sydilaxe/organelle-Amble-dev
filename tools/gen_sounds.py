@@ -240,8 +240,31 @@ def flav_air():
     return s
 
 
+def flav_cz():
+    s, ln = switched("cz", "$0-fw17")
+    s.comment("CZ: phase distortion (the Casio CZ) - a cosine read through a bent phase. Left: the bend moves the "
+              "wave from a sine (no bend) towards a saw with brightness and a slow sweep; right: the resonant "
+              "wave, a cosine at a higher ratio under a falling ramp, its 'resonance' sweeping the same way")
+    f, b = _flav_inlets(s, 2)
+    ph = s.to(f, "phasor~")
+    sweep = s.ch(s.recv("$0-lb"), "osc~", "*~ 0.5", "+~ 0.5")
+    amt = s.to(add(s, s.to(b, "*~ 0.75"), s.to(sweep, "*~ 0.3")), "clip~ 0 1")
+    d = s.ch(amt, "*~ -0.44", "+~ 0.5")                     # the bend's knee: 0.5 (a sine) .. 0.06 (near a saw)
+    bend = s.obj("expr~ cos(6.28319*if($v1 < $v2, $v1*0.5/$v2, 0.5 + ($v1 - $v2)*0.5/(1 - $v2)))")
+    s.c(ph, 0, bend, 0)
+    s.c(d, 0, bend, 1)
+    r = s.ch(amt, "*~ 5", "+~ 1")                           # resonance ratio 1 .. 6
+    res = s.obj("expr~ cos(6.28319*$v1*$v2)*(1 - $v1)")
+    s.c(ph, 0, res, 0)
+    s.c(r, 0, res, 1)
+    L = s.ch(bend, "hip~ 20", "lop~ 6000", "*~ 0.34")
+    R = s.ch(res, "hip~ 20", "lop~ 4500", "*~ 0.5")
+    _out(s, add(s, L, s.to(R, "*~ 0.35")), ln, add(s, R, s.to(L, "*~ 0.35")))
+    return s
+
+
 NEW_FLAVS = (flav_saws, flav_pwm, flav_digi, flav_sync, flav_tine, flav_sine, flav_glass, flav_beat,
-             flav_reed, flav_organ, flav_air)
+             flav_reed, flav_organ, flav_air, flav_cz)
 
 
 # ---------------------------------------------------------------- drone designs 1..3 (0 is the original)
@@ -401,7 +424,47 @@ def drone_spectral():
     return s
 
 
-NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost, drone_choir, drone_bowed, drone_spectral)
+GENDY_N = 12
+
+
+def drone_gendy():
+    s, ln = switched("drone-gendy", "ac-g-drone8")
+    s.comment("GENDY drone (Xenakis' stochastic synthesis, gently): a wave of 12 breakpoints read at the drone's "
+              "pitch; every 30 ms each breakpoint takes a small random step (mirrored at the edges), so the "
+              "timbre keeps breathing while the pitch holds. Its own random numbers (not the piece's). The right "
+              "side reads the same wave a hair sharp.")
+    tab = "$0-gtab"
+    s.obj(f"array define {tab} {GENDY_N + 3}")
+    # the walk: each round, each breakpoint (1..N) steps; then the guard points (0 = N, N+1 = 1, N+2 = 2)
+    met = s.obj("metro 30")
+    s.c(s.obj("loadbang"), 0, met, 0)
+    rnd = s.to(met, "t b b b")
+    cnt = s.obj("f")
+    s.c(s.m((rnd, 2), "0"), 0, cnt, 1)
+    s.c(s.ch(s.m((rnd, 1), str(GENDY_N)), "until"), 0, cnt, 0)
+    s.c(s.to(cnt, "+ 1"), 0, cnt, 1)
+    ix = s.ch(cnt, "+ 1", "t f f")                      # (right to left: the index to write, then read and step)
+    tw = s.obj(f"tabwrite {tab}")
+    s.c(ix, 1, tw, 1)
+    rd = s.ch((ix, 0), f"tabread {tab}", "t f b")
+    stp = s.obj("expr $f1 + ($f2/1000 - 0.5)*0.14; if($f1 + ($f2/1000 - 0.5)*0.14 > 0.95, 1.9 - $f1 - ($f2/1000 - 0.5)*0.14, "
+                "if($f1 + ($f2/1000 - 0.5)*0.14 < -0.95, -1.9 - $f1 - ($f2/1000 - 0.5)*0.14, $f1 + ($f2/1000 - 0.5)*0.14))")
+    s.c(s.ch((rd, 1), "random 1000"), 0, stp, 1)
+    s.c((rd, 0), 0, stp, 0)
+    s.c((stp, 1), 0, tw, 0)
+    g = s.to((rnd, 0), "t b b b")
+    s.c(s.ch(s.m((g, 2), f"{GENDY_N} 1"), f"array get {tab}"), 0, s.obj(f"array set {tab} 0"), 0)
+    s.c(s.ch(s.m((g, 1), "1 2"), f"array get {tab}"), 0, s.obj(f"array set {tab} {GENDY_N + 1}"), 0)
+    f = _drone_freq(s)
+    outs = []
+    for d in (1.0, 1.0025):
+        rdx = s.ch(s.to(f, f"*~ {d}"), "phasor~", f"*~ {GENDY_N}", "+~ 1", f"tabread4~ {tab}")
+        outs.append(s.ch(rdx, "lop~ 1800", "lop~ 2400", "*~ 0.55"))
+    _drone_out(s, outs[0], ln, outs[1])
+    return s
+
+
+NEW_DRONES = (drone_analog, drone_organ, drone_fm, drone_frost, drone_choir, drone_bowed, drone_spectral, drone_gendy)
 
 
 def sub():
