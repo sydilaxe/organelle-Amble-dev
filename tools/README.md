@@ -33,6 +33,7 @@ python3 keymap.py OUT.pdf      the key map alone
 | `gen_verb.py` | the reverbs: Bloom (after Conduit / MidiVerb II), the Hall, the Shimmer |
 | `manual.py`, `readme_text.py` | the PDF manual and the patch's README.txt, from the same data |
 | `keymap.py` | the key map PDF: both octaves drawn with each key's function, aux + key, slots, knob pages |
+| `fanout.py` | the fan-out check every build runs: a control outlet into two hot inlets stops the build unless `fanout_known.txt` lists it (`python3 fanout.py` lists them, `--update` rewrites the list) |
 | `harness.py`, `ci_check.py` | running the patch offline in Pd with timed events, and the checks |
 | `shots.py`, `oledemu.py` | screenshots: the OLED messages of an offline run drawn into PNGs |
 | `gen_log.py` | the performance log (`logs/perf-*.txt`, every 5 s, with the audio meter) and the profile run |

@@ -88,6 +88,9 @@ def build(out=OUT):
     open(os.path.join(out, "pd-opts.txt"), "w").write("-audiobuf 25\n")
     from readme_text import PATCH_README
     open(os.path.join(out, "README.txt"), "w").write(PATCH_README)
+    # a control outlet into two hot inlets has no defined order: stop the build on a new one (tools/fanout.py)
+    import fanout
+    fanout.check(out)
     return out
 
 

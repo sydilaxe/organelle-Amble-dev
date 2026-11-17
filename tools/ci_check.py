@@ -1419,5 +1419,24 @@ check("GLIDE" not in tap and "Sink 0 Blur 0" in tap and "list GLIDE" in held and
 check("3 Glide slow" in after and "1 Morph 30 s" in after and "3 Anchor glide 2 s" in after and "2 Glide 20 s" in after,
       "GLIDE page: the same values show on SETUP VOICES, RECALL and MEMORY")
 
+# 75. the fan-out check (tools/fanout.py, run by every build): the built patch adds none to fanout_known.txt; a
+#     control outlet into two hot inlets that touch the same state is found; a [t ...], a counter and branches
+#     that cannot meet are not
+import fanout, os, tempfile
+fanout.check(build_tmp())
+fd = tempfile.mkdtemp()
+open(os.path.join(fd, "t.pd"), "w").write(
+    "#N canvas 0 0 400 300 12;\n#X obj 10 10 r x;\n#X obj 10 40 v acq;\n#X obj 90 40 expr acq*2;\n"
+    "#X obj 10 80 t f f;\n#X obj 10 110 v acq;\n#X obj 90 110 expr acq*2;\n"
+    "#X obj 10 150 f;\n#X obj 50 180 + 1;\n#X obj 10 180 t b f;\n"
+    "#X obj 200 10 r y;\n#X obj 200 40 * 2;\n#X obj 280 40 * 3;\n#X obj 200 70 osc~;\n#X obj 280 70 osc~;\n"
+    "#X connect 0 0 1 0;\n#X connect 0 0 2 0;\n#X connect 3 1 4 0;\n#X connect 3 0 5 0;\n"
+    "#X connect 6 0 7 0;\n#X connect 7 0 6 1;\n#X connect 6 0 8 0;\n"
+    "#X connect 9 0 10 0;\n#X connect 9 0 11 0;\n#X connect 10 0 12 0;\n#X connect 11 0 13 0;\n")
+fo = fanout.scan(fd)
+check(len(fo) == 1 and "[r x]:0 -> expr acq*2:0 | v acq:0" in next(iter(fo)),
+      f"fan-out check: the built patch adds none; a [v] write beside its read is found, a trigger, a counter and "
+      f"two separate branches are not ({list(fo)})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
