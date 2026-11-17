@@ -183,6 +183,7 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
 1 s to leave, save)
   1 MIDI out   off / tempo only / tempo+note / notes only
      tempo: MIDI clock, 24 a beat at the piece's tempo, Start/Stop with it
+     (Continue when a stopped piece plays on)
      notes, by channel from the base channel (page 2):
        base  the chord as voiced (held)     +1  the tonic (held)
        +2    bells                          +3  the motion arpeggio

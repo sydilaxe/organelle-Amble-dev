@@ -656,7 +656,7 @@ def story():
                "level and brightness (SETUP <i>Breath curve</i>)."),
           Paragraph("MIDI out", H2),
           para("SETUP <i>MIDI out</i>: " + esc(", ".join(S.MOUT)) + ". Tempo is MIDI clock (24 per beat) at the "
-               "piece's tempo, following its changes, with Start and Stop. Notes go out on these channels, counted "
+               "piece's tempo, following its changes, with Start and Stop (and Continue when a stopped piece plays on from where it stopped). Notes go out on these channels, counted "
                "from SETUP <i>MIDI out ch</i> (wrapping after 16):"),
           table([["Channel", "Part"]] + MIDI_CH, [1.0, 5.7]),
           para("Chord and bass velocities follow the piece's energy. Notes are rounded to the nearest semitone. "

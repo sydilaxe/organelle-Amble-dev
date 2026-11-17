@@ -117,7 +117,7 @@ emulator, so the font only approximates the Organelle's.
 Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 hold, 71 off, 74 voice tone. Row 3 shows the last CC that arrived, to find what your controller sends.
 
 **MIDI out** (SETUP page 1): off, **tempo only** (clock), **tempo + notes**, or **notes only**.
-- **Clock:** 24 ticks a beat at the piece's tempo (following the form's tempo changes), with Start and Stop
+- **Clock:** 24 ticks a beat at the piece's tempo (following the form's tempo changes), with Start, Stop and Continue (Continue when a stopped piece plays on)
   at the start and end of a piece.
 - **Notes**, so external synths and arpeggiators follow the composition. Each part has its own channel,
   counted from the MIDI out channel (wrapping after 16):

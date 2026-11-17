@@ -317,6 +317,11 @@ bpm = [float(l.split()[1]) for l in log.splitlines() if l.startswith("ac-bpm")][
 want = 24 * bpm / 60 * 9.9
 check("ac-midibyte: 250" in by and abs(by.count("ac-midibyte: 248") - want) < 4,
       f"clock out: Start and {by.count('ac-midibyte: 248')} ticks (about {want:.0f} at {bpm:.1f} BPM)")
+# Stop sends Stop and the ticks stop; playing on from there sends Continue (a sequencer resumes, not restarts)
+log, _ = run([(50, "ac-setseed 7"), (310, "ac-secstop bang"), (3000, "ac-stop bang"), (5000, "ac-startstop bang")], 6,
+             prints=("ac-midibyte",))
+by = [l.split()[1] for l in log.splitlines() if l.startswith("ac-midibyte") and not l.endswith(" 248")]
+check(by[-3:] == ["250", "252", "251"], f"clock out: Start, Stop, then Continue on resuming ({by[-3:]})")
 log, _ = run([(40, "acmout 2"), (50, "ac-setseed 7")], 8, prints=("ac-noteout",))
 check(log.count("ac-noteout:") >= 5, "clock + notes: the chord and the drone go out as notes")
 ev = [(40, "acsync 1"), (50, "ac-setseed 7"), (100, "ac-rtin 250")] + \

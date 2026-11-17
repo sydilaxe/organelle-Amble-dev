@@ -506,6 +506,7 @@ def section():
     proc(c, "ac-start", [If("acstopped", [
         If("acready", [Toast("start - playing")], [Toast("playing again")]),
         Call("ac-wakeup"),
+        V("acclkcont", "acready == 0"),         # (resuming: MIDI Continue; a piece from its start: Start)
         X("0; 1; 0", "v acstopped", "v acrun", "v acready"),
         SendL("ac-master", ["0.62 + 0.38*acenergy", "2500"]),
         Arm("ac-nextsec", "acsecrem", stop="ac-secstop"),
