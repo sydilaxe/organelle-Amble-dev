@@ -104,7 +104,7 @@ def cc_map():
         If("acmcix < 8", [V("acmck", f"{mixknob} + {lvl}"), T("acparams", "acmck", "acctlv127/127"),
                           SendL("ac-param", ["acmck", "acctlv127/127"])],
            [V("acmcb", "acmcix - 8"),
-            If("acctlv127 >= 64 && acmcp[int(acmcb)] < 64", [If(f"acmcb == {i}", [Call(f"ac-laykey{i}")]) for i in range(8)]),
+            If("acctlv127 >= 64 && acmcp[int(acmcb)] < 64", [If(f"acmcb == {i}", [Call(f"ac-laytog{i}")]) for i in range(8)]),
             T("acmcp", "acmcb", "acctlv127")])])
     c.col()
     up = c.to(c.recv("ac-pressin"), "unpack f f")
