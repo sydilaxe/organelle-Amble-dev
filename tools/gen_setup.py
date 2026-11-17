@@ -149,7 +149,11 @@ SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("ac
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
               ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
               ("acmeisel", 0), ("acbrsel", 0), ("acsubt", 0)] + \
-             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))]
+             [(f"acsh{x}{p}", d) for x in "dspbmtac" for p, d in (("t", 0.5), ("d", 0), ("w", 0.5))] + \
+             [(n, d) for n, d in (("acmuser", 0), ("acmuk", 3), ("acmun", 8), ("acmurot", 0), ("acmusw", -1),
+                                  ("acmghost", 0), ("acmrat", 0), ("acmharm", 0), ("acbuser", 0), ("acbru0", 1),
+                                  ("acbru1", 1), ("acbru2", 1), ("acbru3", 1), ("acbru4", 1), ("acbghost", 0),
+                                  ("acbrat", 0), ("acbrub", 1), ("acbharm", 0))]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form

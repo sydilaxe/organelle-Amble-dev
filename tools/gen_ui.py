@@ -195,8 +195,8 @@ def keys():
         # top E / D# held (with or without aux): a low key picks the motion's / the bells' rhythm - and the held key
         # then neither opens its SHAPE page nor takes the layer in / out when let go; aux + a low key: that SETUP page
         pick = [V("acrsel", str(i)), Send("ac-shpstop"), V("acshkh", "1")]
-        run_steps(c, (b, 0), [If("acrkey == 1", pick + [Call("ac-mrhypick")], [
-            If("acrkey == 2", pick + [Call("ac-brhypick")], [If("acauxheld", [If(f"{i} < {NSET}", [
+        run_steps(c, (b, 0), [If("acrkey == 1", pick + [Call("ac-mop")], [
+            If("acrkey == 2", pick + [Call("ac-bop")], [If("acauxheld", [If(f"{i} < {NSET}", [
                 V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])], f)])])])
         c.col(170)
     for i, f in enumerate(top):

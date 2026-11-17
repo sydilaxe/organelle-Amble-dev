@@ -1027,18 +1027,46 @@ check("ac-sett0: list MOTION" in log and "ac-sett2: 2 Play in" in log and "ac-se
       and "ac-sett1: 1 Sound fm" in log and "ac-toast" not in log,
       "aux + top E: the MOTION page (Play in, out; Sound fm)")
 
-# aux + top E (motion) held + a low key: that Euclidean rhythm (again: auto); aux + top D# (bells): a phrase rhythm
+# aux + top E (motion) held + low D: the pattern rotated; aux + top D# (bells) + low E twice: denser, twice
 log, _ = run([(50, "ac-setseed 7"), (1000, "aux 1"), (1050, "notesRaw 76 100"), (1200, "notesRaw 62 100"),
               (1250, "notesRaw 62 0"), (1300, "notesRaw 76 0"), (1350, "aux 0"), (2000, "aux 1"), (2050, "notesRaw 75 100"),
               (2200, "notesRaw 64 100"), (2250, "notesRaw 64 0"), (2300, "notesRaw 64 100"), (2350, "notesRaw 64 0"),
               (2400, "notesRaw 75 0"), (2450, "aux 0")], 3)
 ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
-check(ts == ["motion 5/12", "bells waltz", "bells auto"], f"aux + top E / D# + a low key: rhythms ({ts})")
+check(len(ts) == 3 and ts[0].startswith("motion ") and " rot " in ts[0] and ts[1:] == ["bells: denser"] * 2,
+      f"aux + top E / D# + a low key: rhythm keys ({ts})")
 # the same without aux: top E held + a low key - the rhythm, and the held key neither toggles nor opens SHAPE
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 76 100"), (1200, "notesRaw 65 100"), (1250, "notesRaw 65 0"),
               (2000, "notesRaw 76 0")], 3, prints=("ac-sett0",))
 ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
-check(ts == ["motion 4/11"] and "ac-sett0" not in log, f"top E held + low F: a motion rhythm, nothing else ({ts})")
+check(len(ts) == 1 and ts[0].startswith("motion ") and "ac-sett0" not in log,
+      f"top E held + low F (fewer hits): that, nothing else ({ts})")
+# the rhythm keys: more hits, harmony and ratchets add notes; C# gives back the piece's own; bells harmony adds strikes
+def rk(keys, layer, prints):
+    ev = [(50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfmotion",
+                                                                                     "acfbell", "acrhythm")] + \
+         [(300, "acmmotion 2"), (300, "acmbell 2"), (301, "ac-layers bang")]
+    t = 1000
+    if keys:
+        ev += [(t, f"notesRaw {layer} 100")]
+        for k in keys:
+            t += 150
+            ev += [(t, f"notesRaw {k} 100"), (t + 50, f"notesRaw {k} 0")]
+        ev += [(t + 200, f"notesRaw {layer} 0")]
+    log, _ = run(ev + [(4000, "h-mark bang")], 14, prints=(prints, "h-mark"))
+    return log.split("h-mark: bang")[1].count(prints + ":"), [l.split("list ", 1)[1] for l in log.splitlines()
+                                                            if l.startswith("ac-toast")]
+base, _ = rk([], 76, "ac-mnote")
+more, t1 = rk([64, 64], 76, "ac-mnote")
+harm, t2 = rk([68], 76, "ac-mnote")
+rat, t3 = rk([69, 69], 76, "ac-mnote")
+back, t4 = rk([64, 64, 61], 76, "ac-mnote")
+bb, _ = rk([], 75, "ac-bell")
+bh, t5 = rk([68], 75, "ac-bell")
+check(more > base and harm >= 1.8 * base and rat > base and back == base and bh > bb
+      and t2 == ["motion harmony 3rds"] and t5 == ["bells harmony 3rds"],
+      f"rhythm keys: motion {base} notes, more hits {more}, 3rds {harm}, ratchets {rat}, C# back {back}; "
+      f"bells {bb}, with 3rds {bh}")
 
 # a layer key held: its SHAPE page - Tone down darkens, up thins, Width 0 is mono; a tap still takes it in / out
 import numpy as np
