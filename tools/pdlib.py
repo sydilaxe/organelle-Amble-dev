@@ -257,6 +257,8 @@ def Raw(fn):
 
 def lookup(c, src, names, dest, prefix="symbol "):
     """float index at src -> [sel 0 1 ..] -> 'symbol name' messages into dest (obj, inlet)."""
+    bad = [n for n in names if any(ch in str(n) for ch in ",;$")]
+    assert not bad, f"names {bad}: a comma or semicolon ends a Pd message (the screen showed only the first word)"
     s = c.obj("sel " + " ".join(str(i) for i in range(len(names))))
     c.c(*(src if isinstance(src, tuple) else (src, 0)), s, 0)
     for i, n in enumerate(names):

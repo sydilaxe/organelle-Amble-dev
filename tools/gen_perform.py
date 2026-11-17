@@ -130,7 +130,7 @@ def perform():
          + [T("acbasem", j, n) for j, n in enumerate(L8)] + [X("1; 0", "v acbases", "v acchanged")])
     proc(c, "ac-basesetnow", [Loop(str(NK), "aci", [T("acbase", "aci", "acparams[int(aci)]")])]
          + [T("acbasem", j, n) for j, n in enumerate(L8)] + [X("1; 0", "v acbases", "v acchanged")])
-    proc(c, "ac-cmpon", [If("acbases == 0", [V("accmp", "0"), Toast("nothing saved to compare")], [
+    proc(c, "ac-cmpon", [If("acbases == 0", [V("accmp", "0"), Toast("no slot to compare")], [
         Loop(str(NK), "aci", [T("accur", "aci", "acparams[int(aci)]")])] + [T("accurm", j, n) for j, n in enumerate(L8)]
         + apply_cut("acbase") + layers_from("acbasem") + [V("accmp", "1"), Toast("compare - as saved"),
                                                            Send("ac-oledsetupq")])])

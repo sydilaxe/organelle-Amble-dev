@@ -35,10 +35,10 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            ["acjour", "acjpad", "acjdrone", "acjstrike", "acrvpre", "acrvera", "acccout", "acccch", "acccbase", "acccrate"] + \
            ["acspark", "acsparko"]
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
-MOUT = ["off", "tempo only", "tempo+notes", "notes only"]
+MOUT = ["off", "tempo only", "tempo+note", "notes only"]
 PARTS = ["all", "harmony", "arp only"]
 # SETUP page 4, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
-SGUARD = ["off", "on", "off, log", "on, log"]
+SGUARD = ["off", "on", "off + log", "on + log"]
 OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everything else right (mono stems)
 NSET = 21                                  # SETUP pages
 SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
@@ -102,7 +102,7 @@ SPLAY = ["auto", "off", "on", "in 1/4", "in 1/2", "in 3/4", "out 1/4", "out 1/2"
 # save slot, the fade of a layer key (or button), the swell of a layer coming in or going out within a section
 SMIXCC = ["off", "CC 20-35", "CC 102-117"]
 MIXCC_BASE = "if(acmixcc == 1, 20, 102)"
-SPGM = ["off", "loads a slot"]
+SPGM = ["off", "load slot"]
 SLFADE = [("0.5 s", 500), ("2.5 s", 2500), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000)]
 SSFADE = [("2 s", 2000), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000), ("40 s", 40000)]
 
@@ -282,8 +282,8 @@ def setup_pages():
         ]),
         ("MIDI IN", [
             ("list 1 Notes to $1", [("s", "acroute", ROUTES)]),
-            ("list 2 Breath to $1", [("s", "acbrto", BRTOS)]),
-            ("list 3 Pressure to $1", [("s", "acpressto", TARGETS)]),
+            ("list 2 Breath $1", [("s", "acbrto", BRTOS)]),
+            ("list 3 Press $1", [("s", "acpressto", TARGETS)]),
             ("list 4 Breath in $1%", [("f", "int(aclbv*100)")]),
         ]),
         ("CC MAP", [
@@ -324,7 +324,7 @@ def setup_pages():
         ]),
         ("LIVE", [
             ("list 1 Mix CCs $1", [("s", "acmixcc", SMIXCC)]),
-            ("list 2 Prog change $1", [("s", "acpgm", SPGM)]),
+            ("list 2 Program $1", [("s", "acpgm", SPGM)]),
             ("list 3 Key fade $1", [("s", "aclfd", [n for n, _ in SLFADE])]),
             ("list 4 Entry fade $1", [("s", "acsfd", [n for n, _ in SSFADE])]),
         ]),

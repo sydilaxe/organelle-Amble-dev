@@ -8,7 +8,8 @@ python3 gen.py                 build the patch (= ./build.sh)
 python3 ci_check.py            all the offline checks in Pd (about 25 min; CI runs them)
 python3 ci_check.py --list     the checks' sections;  python3 ci_check.py 57 58  only those
 python3 shots.py               OLED screenshots into ../docs/shots
-./package.sh VERSION           the release zip and the PDF manual into ../dist
+./package.sh VERSION           the release zip, the PDF manual and the key map into ../dist
+python3 keymap.py OUT.pdf      the key map alone
 ```
 
 ## The files
@@ -31,6 +32,7 @@ python3 shots.py               OLED screenshots into ../docs/shots
 | `gen_strikes.py` | the bells' and motion's engines (bars, fm, blip, wood, wave, metal) |
 | `gen_verb.py` | the reverbs: Bloom (after Conduit / MidiVerb II), the Hall, the Shimmer |
 | `manual.py`, `readme_text.py` | the PDF manual and the patch's README.txt, from the same data |
+| `keymap.py` | the key map PDF: both octaves drawn with each key's function, aux + key, slots, knob pages |
 | `harness.py`, `ci_check.py` | running the patch offline in Pd with timed events, and the checks |
 | `shots.py`, `oledemu.py` | screenshots: the OLED messages of an offline run drawn into PNGs |
 | `gen_log.py` | the performance log (`logs/perf-*.txt`, every 5 s, with the audio meter) and the profile run |

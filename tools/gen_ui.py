@@ -158,7 +158,7 @@ def keys():
                 Call("ac-oledpage")]
 
     low = [page(LOW_PAGES[k]) if k in LOW_PAGES else None for k in range(12)]
-    low[7] = [V("acroothold", "1"), Toast("root: play a note or turn knob 1")]
+    low[7] = [V("acroothold", "1"), Toast("root: note or knob 1")]
     low[9] = [V("acrr", "0"), Arm("ac-reroll", "500", stop="ac-rrstop")]
     low[10] = [Call("ac-resolvetoggle")]
     low[11] = [V("acsbk", "0"), Arm("ac-sbhold", "600", stop="ac-sbstop")]      # (its release: above)
@@ -200,7 +200,7 @@ def keys():
                               If("acres", [Toast("resolve - open fifths")], [Toast("resolve released")])])
     proc(c, "ac-freezetoggle", [
         V("acvfreeze", "1-acvfreeze"), V("acfreeze", "acvfreeze"), Call("ac-freezeupd"), Call("ac-revupd"),
-        If("acvfreeze", [Toast("freeze - reverb and cloud")], [Toast("freeze released")]), Call("ac-oledbottom")])
+        If("acvfreeze", [Toast("freeze: verb + cloud")], [Toast("freeze released")]), Call("ac-oledbottom")])
     Line("ac-keytoast", "list next key $1", [("s", "acpend", NOTE_NAMES)], "ac-toast")(c)
     Line("ac-inmodetoast", "list input $1", [("s", "acinmode", INMODES)], "ac-toast")(c)
     # aux: knob page
@@ -228,7 +228,7 @@ def screen():
     c.c(c.to((s1, 1), "t b"), 0, c.obj("s ac-scr1c"), 0)
     c.c(c.m((s1, 2), "list FIN - B new piece"), 0, c.obj("s ac-txt1"), 0)
     c.col()
-    Line("ac-scr1r", "list READY $1 - A# start", [("s", "acmode", ["DRIFT", "COMPOSE"])], "ac-txt1")(c)
+    Line("ac-scr1r", "list READY $1 - A# go", [("s", "acmode", ["DRIFT", "COMPOSE"])], "ac-txt1")(c)
     Line("ac-scr1d", "list DRIFT $1 $2",
          [("s", "acrole", ROLES), ("f", "acseed % 10000")], "ac-txt1")(c)
     Line("ac-scr1c", "list COMP $1 of $2 $3",

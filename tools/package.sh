@@ -13,6 +13,9 @@ printf 'Amble %s\n' "$VERSION" > "dist/stage/Amble/VERSION.txt"
 # the manual, generated from the same source as the patch (fails if a control has no description)
 python3 tools/manual.py "$VERSION" "dist/Amble-manual-${VERSION}.pdf"
 cp "dist/Amble-manual-${VERSION}.pdf" "dist/stage/Amble/Amble-manual.pdf"
+# the key map: the keyboard drawn with what each key does (from the same tables as the patch)
+python3 tools/keymap.py "dist/Amble-keymap-${VERSION}.pdf" "$VERSION"
+cp "dist/Amble-keymap-${VERSION}.pdf" "dist/stage/Amble/Amble-keymap.pdf"
 (cd dist/stage && zip -qr "../Amble-${VERSION}.zip" .)
 rm -rf dist/stage
 ls -l dist

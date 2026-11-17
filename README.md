@@ -267,7 +267,7 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
   lighter in steps: 1, cloud and atmosphere off; 2, textures and the pad character off; 3, the automatic
   vocoder off. Below 50 % for 20 s it steps back. The pads, drone, sub, bells, motion and reverb never change.
   SETUP page 4 shows the load and the guard's level, and can turn the guard off.
-- **Performance logs.** Set the CPU guard to *on, log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
+- **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
   cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
   every part alone for 6 s (about 7 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
@@ -287,6 +287,10 @@ workflow artifact, so it doesn't use the Actions storage quota.
 scales, sound types, input modes, tempo ranges and MIDI channels are read from the generator. A control added
 without a description in `manual.py` stops the build. Build it locally with `python3 tools/manual.py dev out.pdf`
 (needs reportlab and Pillow).
+
+**The key map** (`Amble-keymap-<version>.pdf`, also attached and inside the patch folder) draws both octaves of the
+Organelle with what each key does (tap, hold, aux), the SETUP pages under aux + key, the save slots and the knob
+pages. `tools/keymap.py` builds it from the same tables; a key without an entry there stops the build.
 
 ## Licence
 

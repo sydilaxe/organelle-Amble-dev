@@ -148,14 +148,14 @@ def perflog():
         Send("ac-chgstop"), Send("ac-secstop"), V("acsetup", "0"), Call("ac-oledall"),
         X("1; 0; aclogon", "v acprof", "v acprst", "v aclogwas"), Send("ac-logrun", "1"), V("acflxf", "50"),
         Loop("4", "aci", [T("acprfl", "aci", "acflav[int(aci)]")]),
-        Send("ac-profclear"), Later("ac-profgo", 9000)])])     # (after the stop's fade)
+        Send("ac-profclear"), Later("ac-profgo", 9000), Toast("profile: 7 min silent")])])     # (after the stop's fade)
     pc = c.obj("t b b")
     c.c(c.recv("ac-profclear"), 0, pc, 0)
     c.c(c.m((pc, 0), "list part load peak"), 0, c.obj("text set acprofile 1e+06"), 0)
     c.c(c.m((pc, 1), "clear"), 0, pt, 0)
     steps = []
     for i, (name, act) in enumerate(parts):
-        steps += [If(f"acprst == {i}", act + [Toast(f"profile {i + 1}/{len(parts)} {name}")])]
+        steps += [If(f"acprst == {i}", act + [Toast(f"{i + 1}/{len(parts)} {name}")])]
     proc(c, "ac-profgo", base + steps + [Arm("ac-profmeasure", "2000", stop="ac-profstop")])
     proc(c, "ac-profmeasure", [X("0; 0; 0", "v acprsum", "v acprn", "v acprmax"), Arm("ac-profrecord", "4000", stop="ac-profstop")])
     # (the crossfade part: the voices fade from sine to glass over 10 s, so two types compute in each)
@@ -183,7 +183,7 @@ def perflog():
          + [SendL(f"ac-v{k}-flav", [f"acprfl[{k}]"]) for k in range(4)]
          + [V("acfade", "500"), Call("ac-layers"), Call("ac-verbsel"), Call("ac-inputupd"), Call("ac-sinkupd"),
             Call("ac-sparkupd"), If("aclogwas == 0", [Send("ac-logrun", "0")]),
-            Toast("profile written - A# to start")])
+            Toast("profile written")])
     c.col()
     # on, off (SETUP 4); when the piece stops, the part so far is written
     proc(c, "ac-logupd", [If("acguard >= 2", [If("aclogon == 0", [V("aclogon", "1"), Call("ac-lognew"),
