@@ -1083,7 +1083,8 @@ def centroid(x):
     f = np.fft.rfftfreq(len(x), 1 / SR)
     P = np.abs(np.fft.rfft(x)) ** 2
     return (f * P).sum() / P.sum()
-base = [(50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+# (Writing still: the pads alone - moving, the counter-melody's voice sings over them)
+base = [(5, "acwrite 0"), (50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
        [(311, "acmpad 2"), (311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10")]
 held = [(1000, "notesRaw 74 100"), (1700, "notesRaw 74 0")]
 sh = {}
@@ -1487,7 +1488,7 @@ k = lambda i, n: (i + 0.5) / n
 d = build_tmp()
 W = ("ac-bell", "ac-mnote", "ac-dronep", "ac-v3-pitch", "h-mark") + tuple(f"ac-g-drone{i}" for i in ["", 1, 2, 3, 4, 5, 6, 7])
 OFF = [(n, 0) for n in ("acmelm", "accanon", "acmovm", "acsecd", "acphr", "acvlead", "acrests", "acmdev", "acans",
-                        "acphase", "acreg", "acpadm", "acdrsub", "acendp")] + [("acwrite", 1)]
+                        "acphase", "acreg", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm", "acctr")] + [("acwrite", 1)]
 def wr(sets, secs=150, seed=11, ev=(), base=OFF):
     log, _ = run([(10, "actide 0"), (10, "acmbell 2"), (10, "acmmotion 2")] + [(15, f"{n} {v}") for n, v in base]
                  + [(20, f"{n} {v}") for n, v in sets]
