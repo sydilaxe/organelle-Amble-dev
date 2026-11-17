@@ -2,7 +2,7 @@
 
 Conventions: global state lives in [value]s named ac<word> (no dash, so [expr] can read them);
 every [send]/[receive] name has a dash (ac-<word>), so values and sends never share a symbol."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Arm, Toast, RNG, Later
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Arm, Toast, RNG, Later, Line
 from data import *
 from data import DRONES, CHARACTERS, ATMOS_NAMES, ATMOS_ROLE, SCENE_DATA, SCENE_ROLE, \
     FLAVOUR_WEIGHTS, FM_RATIO_WEIGHTS, PARTIAL_WEIGHTS, pick_table, STRIKES, BELL_ENGINE_WEIGHTS, MOTION_ENGINE_WEIGHTS
@@ -30,17 +30,17 @@ GLOBALS = dict(
     acmtr=2, acbld=1, acblp=0.5, acvauto=1, acvsec=1, acvtype=1, acrvsize=1,
     # rhythm
     acbpm0=56, acbpm=56, actpos=0.5, acmeter=4, actick=0, acstep=0, acms=0, acmk=5, acmn=8, acmei=0, acmrot=0, acmdiv=1,
-    acmarp=0, acshed=0, acmai=0, acmoct=12, acmswing=0, acgdlock=0, acmp=60, acdtype=0, acdtype2=1, acdcur=0, acsubm=0, acsubx=0, acchar=0, accheff=0, acflstag=4200, acres=0, acbela=0, acmota=1, acdauto=0, actex1a=0, actex2a=1, acspad=0, acsdrone=0, acstex=0, acschar=0, acsnew=0, acchamt=0.5, acavoc=0, acgvoc=0, acdb=0, acgt4=0, acgt5=0, acgt6=0, acgt7=0, acgt8=0, acgt9=0, acgt10=0, acgt11=0, acgt12=0, acgt13=0, acgt14=0, acgt15=0, acbbn=0, acbbv=0, acsgn=0, acsgd=0, acgsub=0, acatm=0, acatmT=0, acatmT2=1, acfatm=0, acatmcur=0, acgatm=0, acscene=0, acmono=0, acwidth=1, acpanmot=0.8, acfd=-1, acgbands=0, acgres=0, ackn=0, ackv=0,
+    acmarp=0, acshed=0, acmai=0, acmoct=12, acmswing=0, acgdlock=0, acmp=60, acdtype=0, acdtype2=1, acdcur=0, acsubm=0, acsubx=0, acchar=0, accheff=0, acflstag=4200, acres=0, acbela=0, acmota=1, acdauto=0, actex1a=0, actex2a=1, acspad=0, acsdrone=0, acstex=0, acschar=0, acsnew=0, acchamt=0.5, acavoc=0, acgvoc=0, acdb=0, acgt4=0, acgt5=0, acgt6=0, acgt7=0, acgt8=0, acgt9=0, acgt10=0, acgt11=0, acgt12=0, acgt13=0, acgt14=0, acgt15=0, acbbn=0, acbbv=0, acmeisel=0, acbrsel=0, acmeia=0, acrkey=0, acrsel=0, acsgn=0, acsgd=0, acgsub=0, acatm=0, acatmT=0, acatmT2=1, acfatm=0, acatmcur=0, acgatm=0, acscene=0, acmono=0, acwidth=1, acpanmot=0.8, acfd=-1, acgbands=0, acgres=0, ackn=0, ackv=0,
 )
 for page in PAGES:
     for _, name, d in page:
         GLOBALS[name] = d
 
 ARRAYS = dict(acsroles=12, acslens=12, acssp=12, acsst=96, acslv=96, acscale=16, acfamt=NF * 5, acch=4, acnew=4, acplan=16, acpdur=16, acmotif=8, acmotif0=8,
-              acmrhy=8, acmoves=12, acmods=12, acmovp=12, acmodp=12, acplfam=len(PLEASING_FAMS), acplsc=len(PLEASING_SCALES), acgrt=12, acfmrt=8, acpartt=24, acbellt=12, acdintt=5, acrhyt=5,
+              acmrhy=8, acmrhya=8, acbrhyt=5 * len(BELL_RHYTHMS), acmoves=12, acmods=12, acmovp=12, acmodp=12, acplfam=len(PLEASING_FAMS), acplsc=len(PLEASING_SCALES), acgrt=12, acfmrt=8, acpartt=24, acbellt=12, acdintt=5, acrhyt=5,
               acparams=4 * len(PAGES), acraw=4, acflav=4, acroles=16, acflpick=40, acbelpk=40, acmotpk=40, acfmrpick=40, acpapick=40, acscn=50,
               acscrole=24, acatmrole=8, ackeyp=16, acprog=8, acrmask=48, acrtide=8,
-              acrtempo=8, acrpulse=8, acaway=8, aceuk=10, aceun=10, acmeters=6, acmratios=6, acbrper=4, actlo=5, acthi=5)
+              acrtempo=8, acrpulse=8, acaway=8, aceuk=len(EUCLID), aceun=len(EUCLID), acmeters=6, acmratios=6, acbrper=4, actlo=5, acthi=5)
 
 # the piece tempo: its place (actpos) in the tempo range chosen in SETUP
 # (SETUP FORM Tempo: a fixed tempo instead, the same in every section)
@@ -74,7 +74,7 @@ DATA_TABLES = dict(
     acpartt=sum(PARTIAL_SETS, []), acbellt=sum(BELL_SETS, []), acdintt=DRONE_INTERVALS, acrhyt=RHYTHMS,
     acparams=[d for p in PAGES for _, _, d in p], acraw=[0.5] * 4, aclvn=[-1] * 4, acrmask=sum(ROLE_MASK, []),
     acrtide=ROLE_TIDE, acrtempo=ROLE_TEMPO, acrpulse=ROLE_PULSE, acaway=AWAY, aceuk=[k for k, n in EUCLID],
-    aceun=[n for k, n in EUCLID], acmeters=METERS, acmratios=MOTION_RATIOS, acbrper=BREATH_PERIODS,
+    aceun=[n for k, n in EUCLID], acbrhyt=sum([r for _, r in BELL_RHYTHMS], []), acmeters=METERS, acmratios=MOTION_RATIOS, acbrper=BREATH_PERIODS,
     actlo=[lo for _, lo, _ in TEMPOS], acthi=[hi for _, _, hi in TEMPOS],
 )
 DATA_TABLES.update(_P.DATA_TABLES)
@@ -350,7 +350,8 @@ def piece():
         RNG,
         T("acmotif0", "aci", "if(aci==0, int(acr1*3)*2, acmotif0[int(aci)-1] + int(acr1*5) - 2)"),
         T("acmotif", "aci", "acmotif0[int(aci)]"),
-        T("acmrhy", "aci", "acrhyt[int(acr2*5)]"),
+        T("acmrhya", "aci", "acrhyt[int(acr2*5)]"),
+        T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)])"),
     ])])
     # each section transforms it by role: inverted (develop), raised and faster (intensify, climax),
     # as it was (establish, return), varied otherwise
@@ -361,9 +362,19 @@ def piece():
             T("acmotif", "aci", "if(acrole==2 && acr1<0.5, -acmotif0[int(aci)], if(acrole==3 || acrole==4, "
                                 "acmotif0[int(aci)] + acmtr, if(acrole==6 || acrole<=1, acmotif0[int(aci)], "
                                 "acmotif0[int(aci)] + int(acr1*3) - 1)))"),
-            T("acmrhy", "aci", "acrhyt[int(acr2*5)] * if(acrole==3 || acrole==4, 0.5, 1)"),
+            T("acmrhya", "aci", "acrhyt[int(acr2*5)] * if(acrole==3 || acrole==4, 0.5, 1)"),
+            T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], acmrhya[int(aci)])"),
         ]),
     ])
+    # aux + top E (motion) or D# (bells) held, + a low key: that rhythm (the same key again: the piece's own)
+    proc(c, "ac-mrhypick", [V("acmeisel", "if(acmeisel == acrsel + 1, 0, acrsel + 1)"),
+                            V("acmei", "if(acmeisel > 0, acmeisel - 1, acmeia)"),
+                            X("aceuk[int(acmei)]; aceun[int(acmei)]", "v acmk", "v acmn"), Send("ac-mrhytoast")])
+    proc(c, "ac-brhypick", [V("acbrsel", "if(acbrsel == acrsel + 1, 0, acrsel + 1)"),
+                            Loop("5", "aci", [T("acmrhy", "aci", "if(acbrsel > 0, acbrhyt[int((acbrsel - 1)*5 + aci)], "
+                                                                 "acmrhya[int(aci)])")]), Send("ac-brhytoast")])
+    Line("ac-mrhytoast", "list motion $1", [("s", "acmeisel", ["auto"] + [f"{k}/{n}" for k, n in EUCLID])], "ac-toast")(c)
+    Line("ac-brhytoast", "list bells $1", [("s", "acbrsel", ["auto"] + [n for n, _ in BELL_RHYTHMS])], "ac-toast")(c)
     return c
 
 
@@ -394,7 +405,8 @@ def section():
         Call("ac-sndovr"),
         # rhythm of the motion layer: a Euclidean pattern, its rotation, 16ths or 8ths, arpeggio shape
         RNG,
-        X("int(acr1*10); int(acr2*8); 1 + (acr3<0.35); int(acr4*4)", "v acmei", "v acmrot", "v acmdiv", "v acmarp"),
+        X(f"int(acr1*{EUCLID_AUTO}); int(acr2*8); 1 + (acr3<0.35); int(acr4*4)", "v acmeia", "v acmrot", "v acmdiv", "v acmarp"),
+        V("acmei", "if(acmeisel > 0, acmeisel - 1, acmeia)"),        # (aux + top E + a low key chose one)
         V("acmdiv", f"acmdiv * (1 + (acbpm0 > {HALFTIME}))"),
         X("aceuk[int(acmei)]; aceun[int(acmei)]", "v acmk", "v acmn"),
         RNG,

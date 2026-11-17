@@ -1003,6 +1003,14 @@ check("ac-sett0: list MOTION" in log and "ac-sett2: 2 Play in" in log and "ac-se
       and "ac-sett1: 1 Sound fm" in log and "ac-toast" not in log,
       "aux + top E: the MOTION page (Play in, out; Sound fm)")
 
+# aux + top E (motion) held + a low key: that Euclidean rhythm (again: auto); aux + top D# (bells): a phrase rhythm
+log, _ = run([(50, "ac-setseed 7"), (1000, "aux 1"), (1050, "notesRaw 76 100"), (1200, "notesRaw 62 100"),
+              (1250, "notesRaw 62 0"), (1300, "notesRaw 76 0"), (1350, "aux 0"), (2000, "aux 1"), (2050, "notesRaw 75 100"),
+              (2200, "notesRaw 64 100"), (2250, "notesRaw 64 0"), (2300, "notesRaw 64 100"), (2350, "notesRaw 64 0"),
+              (2400, "notesRaw 75 0"), (2450, "aux 0")], 3)
+ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+check(ts == ["motion 5/12", "bells waltz", "bells auto"], f"aux + top E / D# + a low key: rhythms ({ts})")
+
 # 56. the input stage computes only while In is up: at In 0 it hears nothing (its level stays 0), raised it listens
 def lvprobe(c):
     m = c.obj("metro 1000", 1200, 20)

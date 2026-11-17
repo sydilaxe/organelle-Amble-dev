@@ -51,6 +51,8 @@ SAVE_KEY = 83                           # top B: tap = new piece; held, a key lo
 ANCHOR_KEY = 81                         # top A: aux + tap = ANCHOR (set, then glide back), aux + hold = anchor here
 FKEYS = LOW_KEYS + TOP_KEYS
 ROOT_KEY = 60 + LOW_KEYS.index("Root (hold)")
+MOTION_KEY = 72 + [n for _, n, _ in LAYER_KEYS].index("motion")      # top E
+BELLS_KEY = 72 + [n for _, n, _ in LAYER_KEYS].index("bells")        # top D#
 CHORD_KEY = 60 + LOW_KEYS.index("chord change now (hold: CHORD page)")
 SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
 
@@ -119,6 +121,8 @@ def keys():
     c.c(kb, 1, c.obj("v ackn"), 0)
     run_steps(c, (kb, 0), [If("ackv > 0", [
         V("acauxused", "acauxheld || acauxused"),
+        # top E (motion) / D# (bells) held: with aux, a low key picks its rhythm
+        If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", f"1 + (ackn == {BELLS_KEY})")]),
         # top B held: the next key is a slot (low C..B = 1-12, top C..D# = 13-16) - loaded, or with aux saved
         If(f"ackn == {SAVE_KEY}", [X("1; 0; 0", "v acbdown", "v acbused", "v acbcmp"),
                                    Arm("ac-cmphold", "600", stop="ac-bstop")],
@@ -128,6 +132,7 @@ def keys():
               [If(f"acroothold && ackn != {ROOT_KEY}", [V("acrootn", "int(ackn) % 12"), Call("ac-rootset")],
                   [SendL("ac-fkey", ["ackn"])])])])],
         [If(f"ackn == {ROOT_KEY}", [V("acroothold", "0")]),
+         If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", "0")]),
          # top B let go: a tap is a new piece (aux: the SAVES page); a hold was COMPARE, which ends
          If(f"ackn == {SAVE_KEY} && acbdown", [Send("ac-bstop"),
             If("acbcmp", [Call("ac-cmpoff")], [If("acbused == 0", [
@@ -181,8 +186,11 @@ def keys():
         b = c.obj("t b")
         c.c(lsel, i, b, 0)
         # aux + a low key: that SETUP page
-        run_steps(c, (b, 0), [If("acauxheld", [If(f"{i} < {NSET}", [
-            V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])], f)])
+        run_steps(c, (b, 0), [If("acauxheld", [
+            # aux + top E / D# held: the motion's / the bells' rhythm; otherwise that SETUP page
+            If("acrkey == 1", [V("acrsel", str(i)), Call("ac-mrhypick")], [
+                If("acrkey == 2", [V("acrsel", str(i)), Call("ac-brhypick")], [If(f"{i} < {NSET}", [
+                    V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])])])], f)])
         c.col(170)
     for i, f in enumerate(top):
         b = c.obj("t b")

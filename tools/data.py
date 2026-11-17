@@ -140,7 +140,15 @@ ROLE_TIDE = [1.6, 1.2, 1.0, 0.75, 0.6, 1.5, 1.0, 2.0]      # x the time between 
 ROLE_TEMPO = [0.92, 1.0, 1.0, 1.06, 1.1, 0.95, 1.0, 0.85]  # x the piece tempo
 ROLE_PULSE = [0.0, 0.1, 0.15, 0.3, 0.35, 0.1, 0.15, 0.0]   # drone pulse depth on the bar
 AWAY = [5, 7, -3, 2, 4, -4, -5, 3]                         # key areas away from home (semitones)
-EUCLID = [(3, 8), (5, 8), (5, 12), (7, 16), (5, 13), (4, 11), (7, 12), (3, 7), (5, 16), (9, 16)]
+EUCLID = [(3, 8), (5, 8), (5, 12), (7, 16), (5, 13), (4, 11), (7, 12), (3, 7), (5, 16), (9, 16), (4, 9), (11, 16)]
+# (a piece picks among the first 10; aux + top E + a low key picks any of the 12, C..B)
+EUCLID_AUTO = 10
+# the bells' phrase rhythms (aux + top D# + a low key, C..B): each step's length, x a beat (a piece picks RHYTHMS)
+BELL_RHYTHMS = [("even", [1, 1, 1, 1, 1]), ("long-short", [1.5, 0.5, 1.5, 0.5, 1]),
+                ("short-long", [0.5, 1.5, 0.5, 1.5, 1]), ("gallop", [0.5, 0.5, 1, 0.5, 0.5]),
+                ("waltz", [1, 0.5, 0.5, 1, 1]), ("dotted", [1.5, 0.5, 1, 1, 1]), ("clave", [1.5, 1.5, 1, 1, 1]),
+                ("triplet", [0.67, 0.67, 0.67, 1, 1]), ("sparse", [2, 2, 1, 2, 3]), ("rush", [0.5, 0.5, 0.5, 0.5, 2]),
+                ("swing", [1.33, 0.67, 1.33, 0.67, 1]), ("slow", [2, 2, 2, 2, 2])]
 METERS = [4, 4, 3, 5, 6, 7]
 # tempo ranges (SETUP page 3): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
 # (pad breathing, bells, the drone's bar swell) feel the beat at half speed and the arpeggio counts in 8ths.

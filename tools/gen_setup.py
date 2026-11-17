@@ -143,7 +143,8 @@ SAVE_ARRAYS = [("acsroles", 12), ("acslens", 12), ("acssp", 12), ("acsst", 96), 
 # (added after the arrays, so a line saved before them still loads: they take these defaults)
 SAVE_EXTRA = [("acsink", 0), ("acblur", 0), ("acswell", 0), ("acharmx", 0), ("acpump", 0), ("acpumpd", 0.5),
               ("acduck", 0), ("acjour", 0), ("acjpad", 0), ("acjdrone", 0), ("acjstrike", 0), ("acrvpre", 0),
-              ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1)]
+              ("acrvera", 3), ("acsname", 0), ("acstonic", -1), ("acsscale", 0), ("acspark", 0), ("acsparko", 1),
+              ("acmeisel", 0), ("acbrsel", 0)]
 SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 SAVE_LEN = SAVE_EXTRA_AT + len(SAVE_EXTRA)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
