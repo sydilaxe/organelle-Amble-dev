@@ -206,9 +206,9 @@ MOTION_ENGINE_WEIGHTS = [0.4, 2.0, 1.5, 0.9, 0.9, 0.5]
 # level and equal peaks (the short, spiky wood and blip would be too loud at equal level) - see tools/ci_check.py;
 # then the decay in ms on the bells, and the motion's decay as a factor of its piece decay (250-950 ms)
 STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2, kalimba=0.7, steel=0.9,
-                             pluck=0.85, bowl=1.0, plate=1.0, crystal=1.0, lpg=1.0),
+                             pluck=0.85, bowl=0.62, plate=1.0, crystal=0.57, lpg=7.5),
                    motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0, kalimba=8.0, steel=8.0,
-                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=8.0))
+                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=48.0))
 STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000,
                   bowl=7000, plate=3800, crystal=5200, lpg=1500)
 STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
