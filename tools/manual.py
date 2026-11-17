@@ -124,10 +124,10 @@ for _var, _name, _g in U.LAYER_KEYS:
         "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (
-            " Aux and this key held, a low key picks the motion's rhythm, C-B: the Euclidean patterns 3/8, 5/8, 5/12, "
+            " Held, a low key picks the motion's rhythm (then it neither opens SHAPE nor toggles), C-B: the Euclidean patterns 3/8, 5/8, 5/12, "
             "7/16, 5/13, 4/11, 7/12, 3/7, 5/16, 9/16, 4/9, 11/16 (the same key again: the piece's own; kept in a saved "
             "piece)." if _name == "motion" else
-            " Aux and this key held, a low key picks the bells' phrase rhythm, C-B: even, long-short, short-long, "
+            " Held, a low key picks the bells' phrase rhythm (then it neither opens SHAPE nor toggles), C-B: even, long-short, short-long, "
             "gallop, waltz, dotted, clave, triplet, sparse, rush, swing, slow (the same key again: the piece's own; "
             "kept in a saved piece)." if _name == "bells" else
             " On its SHAPE page knob 1 is the sub's sound: sine (as always), warm (rounder, with the octave), pulse "

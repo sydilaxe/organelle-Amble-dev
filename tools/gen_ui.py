@@ -122,7 +122,7 @@ def keys():
     c.c(kb, 1, c.obj("v ackn"), 0)
     run_steps(c, (kb, 0), [If("ackv > 0", [
         V("acauxused", "acauxheld || acauxused"),
-        # top E (motion) / D# (bells) held: with aux, a low key picks its rhythm
+        # top E (motion) / D# (bells) held: a low key picks its rhythm
         If(f"ackn == {MOTION_KEY} || ackn == {BELLS_KEY}", [V("acrkey", f"1 + (ackn == {BELLS_KEY})")]),
         # top B held: the next key is a slot (low C..B = 1-12, top C..D# = 13-16) - loaded, or with aux saved
         If(f"ackn == {SAVE_KEY}", [X("1; 0; 0", "v acbdown", "v acbused", "v acbcmp"),
@@ -192,12 +192,12 @@ def keys():
     for i, f in enumerate(low):
         b = c.obj("t b")
         c.c(lsel, i, b, 0)
-        # aux + a low key: that SETUP page
-        run_steps(c, (b, 0), [If("acauxheld", [
-            # aux + top E / D# held: the motion's / the bells' rhythm; otherwise that SETUP page
-            If("acrkey == 1", [V("acrsel", str(i)), Call("ac-mrhypick")], [
-                If("acrkey == 2", [V("acrsel", str(i)), Call("ac-brhypick")], [If(f"{i} < {NSET}", [
-                    V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])])])], f)])
+        # top E / D# held (with or without aux): a low key picks the motion's / the bells' rhythm - and the held key
+        # then neither opens its SHAPE page nor takes the layer in / out when let go; aux + a low key: that SETUP page
+        pick = [V("acrsel", str(i)), Send("ac-shpstop"), V("acshkh", "1")]
+        run_steps(c, (b, 0), [If("acrkey == 1", pick + [Call("ac-mrhypick")], [
+            If("acrkey == 2", pick + [Call("ac-brhypick")], [If("acauxheld", [If(f"{i} < {NSET}", [
+                V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])], f)])])])
         c.col(170)
     for i, f in enumerate(top):
         b = c.obj("t b")

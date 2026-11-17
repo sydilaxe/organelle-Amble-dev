@@ -56,7 +56,7 @@ LOW = {
 # top octave, for each name in gen_ui.TOP_KEYS
 LAYERS = {f"{n} in/out | hold: {n} SHAPE | aux: {n} page": n for _, n, _ in U.LAYER_KEYS}
 TOP = {k: (n.upper(), ["tap: in / out", "hold: SHAPE page", "aux + tap: its page"]
-           + (["aux + held + low key:", "its rhythm (C-B)"] if n in ("motion", "bells") else []), "layer")
+           + (["held + low key:", "its rhythm (C-B)"] if n in ("motion", "bells") else []), "layer")
        for k, n in LAYERS.items()}
 TOP.update({
     "input mode | hold: INPUT page | aux: capture": ("INPUT", ["tap: next input mode", "hold: INPUT page", "aux + tap: capture",
@@ -220,7 +220,6 @@ def aux_panel(c, x, y, w):
     text_block(c, x0 + col, y - 16, col - 10, [
         ("+ low key:", "that SETUP page, C = 1 to B = 12 (keyboard above)."),
         ("+ top B, + key:", "save to that slot (low C-B = 1-12, top C-D# = 13-16)."),
-        ("+ top E / D#, + low key:", "the motion's Euclidean rhythm / the bells' phrase rhythm (C-B; again: auto)."),
     ])
     # with a top key
     layers, others = aux_top()

@@ -120,8 +120,8 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
         page (sound, tone, drive, width); aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
-        3 its level, 4 its reverb send; aux leaves. Aux + E (motion) or
-        D# (bells) held, + a low key C..B: its rhythm (again: auto)
+        3 its level, 4 its reverb send; aux leaves. E (motion) or D#
+        (bells) held + a low key C..B: its rhythm (again: auto)
   G#  input mode: auto / reso / cloud / tape / ghost / bands / vocode /
       morph; hold: the INPUT page (mode, In, Follow you, reverb send);
       aux: capture 8 s of input (cloud + a memory)

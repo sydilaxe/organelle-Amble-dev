@@ -1034,6 +1034,11 @@ log, _ = run([(50, "ac-setseed 7"), (1000, "aux 1"), (1050, "notesRaw 76 100"), 
               (2400, "notesRaw 75 0"), (2450, "aux 0")], 3)
 ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
 check(ts == ["motion 5/12", "bells waltz", "bells auto"], f"aux + top E / D# + a low key: rhythms ({ts})")
+# the same without aux: top E held + a low key - the rhythm, and the held key neither toggles nor opens SHAPE
+log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 76 100"), (1200, "notesRaw 65 100"), (1250, "notesRaw 65 0"),
+              (2000, "notesRaw 76 0")], 3, prints=("ac-sett0",))
+ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+check(ts == ["motion 4/11"] and "ac-sett0" not in log, f"top E held + low F: a motion rhythm, nothing else ({ts})")
 
 # a layer key held: its SHAPE page - Tone down darkens, up thins, Width 0 is mono; a tap still takes it in / out
 import numpy as np
