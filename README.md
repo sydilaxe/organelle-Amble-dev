@@ -52,9 +52,9 @@ The layers and their rhythms:
   - low white keys C, D, E, F: the knob pages SHAPE, SPACE, PIECE, PERFORM; the black keys beside them: MIX 1
     (C#), MIX 2 (D#), SENDS 1 (F#), SENDS 2 (G#);
   - low G: hold for **Root** and press a key, play a MIDI note or turn knob 1;
-  - low A chord change now (hold it to pick another next chord), A# **Resolve** (the tonic as open fifths, held),
+  - low A chord change now (hold it: the **CHORD** page, to pick the next chord), A# **Resolve** (the tonic as open fifths, held),
     B next section (hold it: hold section);
-  - top C to G: the layers in or out (aux: back to auto); G# input mode (aux: capture), A **Freeze** (aux:
+  - top C to G: the layers in or out (aux: the layer's page - its sound, in / out / auto, level and reverb send); G# input mode (aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
   - aux + a low key opens that SETUP page.
 - **Your own form:** SETUP FORM, SECTIONS and SECTION MIX build a piece section by section: roles, lengths, pad

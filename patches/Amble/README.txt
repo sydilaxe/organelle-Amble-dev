@@ -99,8 +99,9 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   G   ROOT: hold it and press a key, play a MIDI note or turn knob 1 -
       that note is the next key (while G is up, MIDI notes play)
   G#  SENDS 2 page (textures, cloud, atmosphere, input)
-  A   tap: chord change now (to the next chord shown); hold: pick another
-      next chord, again every 0.7 s - let go when you like it
+  A   tap: chord change now (to the next chord shown); hold: the CHORD
+      page - knob 1 picks the next chord from the key's chords, knob 3 up:
+      the piece picks another, knob 4 On pick: next change / now; aux leaves
   A#  RESOLVE: the tonic as open fifths, held - no modulation, no
       dissonant chords - until pressed again (a CC mapped to resolve
       holds it from a pedal)
@@ -108,7 +109,9 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
       hold again: moves on)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
-        cloud - tap: in (if silent) / out (if playing); aux + tap: auto
+        cloud - tap: in (if silent) / out (if playing); aux + tap: the
+        layer's page - knob 1 its sound (or auto), 2 out / auto / in,
+        3 its level, 4 its reverb send; aux leaves
   G#  input mode: auto / reso / cloud / tape / ghost / bands / vocode /
       morph; aux: capture 8 s of input (cloud + a memory)
   A   FREEZE: the reverb tail and the cloud hold still; again to release.

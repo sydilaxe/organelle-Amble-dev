@@ -92,9 +92,11 @@ FKEY_DESC = {
                    "(it arrives with the next chord change). While it is not held, MIDI notes play as usual.",
     "Resolve": "The harmony moves to the tonic as open fifths (root, 5th, octave, 12th) and stays there - no "
                "modulation, no dissonant chords - until you press it again. A CC mapped to resolve does it too.",
-    "chord change now": "Tap: move to the next chord (the one the screen shows) at once - the footswitch does the "
-                        "same. Hold: after half a second another next chord is picked, and again every 0.7 s while "
-                        "you hold; let go when line 2 shows one you like.",
+    "chord change now (hold: CHORD page)": "Tap: move to the next chord (the one the screen shows) at once - the "
+                        "footswitch does the same. Hold half a second: the CHORD page (the key and scale on top). "
+                        "Knob 1 picks the next chord from the key's chords, row 2 shows the chord now, knob 3 turned "
+                        "fully up lets the piece pick another, knob 4 sets On pick: next change (the pick waits for "
+                        "the next change, or a tap on low A) or now (it plays at once). Aux leaves the page.",
     "next section (hold: hold section)": "A tap (on its release): jump to the next section of the form. Held "
                                          "0.6 s: hold the section - it plays past its length (HOLD shows); hold "
                                          "again and the piece moves on within 2 s.",
@@ -109,9 +111,11 @@ FKEY_DESC = {
     "new piece | aux: SAVES": "A new piece with a new seed (ready, if stopped). Aux: the SAVES page.",
 }
 for _var, _name, _g in U.LAYER_KEYS:
-    FKEY_DESC[f"{_name} in/out | aux: auto"] = (
+    FKEY_DESC[f"{_name} in/out | aux: {_name} page"] = (
         f"Bring the {_name} in (on at its MIX level, whatever the piece does) if it is silent, or take it out if "
-        "it plays. Aux: back to auto - the piece and its sections decide. The fade takes SETUP LIVE Key fade.")
+        "it plays. The fade takes SETUP LIVE Key fade. Aux + tap: the layer's page - knob 1 its sound (auto: the "
+        "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
+        "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page.")
 
 SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "MIDI out": (", ".join(S.MOUT), "Tempo = MIDI clock (24 per beat) following the piece's tempo, with Start and "
@@ -425,7 +429,7 @@ def story():
                  ["Top strip", "The form: one bar per section (height = energy), the current one inverted, a "
                                "playhead. In DRIFT: the energy and the section's progress."],
                  ["Line 2", "The chord now > the next chord (picked ahead, so you see what is coming; hold low A "
-                            "for another). Under it a bar shrinks to the change. Messages take the line briefly."],
+                            "to pick it on the CHORD page). Under it a bar shrinks to the change. Messages take the line briefly."],
                  ["Left", "The 4 pad voices as dots on a pitch ladder (they glide between chords); your held notes "
                           "as boxes; tonic ticks; a breath bar. A pitch heard on the input is a line across it."],
                  ["Right", "The motion layer's Euclidean pattern with its cursor, and the tempo. While audio comes in: "
@@ -670,7 +674,7 @@ def story():
                                                    "page 4; lower Dens or choose Bloom instead of Shimmer."],
                  ["The Organelle keys play no notes", "They are functions; play from a MIDI controller."],
                  ["Silence and READY on the screen", "A piece waits: top A# starts it."],
-                 ["A layer never comes in", "Check its layer key (aux + key = back to auto), its MIX level and, "
+                 ["A layer never comes in", "Check its layer key (aux + key: its page, Play auto), its MIX level and, "
                                             "with Form custom, its Play in SECTION MIX."],
                  ["Nothing happens at the end", "COMPOSE ended (FIN): press top A# or B for a new piece, or "
                                                 "switch to DRIFT with aux + top A#."],

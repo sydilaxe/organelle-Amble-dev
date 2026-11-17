@@ -30,7 +30,8 @@ scheduler fell behind, with what had just changed.
 
 ## 2. Feel (one hand, while playing a MIDI keyboard with the other)
 
-- **Low A**: tap = the next chord now; hold = another next chord every 0.7 s. Is 0.5 s before the first re-pick right?
+- **Low A**: tap = the next chord now; hold 0.5 s = the CHORD page. Does knob 1 pick from the key's chords, and does a
+  tap on low A then play the pick? Aux + a top layer key: the layer's page (sound, play, level, send); aux leaves.
 - **Top B**: tap = new piece (on release); hold 0.6 s = COMPARE; hold + a key = load that slot; aux + hold + key =
   save. Does a tap ever turn into COMPARE by accident? Is 0.6 s right?
 - **Aux + top A** (ANCHOR): set, change a few knobs, glide back. Is 8 s (SETUP 15) a good default?

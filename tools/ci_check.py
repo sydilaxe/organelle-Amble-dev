@@ -591,9 +591,9 @@ F = [(2100, "notesRaw 81 100"), (2150, "notesRaw 81 0")]
 F2 = [(2300, "notesRaw 81 100"), (2350, "notesRaw 81 0")]
 cases = [toasts(C), toasts(C + C2), toasts([(2000, "aux 1")] + C + [(2500, "aux 0")]), toasts(F), toasts(F + F2)]
 check(cases[0] in (["cloud in"], ["cloud out"]) and len(cases[1]) == 2 and cases[1][0] != cases[1][1]
-      and cases[2] == ["cloud auto"] and cases[3] == ["freeze: verb + cloud"]
+      and cases[2] == [] and cases[3] == ["freeze: verb + cloud"]
       and cases[4] == ["freeze: verb + cloud", "freeze released"],
-      f"top G = cloud in / out, aux + top G = auto, top A = Freeze, again = released ({cases})")
+      f"top G = cloud in / out, aux + top G = its page (no toast), top A = Freeze, again = released ({cases})")
 mt = toasts([(40, "acsync 1"), (2000, "ac-rtin 252"), (4000, "ac-rtin 250")])
 check("stopped - A# to start" in mt and "playing again" in mt, "following a clock: MIDI Stop / Start stop and start")
 
@@ -962,7 +962,8 @@ check("ac-toast: list loaded slot 3" in log and log.splitlines()[-1] != "" and
       "Prog change 3 loads save slot 3")
 
 # 55. the play screen: line 2 is the chord now > the next one, and the next one is the one that comes; holding
-#     low A picks another next chord (every 0.7 s) without a change; a tap changes to the shown one
+#     low A opens the CHORD page: knob 1 picks the next chord from the key's (no change), a tap on low A plays it,
+#     On pick now plays a pick at once, and aux leaves
 log, _ = run([(50, "actime 0.1"), (60, "ac-setseed 2026")], 40, prints=("ac-oledtop",))
 L = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-oledtop")]
 D = [x for i, x in enumerate(L) if i == 0 or x != L[i - 1]]
@@ -970,14 +971,29 @@ D = [x for i, x in enumerate(L) if i == 0 or x != L[i - 1]]
 #  e.g. when the key plan moves the key at a section)
 bad = [(a, b) for a, b in zip(D[1:], D[2:]) if a.split(" > ")[0] != b.split(" > ")[0] and a.split(" > ")[1] != b.split(" > ")[0]]
 check(len(D) > 8 and not bad, f"chord line: each next chord is the one that plays ({len(D)} lines, {bad[:2]})")
-log, _ = run([(50, "ac-setseed 7"), (2900, "h-mark bang"), (3000, "notesRaw 69 100"), (4400, "notesRaw 69 0"),
-              (6000, "notesRaw 69 100"), (6050, "notesRaw 69 0")], 8, prints=("ac-oledtop", "h-mark"))
-part = [l.split("list ", 1)[1] for l in log.split("h-mark: bang")[1].splitlines() if l.startswith("ac-oledtop")]
-cut = next((i for i, x in enumerate(part) if x.split(" > ")[0] != part[0].split(" > ")[0]), len(part))
-held, after = part[:cut], part[cut:]
-check(len({h.split(" > ")[0] for h in held}) == 1 and len({h.split(" > ")[1] for h in held}) >= 2 and after
-      and after[0].split(" > ")[0] == held[-1].split(" > ")[1],
-      f"low A held picks other next chords ({held}), a tap plays the shown one ({after[:1]})")
+log, _ = run([(50, "ac-setseed 7"), (2900, "h-mark bang"), (3000, "notesRaw 69 100"), (3700, "notesRaw 69 0"),
+              (4000, "knob1 0.05"), (4300, "knob1 0.65"), (4500, "h-mark bang"), (6000, "notesRaw 69 100"),
+              (6050, "notesRaw 69 0"), (6500, "knob4 0.9"), (6600, "h-mark bang"), (6700, "knob1 0.35"),
+              (6800, "h-mark bang"), (7500, "aux 1"), (7550, "aux 0"), (7600, "h-mark bang")], 9,
+             prints=("ac-oledtop", "h-mark", "ac-sett0", "ac-sett1"))
+seg = log.split("h-mark: bang")
+grab = lambda t, pre: [l.split(pre, 1)[1].split()[0] for l in t.splitlines() if pre in l]
+picks = grab(seg[1], "ac-sett1: 1 Next ")
+nows2 = [x.split(" > ")[0] for x in grab(seg[2], "ac-oledtop: list ")]
+# (the play screen's line: "now > next" as picked, then the change: the pick is now)
+t4 = [l.split("list ", 1)[1] for l in seg[3].splitlines() if l.startswith("ac-oledtop")]
+pickb, nows4 = [t4[0].split(" > ")[1]] if t4 else [], [t4[1].split(" > ")[0]] if len(t4) > 1 else []
+check("ac-sett0: list CHORD" in seg[1] and len(set(picks)) >= 2 and picks and nows2
+      and picks[-1] in nows2 and pickb and nows4 and nows4[0] == pickb[0] and "ac-sett" not in seg[5],
+      f"low A held: the CHORD page, knob 1 picks ({picks}), a tap plays it ({nows2}), On pick now at once "
+      f"({pickb} -> {nows4}), aux leaves")
+# aux + a layer key: its page; knob 2 (Play) in / out / auto; knob 1 its sound
+log, _ = run([(50, "ac-setseed 7"), (2000, "aux 1"), (2050, "notesRaw 76 100"), (2100, "notesRaw 76 0"), (2200, "aux 0"),
+              (2500, "knob2 0.9"), (3000, "knob1 0.3"), (3500, "knob2 0.01"), (4000, "aux 1"), (4050, "aux 0")], 5,
+             prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-toast"))
+check("ac-sett0: list MOTION" in log and "ac-sett2: 2 Play in" in log and "ac-sett2: 2 Play out" in log
+      and "ac-sett1: 1 Sound fm" in log and "ac-toast" not in log,
+      "aux + top E: the MOTION page (Play in, out; Sound fm)")
 
 # 56. the input stage computes only while In is up: at In 0 it hears nothing (its level stays 0), raised it listens
 def lvprobe(c):
@@ -1217,7 +1233,8 @@ check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet
       f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
-#     what is there. SETUP's 21 pages, the 8 knob pages, keys and toasts, the profile's parts
+#     what is there. SETUP's 21 pages, the quick pages (CHORD, the layers'), the 8 knob pages, keys and toasts,
+#     the profile's parts
 import re
 ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
 t = 2000
@@ -1226,6 +1243,13 @@ for pg in range(21):
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
 t += 2000
+for k in [None] + list(range(72, 80)):       # CHORD (low A held), then aux + each layer key
+    ev += [(t, f"notesRaw 69 100"), (t + 700, f"notesRaw 69 0")] if k is None else \
+        [(t, "aux 1"), (t + 50, f"notesRaw {k} 100"), (t + 100, f"notesRaw {k} 0"), (t + 150, "aux 0")]
+    for j in range(4):
+        ev += [(t + 800 + 200 * j, f"knob{j + 1} 0.999"), (t + 900 + 200 * j, f"knob{j + 1} 0.001")]
+    ev += [(t + 1800, "aux 1"), (t + 1850, "aux 0")]
+    t += 2200
 for k in (60, 61, 62, 63, 64, 65, 66, 68, 70, 72, 80, 81, 67):
     ev += [(t, f"notesRaw {k} 100"), (t + 50, f"notesRaw {k} 0"), (t + 300, "knob2 0.9"), (t + 400, "knob2 0.1")]
     t += 900

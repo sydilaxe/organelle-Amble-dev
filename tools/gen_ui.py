@@ -40,18 +40,18 @@ NP = len(PAGES)
 LOW_PAGES = {0: 0, 1: 5, 2: 1, 3: 6, 4: 2, 5: 7, 6: 3, 8: 4}     # low key -> knob page (data.PAGE_NAMES)
 SAVES_PAGE = 12                         # SETUP SAVES (aux + top B)
 LOW_KEYS = ["SHAPE page", "MIX 1 page", "SPACE page", "MIX 2 page", "PIECE page", "PERFORM page", "SENDS 1 page",
-            "Root (hold)", "SENDS 2 page", "chord change now", "Resolve", "next section (hold: hold section)"]
+            "Root (hold)", "SENDS 2 page", "chord change now (hold: CHORD page)", "Resolve", "next section (hold: hold section)"]
 LAYER_KEYS = [("acmdrone", "drone", "acgdrone"), ("acmsub", "sub", "acgsub"), ("acmpad", "pads", "acgpad"),
               ("acmbell", "bells", "acgbell"), ("acmmotion", "motion", "acgmotion"), ("acmtex", "textures", "acgtex"),
               ("acmatm", "atmosphere", "acgatm"), ("acmcloud", "cloud", "acgcloud")]
-TOP_KEYS = [f"{n} in/out | aux: auto" for _, n, _ in LAYER_KEYS] + [
+TOP_KEYS = [f"{n} in/out | aux: {n} page" for _, n, _ in LAYER_KEYS] + [
     "input mode | aux: capture", "Freeze | aux: ANCHOR", "start / stop | aux: COMPOSE / DRIFT",
     "new piece | hold: COMPARE | + key: load | aux: SAVES"]
 SAVE_KEY = 83                           # top B: tap = new piece; held, a key loads its slot (aux: saves to it)
 ANCHOR_KEY = 81                         # top A: aux + tap = ANCHOR (set, then glide back), aux + hold = anchor here
 FKEYS = LOW_KEYS + TOP_KEYS
 ROOT_KEY = 60 + LOW_KEYS.index("Root (hold)")
-CHORD_KEY = 60 + LOW_KEYS.index("chord change now")
+CHORD_KEY = 60 + LOW_KEYS.index("chord change now (hold: CHORD page)")
 SECTION_KEY = 60 + LOW_KEYS.index("next section (hold: hold section)")
 
 
@@ -137,7 +137,7 @@ def keys():
          # top A let go (aux + A): a tap glides back to the anchor (or sets it); a hold already anchored here
          If(f"ackn == {ANCHOR_KEY} && acanp", [Send("ac-ancstop"), If("acanheld == 0", [Call("ac-anchortap")]),
                                               X("0; 0", "v acanp", "v acanheld")]),
-         # low A let go: a tap changes to the next chord now; a hold already picked others (ac-reroll)
+         # low A let go: a tap changes to the next chord now; a hold already opened the CHORD page
          If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")]),
          # low B let go: a tap is the next section; a hold (0.6 s) already held or released the section
          If(f"ackn == {SECTION_KEY} && acsbk >= 0", [Send("ac-sbstop"), If("acsbk == 0", [Call("ac-secnow")]),
@@ -147,11 +147,12 @@ def keys():
     tsel = c.ch((mo, 1), "- 12", "sel " + " ".join(str(i) for i in range(12)))
     c.col()
 
-    def layer(var, label, g):
-        # tap: in (always on) if it's silent now, out if it plays; aux + tap: back to auto (the piece decides)
-        return [If("acauxheld", [V(var, "1"), Toast(label + " auto")],
-                   [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")])]),
-                V("acfade", _S.LFADE), Call("ac-layers")]
+    def layer(i, var, label, g):
+        # tap: in (always on) if it's silent now, out if it plays; aux + tap: the layer's page (its sound, in / out
+        # / auto, level, reverb send)
+        return [If("acauxheld", [V("acsetup", "1"), V("acsetpg", str(_S.LAYER_PAGE0 + i)), Call("ac-oledsetup")],
+                   [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")]),
+                    V("acfade", _S.LFADE), Call("ac-layers")])]
 
     def page(p):
         return [V("acpage", str(p)), If("acsetup", [V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")]),
@@ -159,14 +160,14 @@ def keys():
 
     low = [page(LOW_PAGES[k]) if k in LOW_PAGES else None for k in range(12)]
     low[7] = [V("acroothold", "1"), Toast("root: note or knob 1")]
-    low[9] = [V("acrr", "0"), Arm("ac-reroll", "500", stop="ac-rrstop")]
+    low[9] = [V("acrr", "0"), Arm("ac-chordhold", "500", stop="ac-rrstop")]
     low[10] = [Call("ac-resolvetoggle")]
     low[11] = [V("acsbk", "0"), Arm("ac-sbhold", "600", stop="ac-sbstop")]      # (its release: above)
     proc(c, "ac-secnow", [V("acsec", "acsec+1"), Call("ac-section"), Toast("next section")])
     proc(c, "ac-sbhold", [V("acsbk", "1"), V("acsecfz", "1 - acsecfz"),
                           If("acsecfz", [Toast("section held")], [Toast("section moves on")]), Call("ac-oledbottom")])
     for i, lk in enumerate(LAYER_KEYS):
-        proc(c, f"ac-laykey{i}", layer(*lk))
+        proc(c, f"ac-laykey{i}", layer(i, *lk))
     top = [[Call(f"ac-laykey{i}")] for i in range(len(LAYER_KEYS))] + [
         [If("acauxheld", [Call("ac-capture")],
             [V("acinmode", "(acinmode+1) % 8"), Call("ac-inputupd"), Call("ac-inmodetoast"), Call("ac-scr5")])],
@@ -192,8 +193,8 @@ def keys():
     proc(c, "ac-cmphold", [If("acbdown && acbused == 0", [V("acbcmp", "1"), Call("ac-cmpon")])])
     proc(c, "ac-ancheld", [V("acanheld", "1"), Call("ac-anchorset")])
     proc(c, "ac-rootset", [V("acpend", "acrootn"), Send("ac-keytoast"), Call("ac-chordnext")])
-    # low A held: another next chord now, and again every 0.7 s while it is held
-    proc(c, "ac-reroll", [V("acrr", "1"), Call("ac-chordnext"), Arm("ac-reroll", "700", stop="ac-rrstop")])
+    # low A held 0.5 s: the CHORD page (knob 1 picks the next chord; gen_setup)
+    proc(c, "ac-chordhold", [V("acrr", "1"), V("acsetup", "1"), V("acsetpg", str(_S.CHORD_PAGE)), Call("ac-oledsetup")])
     proc(c, "ac-chordnow", [Call("ac-change"), Toast("chord change")])
     proc(c, "ac-resolvetoggle", [V("acres", "1 - acres"), Call("ac-resolveupd")])
     proc(c, "ac-resolveupd", [Call("ac-change"),
@@ -207,8 +208,10 @@ def keys():
     a = c.ch(c.recv("aux"), "sel 0")
     b = c.to((a, 1), "t b")
     run_steps(c, (b, 0), [X("1; 0; acnow", "v acauxheld", "v acauxused", "v acauxt")])
-    run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxused == 0", [If("acsetup", [
-        V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")], [
+    run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [
+        # (a quick page: aux leaves it)
+        V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")], [
+        V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")])], [
         V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])
     f = c.ch(c.recv("fs"), "sel 0")
     c.c(c.to((f, 1), "t b"), 0, c.obj("s ac-change"), 0)

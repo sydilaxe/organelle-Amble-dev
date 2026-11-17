@@ -14,7 +14,7 @@ GLOBALS = dict(
     acfamc=0, acflxf=4000,
     acxt=48, acxscf=0, acxsci=0, acxdeg=0, acqt=0, acqd=0, acqr=0, acqn=0, acqi=0, acq3=0, acq4=0, acq6=0, acq7=0,
     acq8=0, acchn=0, acnxn=0, acchgt=0,
-    acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1,
+    acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
     acmxq=0, acmdrone=1, acmgd=1, acmgs=1, acmgp=1, acmgb=1, acmgm=1, acmgt=1, acmgc=1, acmga=1, acmpad=1, acmtex=1, acmcloud=1, acmbell=1, acmmotion=1, acmsub=1, acmatm=1, acedrone=1, acsxdrone=0, acsldrone=1, acesub=1, acsxsub=0, acslsub=1, acepad=1, acsxpad=0, acslpad=1, acebell=1, acsxbell=0, acslbell=1, acemotion=1, acsxmotion=0, acslmotion=1, acetex=1, acsxtex=0, acsltex=1, aceatm=1, acsxatm=0, acslatm=1, acecloud=1, acsxcloud=0, acslcloud=1, acscount=0, acsecc=0, acsecsel=0, acsecfol=1, acsecq=0, acsecqn=0, acst=0, acslay=0, acspe=0,
@@ -708,8 +708,9 @@ def change():
         # chord is picked now
         If("acfirst", [Call("ac-chordnext")]),
         # a key move asked for since (Root, SETUP Key, the key plan, a note held) wins; while resolved it waits
-        V("acxt", "if(acres, actonic, if(acpend >= 0, 36 + acpend, acxt))"),
-        X("acxt != actonic; acxt; if(acres, acpend, -1)", "v acmodflag", "v actonic", "v acpend"),
+        # (a chord picked on the CHORD page wins: a key move waits for the change after it)
+        V("acxt", "if(acres, actonic, if(acpend >= 0 && acxpick == 0, 36 + acpend, acxt))"),
+        X("acxt != actonic; acxt; if(acres || acxpick, acpend, -1); 0", "v acmodflag", "v actonic", "v acpend", "v acxpick"),
         If("acxscf && acfirst==0", [V("acsci", "acxsci"), Call("ac-loadscale")]),
         V("acdeg", "if(acmodflag || acfirst || acres, 0, int(acxdeg) % int(acn))"),
         V("acprogi", "acprogi + (acrole==6)"),
@@ -752,7 +753,7 @@ def change():
               V("acchn", "acqn"), Call("ac-chordnext")]
     steps += [Later("ac-grains", 13), Later("ac-change2", 29, stop="ac-chgstop")]
     # the next chord: a key move (pending root, or by chance in DRIFT), a chance scale change, the next degree
-    # (or the opening progression in a return section); then its name for the screen. aux + low A picks again.
+    # (or the opening progression in a return section); then its name for the screen.
     proc(c, "ac-chordnext", [
         RNG,
         V("acxt", "if(acres, actonic, if(acpend>=0, 36 + acpend, if(acmode==0 && ackeyc == 0 && acr1 < 0.03 + acweird*0.15 && acfirst==0, "
@@ -763,9 +764,11 @@ def change():
         V("acxdeg", "if(acxt != actonic || acfirst || acres, 0, if(acrole==6 && acprogi < acprogn, acprog[int(acprogi)], "
                     "if(acr1 < 0.1 + 0.15*(1-acweird) && acdeg != 0, 0, "
                     "((int(acdeg) + int(if(fmod(acr2*17.3, 1) < acharmx, acmoves[int(acr2*12)], acmovp[int(acr2*12)]))) % int(acn) + int(acn)) % int(acn))))"),
-        X("acxt; acxdeg; acres", "v acqt", "v acqd", "v acqr"), Call("ac-chordname"), V("acnxn", "acqn"),
-        Send("ac-scr2"),
+        Call("ac-chordshow"),
     ])
+    # the next chord's name, on the play screen (and the CHORD page, low A held, picks it: gen_setup)
+    proc(c, "ac-chordshow", [X("acxt; acxdeg; acres", "v acqt", "v acqd", "v acqr"), Call("ac-chordname"),
+                             V("acnxn", "acqn"), Send("ac-scr2")])
     # a chord's name (an index into CHORD_NAMES): its root, and its 3rd and 5th found in the scale
     proc(c, "ac-chordname", [
         X("0; 0; 0; 0; 0", "v acq3", "v acq4", "v acq6", "v acq7", "v acq8"),
