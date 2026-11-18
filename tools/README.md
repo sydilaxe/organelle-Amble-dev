@@ -23,7 +23,7 @@ python3 keymap.py OUT.pdf      the key map alone
 | `gen_perform.py` | performing: the morph engine, ANCHOR, COMPARE, the changed check, macros, SINK / SWELL / DUCK, PUMP, JOURNEY, CC OUT, GLINT's engine |
 | `gen_ui.py` | the Organelle keys, knobs (pickup), aux, footswitch, the text screen lines, the LED |
 | `gen_oled.py` | the OLED: the play view, the MIX view, the knob pop-up (SETUP draws its own page) |
-| `gen_setup.py` | SETUP: the 21 pages (`setup_pages()`), what each knob does (`setup()`), settings.txt, the CPU guard |
+| `gen_setup.py` | SETUP: the 28 pages and the quick pages (`setup_pages()`), what each knob does (`setup()`), settings.txt, the CPU guard |
 | `gen_saves.py` | SAVES: saves.txt, loading (through the morph), factory pieces (factory.txt) |
 | `gen_midi.py` | MIDI out (clock, notes) and MIDI clock in |
 | `gen_live.py` | MIDI in, the live voices, CC MAP and Mix CC targets, listening, audio analysis, memories, the 100 ms clock |
@@ -33,6 +33,7 @@ python3 keymap.py OUT.pdf      the key map alone
 | `gen_verb.py` | the reverbs: Bloom (after Conduit / MidiVerb II), the Hall, the Shimmer |
 | `manual.py`, `readme_text.py` | the PDF manual and the patch's README.txt, from the same data |
 | `keymap.py` | the key map PDF: both octaves drawn with each key's function, aux + key, slots, knob pages |
+| `fanout.py` | the fan-out check every build runs: a control outlet into two hot inlets stops the build unless `fanout_known.txt` lists it (`python3 fanout.py` lists them, `--update` rewrites the list) |
 | `harness.py`, `ci_check.py` | running the patch offline in Pd with timed events, and the checks |
 | `shots.py`, `oledemu.py` | screenshots: the OLED messages of an offline run drawn into PNGs |
 | `gen_log.py` | the performance log (`logs/perf-*.txt`, every 5 s, with the audio meter) and the profile run |

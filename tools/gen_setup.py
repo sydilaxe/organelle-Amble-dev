@@ -1,4 +1,4 @@
-"""SETUP (hold aux 1 s, or aux + a low key for that page): 22 pages of 4 rows, each row set by its knob.
+"""SETUP (hold aux 1 s, or aux + a low key for that page): 29 pages of 4 rows, each row set by its knob.
 
 Where things are:
   the choices of each row        constants below (SPADS, SFORMS, SMORPH ...), next to a comment naming the page
@@ -19,7 +19,11 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                acmap0=2, acmap1=1, acmap2=1, acmap3=1, acmap4=6, acmap5=0, acmap6=3, acsbell=0, acsmot=0, acglide=5, acmodesel=0, acssub=0, acsform=0, acstempo=0, acsmeter=0, acsatm=0, acnsx=0, acchx=0, acslot=0, acslotfull=0, acsvp49=1, acsvp50=1, acsvpp=1, acsetpgl=-1, acmixcc=0, acpgm=0, aclfd=1, acsfd=2,
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
-               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0)
+               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0,
+               achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
+               acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
+               acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acrcell=1, acarc=3, acbassm=1, acctr=1)
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
@@ -33,17 +37,85 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            ["acmorph", "acrecall", "acancg", "acpump", "acpumpd", "acduck", "acduckr"] + \
            [f"acmc{m}{f}" for m in range(4) for f in ("mode", "ta", "da", "tb", "db")] + \
            ["acjour", "acjpad", "acjdrone", "acjstrike", "acrvpre", "acrvera", "acccout", "acccch", "acccbase", "acccrate"] + \
-           ["acspark", "acsparko", "acchpick"]
+           ["acspark", "acsparko", "acchpick"] + \
+           ["achints", "acscope", "acscopeg", "acledm"] + \
+           ["acmelm", "acmutp", "accanon", "accand", "acmovm", "achmvp", "acsecd", "acnewt",     # (LINES, HARMONY,
+            "acphr", "acvlead", "ackplan", "acrests", "acmdev", "acans", "acphase", "acreg",    # PHRASE, DIALOGUE,
+            "acwrite", "acpadm", "acdrsub", "acendp",                                         # WRITING,
+            "acrcell", "acarc", "acbassm", "acctr"]                                           # ARC)
+# (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
 PARTS = ["all", "harmony", "arp only"]
 # SETUP page 4, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
 SGUARD = ["off", "on", "off + log", "on + log"]
 OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everything else right (mono stems)
-NSET = 22                                  # SETUP pages
 SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
                "SECTIONS", "SECTION MIX", "SAVES", "LIVE", "RECALL", "GROOVE", "MACRO A", "MACRO B", "JOURNEY",
-               "COLOUR", "CC OUT", "MEMORY"]
+               "COLOUR", "CC OUT", "MEMORY", "DISPLAY", "LINES", "HARMONY", "PHRASE", "DIALOGUE", "WRITING", "ARC"]
+NSET = len(SETUP_NAMES)                    # SETUP pages
+# SETUP page 23, DISPLAY: hints (a held key's toast, 0.25 s in, says what holding it does), the scope (the play
+# view's middle shows the output, left against right) and its gain, the LED (the piece's state, or pulsing with the
+# drone's beating). Settings, not saved with a piece.
+# SETUP pages 24-28, LINES, HARMONY, PHRASE, DIALOGUE, WRITING: how the piece writes - one motif carried between
+# the bells, the motion and (held, slowly) the pads, in phrases that close and breathe. Saved with the piece. WRITING
+# Writing still turns all of it off at once (the static, droning piece; the choices kept for moving again).
+# Random numbers are drawn only while a feature is on.
+# LINES: the motion's melody (arp: the chord tones as before; 1/f: a melody whose steps are mostly small, now and
+# then large - three dice changing at 1, 2 and 4 steps; grow: the arpeggio adds a note each round, 1, 12, 123, 1234;
+# mutate: an 8-step loop of chord tones whose notes change now and then, by Mutate), and the bells' canon (each
+# bell note echoed an octave, a 5th or two octaves up, later by Canon delay, on the other side)
+# (motif: the bells' motif as counterpoint - its intervals, against the bells' direction (contrary motion), a chord
+# tone on the bar's first step; with Answer motion, a 5th up: the answer to the bells' subject)
+SMELM = ["arp", "1/f", "grow", "mutate", "motif"]
+SMUTP = [("locked", 0), ("10%", 0.1), ("25%", 0.25), ("50%", 0.5)]
+SCANON = ["off", "8va", "5th", "15ma", "motion"]      # (motion: the motion answers each bell, an octave down)
+SCAND = [("1/2 beat", 0.5), ("1 beat", 1), ("2 beats", 2), ("1 bar", 0)]
+# HARMONY: key moves the piece makes on its own between chords: mediants (to the major or minor key a 3rd away,
+# the chord keeping its kind), tonnetz (P, L, R: the chord's 3rd or 5th moves a step, major turns minor), both;
+# how often; secondary dominants (a chord's own V, major, just before it); New types: a piece's own picks also take
+# the types added later (pads, textures, drones, rhythms, scales) - off, a piece picks only the original ones
+SMOVM = ["in key", "mediants", "tonnetz", "both"]
+# (by form: where the form wants tension - often while intensifying and at the climax, now and then while
+# establishing and developing, never in the return)
+SMOVP = [("rare", 0.1), ("some", 0.25), ("often", 0.5), ("by form", 0)]
+SSECD = [("off", 0), ("some", 0.25), ("often", 0.5)]
+# PHRASE: phrases of 4 or 8 chords in pairs, the first ending open (IV then V), the second closed (V then I); the
+# pad voices take the nearest chord tone (common tones held) instead of one each; the key plan of a COMPOSE piece
+# (auto: the piece's own; home: no key moves; fifths, thirds: each section away from home a 5th or a major 3rd
+# further); breath: the bells and the motion rest a bar as a section starts, and now and then for 1-2 bars (bells,
+# motion, or both with the pads dipping)
+SPHR = ["off", "4 chords", "8 chords"]
+SVLEAD = ["as before", "smooth"]
+SKPLAN = ["auto", "home", "fifths", "thirds"]
+SBREATH = [("off", 0), ("some", 0.05), ("often", 0.12)]
+# DIALOGUE: the motif develops (each section also plays it backwards, slower, faster or in fragments); answer
+# (motion: the motion and the bells take 2 bars each in turn; you: the bells answer what you play, with the
+# motif, near your note, and keep answering after you stop, fading out over 12 s); phasing (a second motion voice, on the other side, slowly drifts later, a step every 50 or 16 steps); the
+# register (spaced: the pads below 77, the motion 67-84, the bells 84-103)
+SMDEV = ["fixed", "develops"]
+SANS = ["off", "motion", "you"]
+SPHASE = [("off", 0), ("slow", 0.02), ("faster", 0.06)]
+SREG = ["as before", "spaced"]
+# WRITING: still (none of LINES .. DIALOGUE: the piece as it was - static, droning) or moving; the pads carry the
+# motif (their top voice takes a motif note as a suspension when it is a step from the chord, resolving halfway); the
+# drone subtle (-6 dB) while moving; the ending by phrase (the motion stops, then the bells, the pads and the drone
+# fading last)
+SWRITE = ["still", "moving"]
+SPADM = ["chords", "motif"]
+SDRSUB = ["full", "subtle"]
+SENDP = ["fade", "by phrase"]
+# ARC (page 29): the rhythm shared (the motion's hits on the bells' motif rhythm, twice as fast - your rhythm keys
+# still win); the phrase's arc (dynamics: the bells and motion louder towards its V, softer at the cadence;
+# tension: brighter and more adventurous towards its V, relaxing on the I); the bass (pedal: before a return the
+# drone and sub hold its dominant, resolving home with it; ground: the sub a 4-note line from the motif, bar by bar,
+# under the changing chords); the counter-melody (the distant song voice sings the motif slowly - a third voice)
+SRCELL = ["own", "shared"]
+SARC = ["off", "dynamics", "tension", "both"]
+SBASSM = ["off", "pedal", "ground", "both"]
+SCTR = ["off", "song"]
+SSCOPEG = [("x1", 1), ("x2", 2), ("x4", 4), ("x8", 8), ("x16", 16)]
+SLEDM = ["state", "beat"]
 # SETUP page 22, MEMORY: with Memory on, the knobs you turn in a section are kept for it (acsnapt / acsnapv, a
 # value per section and knob); when that section comes again they glide back over Glide. Saved with the piece.
 SMEMG = [("cut", 0), ("2 s", 2000), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000)]
@@ -61,7 +133,21 @@ SHAPE_X = "dspbmtac"                       # each layer's letter (its SHAPE valu
 INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
 SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the layer key held)
 QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
+# GLIDE (low F held): the glide times you set while playing, together - the same values as their SETUP rows (VOICES
+# Glide, RECALL Morph and Anchor glide, MEMORY Glide); nothing new is saved
+GLIDE_PAGE = SHAPE_PAGE0 + len(LAYER_PAGES)
+QUICK_NAMES += ["GLIDE"]
+# hold pages (a knob-page key held 0.5 s): a SETUP page as a quick page - its rows, and its knobs do what they do
+# there; aux leaves. (SETUP page, the low key: D, D#, E)
+# (and how the piece writes: low C WRITING, C# PHRASE, F# DIALOGUE, G# HARMONY)
+MIRRORS = [("COLOUR", 2), ("GROOVE", 3), ("FORM", 4), ("WRITING", 0), ("PHRASE", 1), ("DIALOGUE", 6), ("HARMONY", 8)]
+MIRROR0 = GLIDE_PAGE + 1
+QUICK_NAMES += [n for n, _ in MIRRORS]
 NALL = NSET + len(QUICK_NAMES)
+# the SETUP page whose rows and knobs a page shows (a mirror shows its SETUP page's)
+SETPG_OF = ("if(acsetpg >= %d, " % MIRROR0 + "".join(f"if(acsetpg == {MIRROR0 + j}, {SETUP_NAMES.index(n)}, "
+                                                    for j, (n, _) in enumerate(MIRRORS)) + "0" + ")" * len(MIRRORS)
+            + ", acsetpg)")
 SCHPICK = ["next change", "now"]
 SPLAYQ = ["out", "auto", "in"]             # a layer's state: 0 out, 1 auto (the piece decides), 2 in
 # a saved slot's name: a word, or auto (its key and scale, kept when it was saved)
@@ -93,7 +179,7 @@ CC_DEFAULTS = [2, 1, 1, 1, 6, 0, 3]          # mod = vibrato, 2 / 7 / 11 = breat
 TARGETS = ["off", "breath", "vibrato", "voice tone", "voice level", "voice type", "hold", "density", "colour",
            "reverb", "swell", "motion", "resolve", "root", "next section", "chord now", "glide",
            "anchor", "compare", "macro 1", "macro 2", "macro 3", "macro 4", "journey step", "sink", "blur",
-           "swell all", "harm", "sparkle"]
+           "swell all", "harm", "sparkle", "writing"]
 TARGET_KNOB = {7: "acdens", 8: "accolor", 9: "acrvmix", 11: "acmotion",       # piece targets: the knob they move
                24: "acsink", 25: "acblur", 26: "acswell", 27: "acharmx"}
 CCSEL = "if(acccsel == 0, 1, " + ", ".join(f"if(acccsel == {j}, {n}" for j, n in enumerate(CCS) if j) + ", 0" + ")" * 7
@@ -163,7 +249,13 @@ SAVE_EXTRA_AT = len(SAVE_SCALARS) + sum(n for _, n in SAVE_ARRAYS)
 # then the section memory (MEMORY): a line saved before it lacks it, and it loads empty
 SAVE_TAIL = [("acsnapt", NSNAP * len(KNOBS)), ("acsnapv", NSNAP * len(KNOBS))]
 SAVE_TAIL_AT = SAVE_EXTRA_AT + len(SAVE_EXTRA)
-SAVE_LEN = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
+# then how the piece writes (LINES .. WRITING): a line saved before them takes the defaults
+SAVE_MORE = [(n, GLOBALS[n]) for n in ("acmelm", "acmutp", "accanon", "accand", "acmovm", "achmvp", "acsecd", "acnewt",
+                                       "acphr", "acvlead", "ackplan", "acrests", "acmdev", "acans", "acphase", "acreg",
+                                       "acwrite", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm",
+                                       "acctr")]
+SAVE_MORE_AT = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
+SAVE_LEN = SAVE_MORE_AT + len(SAVE_MORE)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
 SOUND_ONLY = set(KNOBS) | {"acspad", "acsdrone", "acstex", "acschar", "acsbell", "acsmot", "acglide", "acssub",
                           "acsatm"} | {"acm" + n for n in ("drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud")} \
@@ -231,9 +323,9 @@ def settings():
     c.c(c.m((t, 1), "read settings.txt"), 0, td, 0)
     mo = c.ch((t, 0), "text size acsettings", "moses 1")
     got = c.ch(c.m((mo, 1), "0"), "text get acsettings")
-    ln = c.to(got, "t l l")
-    c.c(c.ch((ln, 1), "list split 12"), 0, c.obj("array set acparams"), 0)
-    sp = c.ch((ln, 0), "list split 12")
+    ln = c.to(got, "t b l l")           # (right to left: the knobs, the SETUP values, then apply them)
+    c.c(c.ch((ln, 2), "list split 12"), 0, c.obj("array set acparams"), 0)
+    sp = c.ch((ln, 1), "list split 12")
     up = c.to((sp, 1), "unpack " + " ".join(["f"] * (len(SETTINGS) - 12)))
     for i, n in enumerate(SETTINGS[12:]):     # SETUP values, then the knobs after the first 12 (older files lack them)
         c.c(up, i, c.obj("v " + n), 0)
@@ -407,6 +499,48 @@ def setup_pages():
             ("list 3 Clear sec $1 - up", [("f", f"int(acsec) % {NSNAP} + 1")]),
             ("list 4 Clear all - turn up", None),
         ]),
+        ("DISPLAY", [
+            ("list 1 Hints $1", [("s", "achints", ["off", "on"])]),
+            ("list 2 Scope $1", [("s", "acscope", ["off", "on"])]),
+            ("list 3 Scope gain $1", [("s", "acscopeg", [n for n, _ in SSCOPEG])]),
+            ("list 4 LED $1", [("s", "acledm", SLEDM)]),
+        ]),
+        ("LINES", [
+            ("list 1 Melody $1", [("s", "acmelm", SMELM)]),
+            ("list 2 Mutate $1", [("s", "acmutp", [n for n, _ in SMUTP])]),
+            ("list 3 Canon $1", [("s", "accanon", SCANON)]),
+            ("list 4 Canon delay $1", [("s", "accand", [n for n, _ in SCAND])]),
+        ]),
+        ("HARMONY", [
+            ("list 1 Moves $1", [("s", "acmovm", SMOVM)]),
+            ("list 2 How often $1", [("s", "achmvp", [n for n, _ in SMOVP])]),
+            ("list 3 Dominants $1", [("s", "acsecd", [n for n, _ in SSECD])]),
+            ("list 4 New types $1", [("s", "acnewt", ["off", "on"])]),
+        ]),
+        ("PHRASE", [
+            ("list 1 Phrases $1", [("s", "acphr", SPHR)]),
+            ("list 2 Voicing $1", [("s", "acvlead", SVLEAD)]),
+            ("list 3 Key plan $1", [("s", "ackplan", SKPLAN)]),
+            ("list 4 Breath $1", [("s", "acrests", [n for n, _ in SBREATH])]),
+        ]),
+        ("DIALOGUE", [
+            ("list 1 Motif $1", [("s", "acmdev", SMDEV)]),
+            ("list 2 Answer $1", [("s", "acans", SANS)]),
+            ("list 3 Phasing $1", [("s", "acphase", [n for n, _ in SPHASE])]),
+            ("list 4 Register $1", [("s", "acreg", SREG)]),
+        ]),
+        ("WRITING", [
+            ("list 1 Writing $1", [("s", "acwrite", SWRITE)]),
+            ("list 2 Pads carry $1", [("s", "acpadm", SPADM)]),
+            ("list 3 Drone level $1", [("s", "acdrsub", SDRSUB)]),
+            ("list 4 Ending $1", [("s", "acendp", SENDP)]),
+        ]),
+        ("ARC", [
+            ("list 1 Rhythm $1", [("s", "acrcell", SRCELL)]),
+            ("list 2 Arc $1", [("s", "acarc", SARC)]),
+            ("list 3 Bass $1", [("s", "acbassm", SBASSM)]),
+            ("list 4 Counter $1", [("s", "acctr", SCTR)]),
+        ]),
     ]
 
 
@@ -417,7 +551,7 @@ def setup_rows():
     return [(k + 1,) + tuple(rows[k] for _, rows in pages) for k in range(4)]
 
 def quick_pages():
-    """the quick pages, as setup_pages(): CHORD, then a page per layer"""
+    """the quick pages, as setup_pages(): CHORD, a page per layer, INPUT, a SHAPE page per layer, GLIDE"""
     types = dict(acsubt=SUBTYPES, acsdrone=SDRONES, acssub=SSUBS, acspad=SPADS, acsbell=SBELLS, acsmot=SMOTS, acstex=STEXS, acsatm=SATMS)
     pages = [("CHORD", [
         ("list 1 Next $1  $2/$3", [("s", "acnxn", CHORD_NAMES), ("f", "acxdeg + 1"), ("f", "acn")]),
@@ -450,6 +584,14 @@ def quick_pages():
             ("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
             ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")]),
         ]))
+    pages.append(("GLIDE", [
+        ("list 1 Chords $1", [("s", "acglide", GLIDES)]),
+        ("list 2 Morph $1", [("s", "acmorph", [n for n, _ in SMORPH])]),
+        ("list 3 Anchor $1", [("s", "acancg", [n for n, _ in SANCG])]),
+        ("list 4 Memory $1", [("s", "acmemg", [n for n, _ in SMEMG])]),
+    ]))
+    setup = dict(setup_pages())
+    pages += [(n, setup[n]) for n, _ in MIRRORS]
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -507,6 +649,10 @@ def quick_knobs(item):
            If(at(INPUT_PAGE, 2), knob("acinput")),
            If(at(INPUT_PAGE, 3), [V("acfollow", "acsv")]),
            If(at(INPUT_PAGE, 4), knob("acsndi"))]
+    st += [If(at(GLIDE_PAGE, 1), [V("acglide", f"int(acsv*{len(GLIDES) - 0.01})")]),
+           If(at(GLIDE_PAGE, 2), [V("acmorph", f"int(acsv*{len(SMORPH) - 0.01})")]),
+           If(at(GLIDE_PAGE, 3), [V("acancg", f"int(acsv*{len(SANCG) - 0.01})")]),
+           If(at(GLIDE_PAGE, 4), [V("acmemg", f"int(acsv*{len(SMEMG) - 0.01})")])]
     return st
 
 
@@ -527,7 +673,7 @@ def setup():
     c.c(up, 1, c.obj("v acsv"), 0)
     tb = c.to(up, "t b f")
     c.c(tb, 1, c.obj("v acsk"), 0)
-    item = "acsetpg*4 + acsk"           # the knob turned: page (0..) x 4 + knob (0..3)
+    item = f"{SETPG_OF}*4 + acsk"        # the knob turned: page (0..) x 4 + knob (0..3) (a mirror: its SETUP page's)
 
     def at(page, row):
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
@@ -657,6 +803,41 @@ def setup():
         If(at("MEMORY", 2), [V("acmemg", f"int(acsv*{len(SMEMG) - 0.01})")]),
         If(at("MEMORY", 3), [If("acsv > 0.9 && acsvpm3 <= 0.9", [Call("ac-memclear")]), V("acsvpm3", "acsv")]),
         If(at("MEMORY", 4), [If("acsv > 0.9 && acsvpm4 <= 0.9", [Call("ac-memclearall")]), V("acsvpm4", "acsv")]),
+        If(at("DISPLAY", 1), [V("achints", "acsv > 0.5")]),
+        If(at("DISPLAY", 2), [V("acscope", "acsv > 0.5"), Call("ac-oledall")]),
+        If(at("DISPLAY", 3), [V("acscopeg", f"int(acsv*{len(SSCOPEG) - 0.01})")]),
+        If(at("DISPLAY", 4), [V("acledm", "acsv > 0.5"), Send("ac-led")]),
+        If(at("LINES", 1), [V("acmelm", f"int(acsv*{len(SMELM) - 0.01})")]),
+        If(at("LINES", 2), [V("acmutp", f"int(acsv*{len(SMUTP) - 0.01})")]),
+        If(at("LINES", 3), [V("accanon", f"int(acsv*{len(SCANON) - 0.01})")]),
+        If(at("LINES", 4), [V("accand", f"int(acsv*{len(SCAND) - 0.01})")]),
+        If(at("HARMONY", 1), [V("acmovm", f"int(acsv*{len(SMOVM) - 0.01})")]),
+        If(at("HARMONY", 2), [V("achmvp", f"int(acsv*{len(SMOVP) - 0.01})")]),
+        If(at("HARMONY", 3), [V("acsecd", f"int(acsv*{len(SSECD) - 0.01})")]),
+        If(at("HARMONY", 4), [V("acnewt", "acsv > 0.5")]),
+        If(at("PHRASE", 1), [V("acsnew", f"int(acsv*{len(SPHR) - 0.01})"), If("acsnew != acphr", [
+            X("acsnew; -1; 0", "v acphr", "v acphc", "v acphn")])]),
+        If(at("PHRASE", 2), [V("acvlead", f"int(acsv*{len(SVLEAD) - 0.01})")]),
+        # (the key plan: for the sections still to come)
+        If(at("PHRASE", 3), [V("acsnew", f"int(acsv*{len(SKPLAN) - 0.01})"), If("acsnew != ackplan", [
+            V("ackplan", "acsnew"), Call("ac-keyplan")])]),
+        If(at("PHRASE", 4), [V("acrests", f"int(acsv*{len(SBREATH) - 0.01})"),
+                             If("acrests == 0 && acrestp", [X("0; 0; 1500", "v acrestb", "v acrestp", "v acfade"),
+                                                             Call("ac-layers")])]),
+        If(at("DIALOGUE", 1), [V("acmdev", f"int(acsv*{len(SMDEV) - 0.01})")]),
+        If(at("DIALOGUE", 2), [V("acans", f"int(acsv*{len(SANS) - 0.01})")]),
+        If(at("DIALOGUE", 3), [V("acphase", f"int(acsv*{len(SPHASE) - 0.01})"), V("acpsd", "0")]),
+        If(at("DIALOGUE", 4), [V("acreg", f"int(acsv*{len(SREG) - 0.01})")]),
+        If(at("WRITING", 1), [V("acsnew", "acsv > 0.5"), If("acsnew != acwrite", [
+            X("acsnew; 0; 0; 1500", "v acwrite", "v acrestb", "v acrestp", "v acfade"), Call("ac-layers"),
+            If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])]),
+        If(at("WRITING", 2), [V("acpadm", "acsv > 0.5")]),
+        If(at("WRITING", 3), [V("acdrsub", "acsv > 0.5"), V("acfade", "1500"), Call("ac-layers")]),
+        If(at("WRITING", 4), [V("acendp", "acsv > 0.5")]),
+        If(at("ARC", 1), [V("acrcell", "acsv > 0.5")]),
+        If(at("ARC", 2), [V("acarc", f"int(acsv*{len(SARC) - 0.01})"), Call("ac-brightupd")]),
+        If(at("ARC", 3), [V("acbassm", f"int(acsv*{len(SBASSM) - 0.01})")]),
+        If(at("ARC", 4), [V("acctr", "acsv > 0.5"), V("acfade", "2000"), Call("ac-layers")]),
         If(at("CC OUT", 1), [V("acccout", "acsv > 0.5")]),
         If(at("CC OUT", 2), [V("acccch", "1 + int(acsv*15.99)")]),
         If(at("CC OUT", 3), [V("acccbase", "int(acsv*3.99)")]),
@@ -672,13 +853,16 @@ def setup():
     ])
     # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
     proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
-        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")],
-                                                                 [Send("ac-setl0q")])])])])
+        If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [
+            If(f"acsetpg >= {MIRROR0}", [Send("ac-setl0m")], [If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
+                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])])
     Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
     Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
                                                 ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
     Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
          "ac-sett0")(c)
+    c.c(c.m(c.recv("ac-setl0g"), "list GLIDE  aux: back"), 0, c.obj("s ac-sett0"), 0)
+    Line("ac-setl0m", "list $1  aux: back", [("s", f"acsetpg - {MIRROR0}", [n for n, _ in MIRRORS])], "ac-sett0")(c)
     Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()

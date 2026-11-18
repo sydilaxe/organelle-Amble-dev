@@ -1,0 +1,2 @@
+# fan-outs accepted for now (tools/fanout.py): count, then file / canvas :: [source]:outlet -> targets.
+# New code must not add one (use one [t ...]); fix these and refresh with python3 fanout.py --update

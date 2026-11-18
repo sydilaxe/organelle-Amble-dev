@@ -7,7 +7,7 @@ otherwise). Bell engines throw to the mix like the bells; motion engines throw t
 motion's tempo echoes and soft limit (gen_dsp.motion()) take them."""
 from pdlib import Canvas
 from gen_dsp import switched, mul, add, throws_to
-from data import STRIKES, STRIKE_GAIN, STRIKE_DEC, STRIKE_MDEC, WAVETABLES
+from data import STRIKES, STRIKE_GAIN, STRIKE_DEC, STRIKE_MDEC, WAVETABLES, MODES
 
 LAYERS = {   # layer: (note message, voices, gain prefix, its own engine)
     "bell": ("ac-bell", 2, "ac-g-bel", "bars"),
@@ -99,7 +99,19 @@ def engine(layer, kind):
                "steel": "Steel: a steel pan - the note, its octave and twelfth tuned in, a hair of pitch bend up "
                         "at the strike",
                "pluck": "Pluck: a plucked string - harmonics 1-6 at 1/n, the higher ones dying sooner, a short "
-                        "bright attack"}[kind])
+                        "bright attack",
+               "bowl": "Bowl: a singing bowl's modes (1 : 2.76 : 5.4 : 8.9), the lower two beating with their twins, "
+                       "struck by a soft mallet",
+               "plate": "Plate: a thin metal plate's close, inharmonic modes (1 : 1.59 : 2.14 : 2.30 : 2.65 : 3.6)",
+               "crystal": "Crystal: a wine glass's modes (1 : 2.32 : 4.25 : 6.63), long and pure, the fundamental "
+                          "beating slowly",
+               "lpg": "LPG: a west-coast pluck - a sine through a wavefolder (harder notes fold brighter) and a "
+                      "low-pass gate, the filter and the level closing together like a vactrol",
+               "gong": "Gong: FM as on the DX7's bells - two modulators at inharmonic ratios (1.41, 2.83); the "
+                       "index swells for 0.12 s after the strike, then falls slower than the level (a tam-tam's bloom)",
+               "chip": "Chip: a game console's pulse - a narrow pulse for hard notes, a square for soft ones (on the motion, "
+                       "each note an arpeggio: root, 5th, octave, 18 times a second), its "
+                       "level stepping down in 16 steps (4-bit), a short tick of pitch at the start"}[kind])
     # the length of the layer's notes: the bells ring their full decay; the motion follows the piece's ping
     # decay (250-950 ms) times the engine's own factor
     # (a value per engine: [v] names are global)
@@ -115,7 +127,7 @@ def engine(layer, kind):
     L, R = s.obj("*~"), s.obj("*~")
     s.c(ln, 0, L, 1)
     s.c(ln, 0, R, 1)
-    noise = s.obj("noise~") if kind == "wood" else None
+    noise = s.obj("noise~") if kind in ("wood", "bowl", "plate", "crystal") else None
     bset = s.to(s.recv("ac-bellset"), "unpack f f f") if kind == "bars" else None
     voices = _voices(s, layer)
     s.col()
@@ -194,6 +206,54 @@ def engine(layer, kind):
                 s.c(mul(s, s.ch(fv, f"*~ {ratio}", "osc~"), e), 0, sig, 0)
         elif kind == "pluck":
             sig = _partials(s, vel, hz, [(n, 0.5 / n, 1.0 / n ** 0.8) for n in range(1, 7)], dec, slen)
+        elif kind in MODES:
+            sig = _partials(s, vel, hz, [(r, a, d) for r, a, d, _ in MODES[kind]], dec, slen)
+            for r, a, d, tw in MODES[kind]:
+                if tw:          # the mode's twin, a few tenths of a Hz up: the slow beating of a real bowl
+                    o = s.ch(s.to(hz, f"* {r}"), f"+ {tw}", "osc~")
+                    s.c(mul(s, o, _env(s, vel, hz, a * 0.6, 2, int(dec * d), slen)), 0, sig, 0)
+            # the strike: a short noise knock through a band at twice the note (softer for the bowl's mallet)
+            kn = mul(s, noise, _env(s, vel, hz, {"bowl": 0.25, "plate": 0.5, "crystal": 0.3}[kind], 0.5, 5, 1))
+            bp = s.obj("bp~ 1000 3")
+            s.c(kn, 0, bp, 0)
+            s.c(s.to(hz, "* 2"), 0, bp, 1)
+            s.c(bp, 0, sig, 0)
+        elif kind == "lpg":
+            # the fold: sin(pi/2 x) - a sine below 1, folding back above it - its depth by velocity, falling
+            fd = s.ch(_env(s, vel, hz, 3.0, 1, int(dec * 0.5), slen, sq=False), "+~ 0.6")
+            x = mul(s, s.to(hz, "osc~"), fd)
+            fo = s.ch(x, "*~ 0.25", "-~ 0.25", "cos~")
+            # the gate: one envelope closes the low-pass (from the note + 6 kHz down to the note) and the level
+            cf = s.to(add(s, s.to(hz, "sig~"), _env(s, vel, hz, 6000, 1, int(dec * 0.45), slen)), "clip~ 30 12000")
+            lp = s.obj("vcf~ 0.8")
+            s.c(fo, 0, lp, 0)
+            s.c(cf, 0, lp, 1)
+            sig = mul(s, s.to((lp, 1), "*~ 1"), _env(s, vel, hz, 0.55, 1, dec, slen))
+        elif kind == "gong":
+            fsig = s.to(hz, "sig~")
+            i1 = _env(s, vel, hz, 4.5, 120, int(dec * 0.7), slen, sq=False)     # (rising 120 ms: the bloom)
+            i2 = _env(s, vel, hz, 1.2, 40, int(dec * 0.3), slen, sq=False)
+            d1 = mul(s, mul(s, s.ch(hz, "* 1.41", "osc~"), i1), fsig)
+            d2 = mul(s, mul(s, s.ch(hz, "* 2.83", "osc~"), i2), fsig)
+            car = s.to(add(s, add(s, fsig, d1), d2), "osc~")
+            sig = mul(s, car, _env(s, vel, hz, 0.42, 4, dec, slen))
+        elif kind == "chip":
+            # the duty: 0.5 (soft) .. 0.125 (hard); a pitch tick from a 4th up in 25 ms
+            du = s.obj("expr 0.5 - 0.375*$f1")
+            s.c(vel, 0, du, 0)
+            tk = s.obj("expr $f1*1.335; $f1")
+            s.c(hz, 0, tk, 0)
+            pk = s.obj("pack f f")
+            s.c(tk, 1, pk, 1)
+            s.c(tk, 0, pk, 0)
+            fv = s.ch(s.m(pk, "$1, $2 25"), "vline~")
+            pl = s.obj("expr~ ($v1 < $v2)*2 - 1")
+            if layer == "motion":     # (the console arpeggio: each note runs root, 5th, octave, 18 times a second)
+                fv = mul(s, fv, s.ch(s.obj("phasor~ 18"), "expr~ if($v1 < 0.333, 1, if($v1 < 0.667, 1.4983, 2))"))
+            s.c(s.to(fv, "phasor~"), 0, pl, 0)
+            s.c(s.to(du, "sig~"), 0, pl, 1)
+            e = s.to(_env(s, vel, hz, 1.0, 1, dec, slen), "expr~ floor($v1*15)/15")
+            sig = mul(s, s.to(pl, "lop~ 9000"), s.to(e, "*~ 0.22"))
         else:   # metal
             sig = _partials(s, vel, hz, [(1, 0.4, 1.0), (4.0, 0.12, 0.3), (10.0, 0.05, 0.08)], dec, slen)
             # a beating twin of the fundamental, 0.8 Hz up

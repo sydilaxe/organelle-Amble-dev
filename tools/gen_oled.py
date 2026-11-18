@@ -19,7 +19,7 @@ from data import ROLES, PAGE_NAMES, PAGES, NOTE_NAMES, SCALES
 
 OSC = "oscOut"
 GLOBALS = dict(acpopt=0, actoastt=0, acfr=0, acel=0, acsecel=0, acox=0, acoxs=0, acmcur=-1, acrvlvl=0, acsetup=0, acsetpg=0, acinv=0, acinlast=-1e+06, acinon=0, acinhi=0, aclastk=0, acmixc=-1, acfx=0, acokq=0)
-ARRAYS = dict(acdisp=4, acdg=8, acinh=32, acino=32)
+ARRAYS = dict(acdisp=4, acdg=8, acinh=32, acino=32, acscl=1024, acscr=1024)
 MIXV = "(acpage >= 3 && acpage <= 6)"     # the knob pages that show the MIX view: SENDS, MIX
 # the play view's voice tags (2 x 4) and the MIX view's columns: (letter, knob, layer); the reverb last
 TAG_LAYERS = ["drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud"]
@@ -87,9 +87,9 @@ def ypitch(p):
 def oled():
     c = Canvas("oled", w=4200, h=1200)
     c.comment("The score: regions redrawn at their own rates, a flip every 100 ms")
-    lb = c.to(c.recv("ac-init"), "delay 200")
-    c.c(c.m(lb, "/oled/gShowInfoBar 3 0"), 0, c.obj("s " + OSC), 0)
-    c.c(lb, 0, c.obj("s ac-oledall"), 0)
+    lb = c.ch(c.recv("ac-init"), "delay 200", "t b b b")   # (right to left: info bar off, the screen, the clock)
+    c.c(c.m((lb, 2), "/oled/gShowInfoBar 3 0"), 0, c.obj("s " + OSC), 0)
+    c.c(lb, 1, c.obj("s ac-oledall"), 0)
     met = c.obj("metro 100")
     c.c(lb, 0, met, 0)
     c.c(met, 0, c.obj("s ac-frame"), 0)
@@ -168,7 +168,14 @@ def oled():
     mid += [Loop("4", "aci", [If("aclvn[int(aci)] >= 0", [
         Box(84, f"{ypitch('aclvn[int(aci)] + acbendt[int(aclvc[int(aci)])]')} - 2", 6, 5)])])]
     mid += [If("acbreath > 0.02", [Fill(0, "39 - int(acbreath*17)", 2, "max(1, int(acbreath*17))")])]
-    proc(c, "ac-oledmid", mid)
+    # SETUP DISPLAY Scope on: the middle shows the output instead - side (L - R) across, mid (L + R) up - 24 points
+    # of the last 1024 samples (23 ms), times Scope gain
+    g = "pow(2, acscopeg)"
+    sx = lambda i: f"max(0, min(94, 47 + int((acscl[int({i}*42)] - acscr[int({i}*42)])*{g}*47)))"
+    sy = lambda i: f"max(21, min(39, 30 - int((acscl[int({i}*42)] + acscr[int({i}*42)])*{g}*9)))"
+    scope_view = [Fill(0, 21, 95, 19, 0), Fill(47, 21, 1, 19, 0), Loop("24", "aci", [Fill(sx("aci"), sy("aci"), 1, 1)]),
+             Send("ac-scopecap")]
+    proc(c, "ac-oledmid", [If("acscope", scope_view, mid)])
     # the voices, one row across the screen in the layer keys' order: two letters while it sounds, a dot while
     # it rests (auto), a dash when it's out
     tags = [Fill(0, 41, 128, 10, 0)]
@@ -249,8 +256,9 @@ def oled():
     # redraw the pattern when it changes (each section) and on the bar
     d = c.obj("delay 5")
     c.c(c.recv("ac-section"), 0, d, 0)
-    c.c(d, 0, c.obj("s ac-oledrhythm"), 0)
-    c.c(d, 0, c.obj("s ac-oledform"), 0)
+    dt = c.to(d, "t b b")
+    c.c(dt, 1, c.obj("s ac-oledrhythm"), 0)
+    c.c(dt, 0, c.obj("s ac-oledform"), 0)
     c.col()
     # ---- the knob page pop-up (6 s after the last knob turn or aux tap)
     # (a value moved from elsewhere - a CC on another page's knob - shows as a message)
@@ -280,7 +288,26 @@ def oled():
     for ln, y in ((4, 24), (5, 36)):
         gated_text(c, f"ac-txt{ln}", "acsetup == 0 && acpopt > 0", 0, y, clear=(0, y, 128, 10))
     mixview(c, mixv)
+    c.sub(scope())
     return c
+
+
+def scope():
+    """the scope's capture (SETUP DISPLAY Scope): each frame that draws it records the next 1024 samples of the output
+    into acscl / acscr; on while frames ask, off 300 ms after the last (so it costs nothing while the scope is off)"""
+    s = Canvas("scope", w=600, h=400)
+    sw = s.obj("switch~")
+    s.c(s.m(s.obj("loadbang"), "0"), 0, sw, 0)
+    t = s.to(s.recv("ac-scopecap"), "t b b b b")    # (right to left: on, keep on, then record both sides)
+    s.c(s.m((t, 3), "1"), 0, sw, 0)
+    off = s.obj("delay 300")
+    s.c((t, 2), 0, off, 0)
+    s.c(s.m(off, "0"), 0, sw, 0)
+    for j, side in enumerate("LR"):
+        tw = s.obj(f"tabwrite~ acsc{side.lower()}")
+        s.c(s.obj(f"r~ ac-scp{side}"), 0, tw, 0)
+        s.c((t, 1 - j), 0, tw, 0)
+    return s
 
 
 def mixview(c, mixv):
@@ -321,9 +348,10 @@ def mixview(c, mixv):
          [("s", "acpage", PAGE_NAMES), ("f", "acsec + 1"), ("f", "acnsec"), ("s", "acrole", ROLES)], "ac-oledmixh")(c)
     gated_text(c, "ac-oledmixh", mixv + " && actoastt == 0", 0, 0, clear=(0, 0, 128, 9))
     for recv, colset in (("ac-oledmixl", MIX_COLS), ("ac-oledsndl", SEND_COLS)):
-        r = c.recv(recv)
+        n = len(colset)
+        r = c.to(c.recv(recv), "t " + " ".join(["b"] * n))     # (the labels left to right)
         for i, (lab, _, _) in enumerate(colset):
-            c.c(c.m(r, f"/oled/gPrintln 3 {2 + 16 * i} 54 8 1 {lab}"), 0, c.obj("s " + OSC), 0)
+            c.c(c.m((r, n - 1 - i), f"/oled/gPrintln 3 {2 + 16 * i} 54 8 1 {lab}"), 0, c.obj("s " + OSC), 0)
 
 
 def _print_fmt(c, src, fmt, x, y):

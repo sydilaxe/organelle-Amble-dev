@@ -12,7 +12,7 @@ import numpy as np
 import gen_setup as GS
 import gen_ui as U
 from harness import run, errors, rms_db, SR, build_tmp
-from data import FLAVOURS
+from data import FLAVOURS, INMODES
 
 fails = []
 
@@ -226,7 +226,8 @@ def stepcount(c):
     c.c(e, 0, c.obj("print MN", 1000, 480), 0)
 
 
-ev = [(50, "ac-setseed 3"), (310, "ac-secstop bang"), (310, "ac-chgstop bang"), (320, "acdens 1"), (320, "acrhythm 1"),
+# (Writing still: the Euclidean pattern itself - moving, a calm opening plays every other step)
+ev = [(5, "acwrite 0"), (50, "ac-setseed 3"), (310, "ac-secstop bang"), (310, "ac-chgstop bang"), (320, "acdens 1"), (320, "acrhythm 1"),
       (320, "acfmotion 1"), (320, "acenergy 1"), (320, "acfade 10"), (321, "ac-layers bang"),
       (330, "acmk 5"), (330, "acmn 8"), (330, "acmdiv 1"), (330, "acmrot 0")]
 log, _ = run(ev, 25, extra=stepcount)
@@ -396,7 +397,8 @@ for tx in range(4, len(TEXTURES)):
     check(rms_db(a[3 * SR:12 * SR]) > -50, f"texture {TEXTURES[tx]}: {rms_db(a[3 * SR:12 * SR]):.1f} dB")
 cents = []
 for ch in range(len(CHARACTERS)):
-    ev = [(50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+    # (Writing still: the pads alone - moving, the counter-melody's song voice sings over them)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
          [(310, "acmpad 1"), (310, "acfpad 1"), (310, "acdens 1"), (320, "ac-layers bang"), (330, "ac-rwet 0 10"),
           (330, "ac-motion 0"), (330, "ac-fmr 2")] + [(340, f"ac-v{k}-flav -1") for k in (1, 2, 3)] + \
          [(400, f"acchar {ch}"), (400, "acchamt 0.8"), (401, "ac-layers bang"), (1000, "ac-v0-flav 0"),
@@ -408,7 +410,9 @@ for ch in range(len(CHARACTERS)):
     cents.append(((S * fr).sum() / S.sum(), np.corrcoef(seg[:, 0], seg[:, 1])[0, 1], rms_db(seg)))
 check(all(c[2] > -45 for c in cents), "every character keeps the pads audible")
 check(cents[1][1] < 0.9, f"chorus widens the pads (L/R {cents[1][1]:.2f})")
-check(min(abs(c[0] - cents[0][0]) for c in cents[2:]) > 50, "tape, ring and crush change the colour " +
+rot, dim_ = cents[CHARACTERS.index("rotor")], cents[CHARACTERS.index("dim")]
+check(rot[1] < 0.95 and dim_[1] < 0.95, f"rotor and dimension widen the pads (L/R {rot[1]:.2f}, {dim_[1]:.2f})")
+check(min(abs(c[0] - cents[0][0]) for c in cents[2:5]) > 50, "tape, ring and crush change the colour " +
       str([int(c[0]) for c in cents]))
 
 
@@ -451,7 +455,8 @@ check(len(pals) >= 8, f"10 consecutive seeds give {len(pals)} different pad pale
 # 19. stereo: wide above the bass, moving, mono-safe; SETUP Output mono gives mono
 from scipy.signal import butter, sosfilt
 hp = butter(4, 200, 'hp', fs=SR, output='sos')
-for seed, extra, name in ((2718, [], "wide"), (2718, [(40, "acmono 1")], "mono")):
+# (Writing still: the mix's width as designed - moving, a calm opening plays fewer hard-panned bells)
+for seed, extra, name in ((2718, [(5, "acwrite 0")], "wide"), (2718, [(5, "acwrite 0"), (40, "acmono 1")], "mono")):
     log, a = run([(50, "aclen 0"), (60, f"ac-setseed {seed}")] + extra, 160)
     seg = a[110 * SR:160 * SR]
     M, S_ = (seg[:, 0] + seg[:, 1]) / 2, (seg[:, 0] - seg[:, 1]) / 2
@@ -477,7 +482,8 @@ check(np.std(bal) > 1.0, f"stereo: the image moves ({np.std(bal):.1f} dB balance
 # 20. atmospheres; pad types in stereo but mono-safe; scenes place the voices; preferred sounds come up more
 from data import ATMOS_NAMES
 for at, name in enumerate(ATMOS_NAMES):
-    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+    # (Writing still: the atmosphere alone, its level not moved by the phrase's chords)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 77"), (305, "ac-secstop bang")] + [(310, f"{m} 0") for m in ALL] + \
          [(311, "acmtex 1"), (311, "acftex 0"), (311, "acfatm 1"), (311, f"acatmcur {at}"), (311, "acfade 10"),
           (312, "ac-layers bang"), (313, "ac-rwet 0 10"), (314, "ac-change bang")]
     log, a = run(ev, 12)
@@ -506,7 +512,7 @@ for fl in range(len(FLAVOURS)):
     wide += np.corrcoef(seg[:, 0], seg[:, 1])[0, 1] < 0.9
     T += 5000
 check(wide >= 7, f"{wide} of {len(FLAVOURS)} pad types have their own stereo")
-check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB)")
+check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB, {FLAVOURS[int(np.argmin(dips))]})")
 log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718")], 40,
              prints=tuple(f"ac-v{k}-home" for k in range(4)))
 homes = {tuple(l.split()[1] for l in log.splitlines() if l.startswith(f"ac-v{k}-home")) for k in range(4)}
@@ -639,7 +645,8 @@ def rvprobe(c):
 for vt, name in ((0.3, "Bloom 1"), (0.7, "Hall")):
     ds = []
     for seed in (7, 11, 23):
-        log, a = run([(50, f"ac-setseed {seed}"), (1000, f"ac-param 5 {vt}")], 40, extra=rvprobe)
+        # (the reverb's own balance: Writing still - moving, the drone is 6 dB lower and the reverb about 1 dB less)
+        log, a = run([(5, "acwrite 0"), (50, f"ac-setseed {seed}"), (1000, f"ac-param 5 {vt}")], 40, extra=rvprobe)
         rv = np.median([float(l.split()[1]) for l in log.splitlines() if l.startswith("RV:")][40:]) - 100
         ds.append(rv - rms_db(a[20 * SR:40 * SR].mean(1)))
     check(-10 < np.mean(ds) < -2, f"{name} at the default Mix: {np.mean(ds):+.1f} dB against the whole output "
@@ -661,9 +668,9 @@ run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 
 vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
-# (every SETTINGS value is saved: 119 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle and the CHORD page's On pick joined)
-check(len(vals) == len(GS.SETTINGS) == 119 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+# (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC joined)
+check(len(vals) == len(GS.SETTINGS) == 147 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -692,13 +699,13 @@ check("ac-sett1: 1 Pads tine" in log and len(flav_vals(after)) >= 8 and set(flav
 check(len(flav_vals(at_once)) == 5 and len(flav_vals(later)) == 3,
       f"a new section changes the pad types one voice at a time ({len(flav_vals(at_once)) - 4} at once, "
       f"{len(flav_vals(later))} later)")
-log, _ = run([(50, "ac-setseed 7")] + sp(0.1) + [(1000 + 400 * i, "ac-section bang") for i in range(6)], 17,
+log, _ = run([(50, "ac-setseed 7")] + sp(1.5 / len(GS.SPADS)) + [(1000 + 400 * i, "ac-section bang") for i in range(6)], 17,
              prints=tuple(FL) + ("ac-g-ch1", "ac-g-ch2", "ac-g-ch3", "ac-g-ch4", "ac-sett1", "h-mark"))
 after = log.split("h-mark")[-1]
 vs = flav_vals(after)
 chs = [float(l.split()[1]) for l in after.splitlines() if l.startswith("ac-g-ch")]
-check(len(vs) >= 20 and set(vs) <= {1, 3, 4, 5} and len(set(vs)) >= 3 and chs and max(chs) == 0,
-      f"SOUNDS Pads raw: only vox / partials / fold / pulsar ({sorted(set(vs))}), no character")
+check(len(vs) >= 20 and set(vs) <= set(__import__("data").RAW_FLAVOURS) and len(set(vs)) >= 3 and chs and max(chs) == 0,
+      f"SOUNDS Pads raw: only vox / partials / fold / pulsar / chip ({sorted(set(vs))}), no character")
 log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 4"), (400, f"ac-setknob 1 {(GS.SDRONES.index('fm') + 0.5) / len(GS.SDRONES)}"),
               (450, f"ac-setknob 2 {(GS.STEXS.index('wind') + 0.5) / len(GS.STEXS)}"),
               (500, f"ac-setknob 3 {(GS.SCHARS.index('tape') + 0.5) / len(GS.SCHARS)}"), (550, "acsetup 0"), (2000, "ac-section bang")], 4,
@@ -1021,7 +1028,8 @@ check("ac-sett0: list CHORD" in seg[1] and len(set(picks)) >= 2 and picks and no
       f"({pickb} -> {nows4}), aux leaves")
 # aux + a layer key: its page; knob 2 (Play) in / out / auto; knob 1 its sound
 log, _ = run([(50, "ac-setseed 7"), (2000, "aux 1"), (2050, "notesRaw 76 100"), (2100, "notesRaw 76 0"), (2200, "aux 0"),
-              (2500, "knob2 0.9"), (3000, "knob1 0.3"), (3500, "knob2 0.01"), (4000, "aux 1"), (4050, "aux 0")], 5,
+              (2500, "knob2 0.9"), (3000, f"knob1 {(GS.SMOTS.index('fm') + 0.5) / len(GS.SMOTS):.3f}"), (3500, "knob2 0.01"),
+              (4000, "aux 1"), (4050, "aux 0")], 5,
              prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-toast"))
 check("ac-sett0: list MOTION" in log and "ac-sett2: 2 Play in" in log and "ac-sett2: 2 Play out" in log
       and "ac-sett1: 1 Sound fm" in log and "ac-toast" not in log,
@@ -1043,7 +1051,8 @@ check(len(ts) == 1 and ts[0].startswith("motion ") and "ac-sett0" not in log,
       f"top E held + low F (fewer hits): that, nothing else ({ts})")
 # the rhythm keys: more hits, harmony and ratchets add notes; C# gives back the piece's own; bells harmony adds strikes
 def rk(keys, layer, prints):
-    ev = [(50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfmotion",
+    # (Writing still: with Answer motion the motion would rest every other 2 bars)
+    ev = [(5, "acwrite 0"), (50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfmotion",
                                                                                      "acfbell", "acrhythm")] + \
          [(300, "acmmotion 2"), (300, "acmbell 2"), (301, "ac-layers bang")]
     t = 1000
@@ -1074,7 +1083,8 @@ def centroid(x):
     f = np.fft.rfftfreq(len(x), 1 / SR)
     P = np.abs(np.fft.rfft(x)) ** 2
     return (f * P).sum() / P.sum()
-base = [(50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+# (Writing still: the pads alone - moving, the counter-melody's voice sings over them)
+base = [(5, "acwrite 0"), (50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
        [(311, "acmpad 2"), (311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10")]
 held = [(1000, "notesRaw 74 100"), (1700, "notesRaw 74 0")]
 sh = {}
@@ -1090,9 +1100,10 @@ check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150
 
 # top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
-              (2800, "notesRaw 80 0"), (3000, "knob1 0.8"), (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
+              (2800, "notesRaw 80 0"), (3000, f"knob1 {(INMODES.index('vocode') + 0.5) / len(INMODES):.3f}"),
+              (3400, "knob3 0.9"), (4000, "aux 1"), (4050, "aux 0")], 5,
              prints=("ac-sett0", "ac-sett1", "ac-sett3"))
-ts = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")]
+ts = [t for t in (l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-toast")) if not t.startswith("hold:")]
 check(ts == ["input reso"] and "ac-sett0: list INPUT" in log and "ac-sett1: 1 Mode vocode" in log
       and "ac-sett3: 3 Follow you 90%" in log, f"top G#: tap = next input mode ({ts}), held = the INPUT page")
 
@@ -1117,7 +1128,9 @@ def vprobe2(exprs, every):
         c.c(pk, 0, c.obj("print P", 1200, 80), 0)
     return f
 pv = lambda log: [[float(x) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("P:")]
-toasts_of = lambda log: [l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast")]
+# (a held key's hint - SETUP DISPLAY Hints, section 76 - is left out: these checks follow the keys' own toasts)
+toasts_of = lambda log: [t for t in (l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast"))
+                         if not t.startswith("hold:")]
 auxkey = lambda t, n: [(t, "aux 1"), (t + 10, f"notesRaw {n} 100"), (t + 50, f"notesRaw {n} 0"), (t + 100, "aux 0")]
 log, _ = run([(50, "ac-setseed 7")] + auxkey(1000, 81) + [(2000, "knob1 0.9"), (2100, "knob1 0.95")] + auxkey(4000, 81), 15,
              extra=vprobe2(["acdens"], 1000))
@@ -1343,7 +1356,7 @@ check(first and col("pk", first) < -3 and col("clip", first) == 0 and col("quiet
       f"quiet {first and col('quiet', first)}")
 
 # 72. every text the OLED prints fits on its line (6 pixels a character): a longer one wraps onto the line below, over
-#     what is there. SETUP's 22 pages, the quick pages (CHORD, the layers'), the 8 knob pages, keys and toasts,
+#     what is there. SETUP's pages, the quick pages (CHORD, the layers', GLIDE, the hold pages), the 8 knob pages, keys and toasts,
 #     the profile's parts
 import re
 ev = [(50, "ac-setseed 7"), (500, "aux 1"), (1800, "aux 0")]
@@ -1353,9 +1366,9 @@ for pg in range(GS.NSET):
     t += 700
 ev += [(t, "aux 1"), (t + 1300, "aux 0")]
 t += 2000
-for k in [None, 80] + list(range(72, 80)) + [-k for k in range(72, 80)]:   # CHORD (low A held), INPUT (top G#
-    # held), aux + each layer key, each layer key held (its SHAPE page)
-    ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80) else \
+for k in [None, 80, 62, 63, 64, 65] + list(range(72, 80)) + [-k for k in range(72, 80)]:   # CHORD (low A held),
+    # INPUT (top G# held), the hold pages (low D, D#, E) and GLIDE (low F), aux + each layer key, each layer key held
+    ev += [(t, f"notesRaw {k or 69} 100"), (t + 700, f"notesRaw {k or 69} 0")] if k in (None, 80, 62, 63, 64, 65) else \
         [(t, f"notesRaw {-k} 100"), (t + 700, f"notesRaw {-k} 0")] if k < 0 else \
         [(t, "aux 1"), (t + 50, f"notesRaw {k} 100"), (t + 100, f"notesRaw {k} 0"), (t + 150, "aux 0")]
     for j in range(4):
@@ -1400,6 +1413,339 @@ ld = dens(seg[1]) if len(seg) > 1 else []
 ts = [l.split("list ", 1)[1] for l in seg[1].splitlines() if l.startswith("ac-toast")] if len(seg) > 1 else []
 check(ld and ld[-1] > 0.85 and "memory: section 1" in ts,
       f"MEMORY: saved with the piece - slot 3 loaded, its section 1 recalls Dens ({ld[-1:]}, {ts[:3]})")
+
+# 74. GLIDE (low F held): a tap opens the PERFORM page only; held 0.5 s, the GLIDE page - its knobs set the same
+#     glide times as their SETUP rows (VOICES Glide, RECALL Morph / Anchor glide, MEMORY Glide); aux leaves
+k = lambda i, n: (i + 0.5) / n
+log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 65 100"), (1050, "notesRaw 65 0"), (1500, "h-mark bang"),
+              (2000, "notesRaw 65 100"), (2800, "notesRaw 65 0"), (3000, f"knob1 {k(5, len(GS.GLIDES))}"),
+              (3200, f"knob2 {k(6, len(GS.SMORPH))}"), (3400, f"knob3 {k(0, len(GS.SANCG))}"),
+              (3600, f"knob4 {k(4, len(GS.SMEMG))}"), (4000, "aux 1"), (4050, "aux 0"), (4500, "h-mark bang"),
+              (5000, "acsetup 1"), (5010, "acsetpg 8"), (5020, "ac-oledsetup bang"),
+              (5100, "acsetpg 14"), (5110, "ac-oledsetup bang"), (5200, "acsetpg 21"), (5210, "ac-oledsetup bang")], 6,
+             prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-sett3", "ac-sett4", "h-mark"))
+seg = log.replace("\\ ", " ").split("h-mark: bang")
+tap, held, after = (seg + ["", "", ""])[:3]
+check("GLIDE" not in tap and "Sink 0 Blur 0" in tap and "list GLIDE" in held and "1 Chords slow" in held
+      and "2 Morph 30 s" in held and "3 Anchor 2 s" in held and "4 Memory 20 s" in held,
+      "low F: tap = the PERFORM page; held = the GLIDE page, its four rows set")
+check("3 Glide slow" in after and "1 Morph 30 s" in after and "3 Anchor glide 2 s" in after and "2 Glide 20 s" in after,
+      "GLIDE page: the same values show on SETUP VOICES, RECALL and MEMORY")
+
+# 75. the fan-out check (tools/fanout.py, run by every build): the built patch adds none to fanout_known.txt; a
+#     control outlet into two hot inlets that touch the same state is found; a [t ...], a counter and branches
+#     that cannot meet are not
+import fanout, os, tempfile
+fanout.check(build_tmp())
+fd = tempfile.mkdtemp()
+open(os.path.join(fd, "t.pd"), "w").write(
+    "#N canvas 0 0 400 300 12;\n#X obj 10 10 r x;\n#X obj 10 40 v acq;\n#X obj 90 40 expr acq*2;\n"
+    "#X obj 10 80 t f f;\n#X obj 10 110 v acq;\n#X obj 90 110 expr acq*2;\n"
+    "#X obj 10 150 f;\n#X obj 50 180 + 1;\n#X obj 10 180 t b f;\n"
+    "#X obj 200 10 r y;\n#X obj 200 40 * 2;\n#X obj 280 40 * 3;\n#X obj 200 70 osc~;\n#X obj 280 70 osc~;\n"
+    "#X connect 0 0 1 0;\n#X connect 0 0 2 0;\n#X connect 3 1 4 0;\n#X connect 3 0 5 0;\n"
+    "#X connect 6 0 7 0;\n#X connect 7 0 6 1;\n#X connect 6 0 8 0;\n"
+    "#X connect 9 0 10 0;\n#X connect 9 0 11 0;\n#X connect 10 0 12 0;\n#X connect 11 0 13 0;\n")
+fo = fanout.scan(fd)
+check(len(fo) == 1 and "[r x]:0 -> expr acq*2:0 | v acq:0" in next(iter(fo)),
+      f"fan-out check: the built patch adds none; a [v] write beside its read is found, a trigger, a counter and "
+      f"two separate branches are not ({list(fo)})")
+
+# 76. DISPLAY (SETUP 23): a held key's hint (not on a tap); low D held opens COLOUR as a quick page, whose knobs
+#     do what they do in SETUP; the scope draws the output in the middle; LED beat blinks the LED with the bed
+log, _ = run([(50, "ac-setseed 7"), (300, "acscope 1"),
+              (3000, "h-mark bang"), (4000, "notesRaw 69 100"), (4400, "notesRaw 69 0"), (5000, "notesRaw 62 100"),
+              (5100, "notesRaw 62 0"), (5600, "h-mark bang"), (6000, "notesRaw 62 100"), (6700, "notesRaw 62 0"),
+              (7000, "knob1 0.95"), (7400, "aux 1"), (7450, "aux 0"), (7600, "h-mark bang"),
+              (8000, "acledm 1"), (8010, "ac-led bang"), (11000, "h-mark bang")], 12,
+             prints=("oscOut", "ac-toast", "ac-sett0", "ac-sett1", "led", "h-mark"))
+seg = log.replace("\\ ", " ").split("h-mark: bang")
+pre, hint, mir, led = (seg + [""] * 5)[:4]
+dots = [l for l in pre.splitlines() if re.search(r"gFillArea 3 \d+ (2[1-9]|3\d) 1 1 1$", l)]
+toasts = [l.split("list ", 1)[1] for l in hint.splitlines() if l.startswith("ac-toast")]
+leds = [l for l in led.splitlines() if l.startswith("led:")]
+check(len(dots) > 100, f"scope: the output drawn in the middle ({len(dots)} points in 2.7 s)")
+check("hold: CHORD page" in toasts and "hold: COLOUR page" not in toasts,
+      f"hints: a held key says what holding does, a tap does not ({toasts})")
+pd_ = sorted({l.split("Pre-delay ")[1] for l in mir.splitlines() if "Pre-delay" in l})
+check("list COLOUR aux: back" in mir and "200 ms" in pd_,
+      f"low D held: the COLOUR page as a quick page, knob 1 sets its Pre-delay ({pd_})")
+check(len(leds) >= 6 and {l.split()[1] for l in leds} >= {"0"}, f"LED beat: the LED blinks with the bed ({len(leds)} changes in 3 s)")
+
+# 77. how the piece writes (SETUP LINES, HARMONY, PHRASE, DIALOGUE, WRITING): each one does what it says (from all
+#     off: the piece as it was); Writing still is all of them off; the defaults carry the motif between the layers;
+#     saved with a piece, an older line takes the defaults
+def chprobe(c):
+    # each chord as it sounds: its name, the key, the scale, the degree, a secondary dominant, the 4 pad voices
+    ex = ["acchn", "actonic", "acsci", "acdeg", "acsdnow", "acch[0]", "acch[1]", "acch[2]", "acch[3]"]
+    e = c.ch(c.obj("r ac-flash", 1400, 0), "t b", "expr " + "; ".join(ex))
+    pk = c.obj("pack " + " ".join(["f"] * len(ex)), 1400, 60)
+    for i in range(len(ex) - 1, -1, -1):
+        c.c(e, i, pk, i)
+    c.c(pk, 0, c.obj("print CH", 1400, 80), 0)
+import os
+k = lambda i, n: (i + 0.5) / n
+d = build_tmp()
+W = ("ac-bell", "ac-mnote", "ac-dronep", "ac-v3-pitch", "h-mark") + tuple(f"ac-g-drone{i}" for i in ["", 1, 2, 3, 4, 5, 6, 7])
+OFF = [(n, 0) for n in ("acmelm", "accanon", "acmovm", "acsecd", "acphr", "acvlead", "acrests", "acmdev", "acans",
+                        "acphase", "acreg", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm", "acctr")] + [("acwrite", 1)]
+def wr(sets, secs=150, seed=11, ev=(), base=OFF):
+    log, _ = run([(10, "actide 0"), (10, "acmbell 2"), (10, "acmmotion 2")] + [(15, f"{n} {v}") for n, v in base]
+                 + [(20, f"{n} {v}") for n, v in sets]
+                 + [(50, f"ac-setseed {seed}")] + list(ev), secs, prints=W, d=d, extra=chprobe)
+    L = log.splitlines()
+    i = max(k for k, l in enumerate(L) if l.startswith("ac-setseed"))     # (the seeded piece, not the start-up one)
+    L = L[i:]
+    ch = [[float(x) for x in l.split(":", 1)[1].split()] for l in L if l.startswith("CH:")]
+    nt = lambda w: [[float(x) for x in l.split(":", 1)[1].split()] for l in L if l.startswith(w + ":")]
+    return log, ch, nt("ac-bell"), nt("ac-mnote"), nt("ac-dronep")
+base = wr([])
+check(not errors(base[0]) and len(base[1]) > 15, f"writing: a piece with fast chords ({len(base[1])} chords)")
+# Phrases (4): pairs of 4 chords, the first ending IV-V, the second V-I - in a 7-note scale (ionian here)
+log, ch, *_ = wr([("acphr", 1), ("acsclc", 5)])
+degs = [int(c_[3]) for c_ in ch]
+vi = sum(1 for a_, b_ in zip(degs, degs[1:]) if (a_, b_) == (4, 0))
+ivv = sum(1 for a_, b_ in zip(degs, degs[1:]) if (a_, b_) == (3, 4))
+check(not errors(log) and vi >= 2 and ivv >= 2, f"Phrases: V-I closes and IV-V half closes ({vi}, {ivv}; {degs})")
+# Moves: the piece moves to mediant and tonnetz keys of its own - each a tonic chord in ionian or aeolian
+log, ch, *_ = wr([("acmovm", 3), ("achmvp", 2)])
+mv = [c_ for a_, c_ in zip(ch, ch[1:]) if c_[1] != a_[1] or c_[2] != a_[2]]
+bkeys = {(c_[1], c_[2]) for c_ in base[1]}
+check(not errors(log) and len(mv) >= 2 and all(c_[2] in (2, 4) and c_[3] == 0 for c_ in mv),
+      f"Moves: {len(mv)} key moves, each to a tonic in ionian or aeolian ({[(int(c_[1]), int(c_[2])) for c_ in mv]}; "
+      f"before {len(bkeys)} key(s))")
+# Dominants: a chord's own V, major (mixolydian), the drone staying on the key; then the chord it leads to (seed 7:
+# Db dorian). A scale that can't carry them (seed 11: minor pentatonic) ignores them
+log, ch, *_ = wr([("acsecd", 2)])
+check(not errors(log) and not any(c_[4] for c_ in ch), "Dominants: a pentatonic piece ignores them")
+base7 = wr([], seed=7)
+log, ch, b_, m_, dr = wr([("acsecd", 2)], seed=7)
+sd = [k_ for k_, c_ in enumerate(ch) if c_[4] == 1]
+okd = all(ch[k_][2] == 3 and ch[k_][3] == 0 and k_ + 1 < len(ch) and ch[k_ + 1][1] != ch[k_][1] for k_ in sd if k_ + 1 < len(ch))
+tonics = {int(c_[1]) for k_, c_ in enumerate(ch) if k_ not in sd}
+check(not errors(log) and len(sd) >= 2 and okd and {int(x[0]) for x in dr} <= tonics | {int(base7[4][0][0])},
+      f"Dominants: {len(sd)} secondary dominants, major, each resolving; the drone stays on the key's tonics "
+      f"({sorted({int(x[0]) for x in dr})} in {sorted(tonics)})")
+# Voicing smooth: the pad voices move less from chord to chord
+mov = lambda ch: np.mean([sum(abs(b_[5 + i] - a_[5 + i]) for i in range(4)) for a_, b_ in zip(ch, ch[1:])])
+log, ch, *_ = wr([("acvlead", 1)])
+check(not errors(log) and mov(ch) < 0.8 * mov(base[1]), f"Voicing smooth: the voices move {mov(ch):.1f} semitones a "
+      f"change, {mov(base[1]):.1f} before")
+# Register spaced: bells 84-103, motion 67-84, pads at most 76
+log, ch, b_, m_, _ = wr([("acreg", 1)])
+check(not errors(log) and b_ and m_ and all(84 <= x[0] <= 103 for x in b_) and all(67 <= x[0] <= 84 for x in m_)
+      and max(max(c_[5:9]) for c_ in ch) <= 76,
+      f"Register spaced: bells {min(x[0] for x in b_):g}-{max(x[0] for x in b_):g}, motion {min(x[0] for x in m_):g}-"
+      f"{max(x[0] for x in m_):g}, pads up to {max(max(c_[5:9]) for c_ in ch):g}")
+# Canon: each bell note again, an octave up, on the other side; Phasing: each motion note again, later each time
+log, _, b_, m_, _ = wr([("accanon", 1)], 60)
+pairs = sum(1 for a_, c_ in zip(b_, b_[1:]) if c_[0] == a_[0] + 12 and abs(c_[2] - (1 - a_[2])) < 0.01)
+check(not errors(log) and pairs >= 0.4 * len(b_) / 2, f"Canon: {pairs} of {len(b_)} bell notes are the octave echo")
+log, _, b_, m_, _ = wr([("acphase", 2)], 60)
+b60 = wr([], 60)
+mb = b60[3]
+check(not errors(log) and 1.8 * len(mb) <= len(m_) <= 2.2 * len(mb), f"Phasing: a second motion voice ({len(m_)} notes, {len(mb)} before)")
+# Melody 1/f, grow, mutate: the motion plays, its notes changed
+for v, nm in ((1, "1/f"), (2, "grow"), (3, "mutate")):
+    log, _, b_, m_, _ = wr([("acmelm", v), ("acmutp", 2)], 60)
+    check(not errors(log) and len(m_) > 20 and [x[0] for x in m_] != [x[0] for x in mb],
+          f"Melody {nm}: the motion plays its own line ({len(m_)} notes, {sorted({int(x[0]) for x in m_})})")
+# Answer motion: the bells and the motion take turns (2 bars each); Answer you: the bells only after you play
+log, _, b_, m_, _ = wr([("acans", 1)], 60)
+check(not errors(log) and len(m_) < 0.75 * len(mb) and b_, f"Answer motion: they take turns ({len(m_)} motion notes, {len(mb)} before)")
+log, _, b_, m_, _ = wr([("acans", 2)], 60, ev=sum([[(t, "ac-livenote 1 64 100"), (t + 500, "ac-livenote 1 64 0")]
+                                                    for t in (20000, 32000, 44000)], []))
+check(not errors(log) and b_ and len(b_) < len(b60[2]), f"Answer you: the bells answer what you play ({len(b_)} bell "
+      f"notes, {len(b60[2])} before)")
+# Breath, Motif develops, Key plan, New types: they play, and differ
+log, _, b_, m_, _ = wr([("acrests", 2)], 90)
+check(not errors(log) and len(m_) < len(mb) * 1.4, f"Breath: rests ({len(m_)} motion notes in 90 s)")
+for sets, nm in (([("acmdev", 1)], "Motif develops"), ([("acnewt", 1)], "New types"), ([("ackplan", 1), ("aclen", 0)], "Key plan home")):
+    log, ch, *_ = wr(sets, 120)
+    check(not errors(log) and ch, f"{nm}: plays ({len(ch)} chords)")
+log, ch, *_ = wr([("ackplan", 1), ("aclen", 0)], 240)
+check(len({c_[1] for c_ in ch}) == 1, f"Key plan home: one key through the sections ({sorted({c_[1] for c_ in ch})})")
+# saved with the piece; a line saved before them loads them off
+import gen_saves as GSV
+dd = build_tmp()
+old = GSV.factory_rows().splitlines()[0].rstrip(";").split()[:GS.SAVE_MORE_AT]
+open(os.path.join(dd, "saves.txt"), "w").write("4 " + " ".join(old) + ";\n")
+def pr(c):
+    m = c.obj("metro 500", 1200, 20)
+    c.c(c.obj("loadbang", 1200, 0), 0, m, 0)
+    c.c(c.to(m, "expr acmelm*100 + acphr*10 + acans"), 0, c.obj("print P", 1200, 80), 0)
+ld = lambda slot: [(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(slot, GS.NSLOTS)}"),
+                   (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")]
+sv = [(50, "ac-setseed 5"), (60, "acmelm 2"), (60, "acphr 2"), (60, "acans 1"), (300, "acsetup 1"), (310, "acsetpg 12"),
+      (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"), (500, "ac-setknob 1 0.5"), (600, "ac-setknob 1 1"), (700, "acsetup 0")]
+run(sv, 2, d=dd)
+log, _ = run([(50, "acmelm 0"), (50, "acphr 0"), (50, "acans 0")] + ld(2), 2, d=dd, extra=pr)
+got = [l for l in log.splitlines() if l.startswith("P:")][-1]
+log2, _ = run([(50, "acmelm 3"), (50, "acphr 1"), (50, "acans 2")] + ld(3), 2, d=dd, extra=pr)
+got2 = [l for l in log2.splitlines() if l.startswith("P:")][-1]
+check(got == "P: 221" and got2 == "P: 411", f"saved with the piece ({got}); an older line takes the defaults ({got2})")
+# Writing still: every feature off at once (the defaults on, still = all off); the defaults: the motion's line is the
+# motif against the bells (mostly contrary motion), the pads' top voice carries it (suspensions), the drone subtle
+def ev_(L, w=("ac-bell", "ac-mnote", "ac-v3-pitch")):
+    L = L.splitlines()          # (from the seeded piece: the start-up one is seeded by the clock)
+    L = L[max(k for k, l in enumerate(L) if l.startswith("ac-setseed")):]
+    return [l for l in L if l.startswith(w)]
+still = wr([("acwrite", 0)], 90, base=[])
+check(ev_(still[0]) == ev_(wr([], 90)[0]), "Writing still: the piece as with every feature off")
+log, ch, b_, m_, _ = wr([], 150, base=[])
+mlog = [l for l in log.splitlines() if l.startswith(("ac-bell:", "ac-mnote:"))]
+# (each motion step after a bell that moved: against the bell's direction?)
+cm = tot = bd = 0
+bl = ml = None
+for l in mlog:
+    x = float(l.split()[1])
+    if l.startswith("ac-bell:"):
+        bd, bl = (0 if bl is None else (x > bl) - (x < bl)), x
+    else:
+        if bd and ml is not None and x != ml:
+            tot += 1
+            cm += (x - ml) * bd < 0
+        ml = x
+v3 = [l for l in log.splitlines() if l.startswith("ac-v3-pitch")]
+gd = [float(l.split()[1]) for l in ev_(log, "ac-g-drone")]
+full = wr([("acdrsub", 0)], 150, base=[])[0]
+gd0 = [float(l.split()[1]) for l in ev_(full, "ac-g-drone")]
+check(not errors(log) and m_ and b_ and cm > 0.4 * max(1, tot),
+      f"defaults: the motion answers the bells with the motif, mostly against their direction ({cm} of {tot})")
+check(len(v3) > len(ch), f"Pads carry motif: the top voice's suspensions resolve ({len(v3)} moves for {len(ch)} chords)")
+check(gd and len(gd) == len(gd0) and all(abs(a_ - 0.5 * b_) < 1e-4 for a_, b_ in zip(gd, gd0)) and max(gd0) > 0,
+      f"Drone subtle: half the level, the same piece ({max(gd):.2f} against {max(gd0):.2f} full)")
+# Ending by phrase: the motion stops, the bells play on 9 s, everything fades
+log, _, b_, m_, _ = wr([("acendp", 1)], 60, ev=[(30000, "h-mark bang"), (30000, "ac-fin bang"), (39500, "h-mark bang")])
+pre, mid, post = (log.split("h-mark: bang") + ["", ""])[:3]
+cnt = lambda t, w: sum(1 for l in t.splitlines() if l.startswith(w))
+check(cnt(mid, "ac-mnote:") == 0 and cnt(mid, "ac-bell:") > 0 and cnt(post, "ac-bell:") == 0,
+      f"Ending by phrase: the motion stops, the bells play on, then stop ({cnt(mid, 'ac-bell:')} bells in 9 s)")
+
+# 78. input modes octave (the octave below and above around your pitch) and formant (the chord sings your vowel)
+ALL = ["acmdrone", "acmpad", "acmtex", "acmcloud", "acmbell", "acmmotion", "acmsub", "acmatm"]
+def inmode(mode, inp, In=0.9):
+    ev = [(50, "ac-setseed 99"), (55, "acwrite 0")] + [(310, f"{m} 0") for m in ALL] + [(311, "ac-layers bang"),
+          (1000, f"acinmode {mode}"), (1000, f"acinput {In}"), (1001, "ac-inputupd bang")]
+    log, a = run(ev, 10, inp=inp)
+    return log, a[4 * SR:10 * SR]
+oct_ = __import__("data").INMODES.index("octave")
+fmt_ = __import__("data").INMODES.index("formant")
+log, seg = inmode(oct_, "saw")
+S = np.abs(np.fft.rfft(seg[:, 0] * np.hanning(len(seg))))
+fr = np.fft.rfftfreq(len(seg), 1 / SR)
+band = lambda f: S[(fr > f * 0.97) & (fr < f * 1.03)].max()
+check(not errors(log) and band(82.4) > 3 * np.median(S[(fr > 60) & (fr < 120)]) and rms_db(seg) > -40,
+      f"input octave: the octave below sounds ({20 * np.log10(band(82.4) / np.median(S[(fr > 60) & (fr < 120)])):.0f} dB "
+      f"over its neighbours), {rms_db(seg):.1f} dB")
+log, seg = inmode(fmt_, "voice")
+check(not errors(log) and rms_db(seg) > -45, f"input formant: the chord sings with the voice ({rms_db(seg):.1f} dB)")
+
+# 79. phrases drive the form (sections change at a phrase's end, call and response by its halves, the calm
+#     sections), counterpoint (no parallel 5ths / octaves with the bells), leading-tone cadences, the echo of what
+#     you play, the factory pieces of the writing
+def fprobe(c):
+    # each section's start and each chord: the chord's place in its phrase, the motion's turn, the scale, calm
+    for r, tag in (("ac-section", "SEC"), ("ac-flash", "PH")):
+        ex = ["acphpos", "acansm", "acsci", "acsecalm", "acrole", "acdeg"]
+        e = c.ch(c.obj("r " + r), "t b", "expr " + "; ".join(ex))
+        pk = c.obj("pack " + " ".join(["f"] * len(ex)))
+        for i in range(len(ex) - 1, -1, -1):
+            c.c(e, i, pk, i)
+        c.c(pk, 0, c.obj("print " + tag), 0)
+d = build_tmp()
+rows = lambda log, tag: [[float(x) for x in l.split(":", 1)[1].split()] for l in log.splitlines()[
+    max(k for k, l in enumerate(log.splitlines()) if l.startswith("ac-setseed")):] if l.startswith(tag + ":")]
+# (seed 7: Db dorian - a closing phrase's V borrows melodic minor's leading tone)
+log, _ = run([(10, "actide 0"), (10, "aclen 0"), (10, "acmbell 2"), (10, "acmmotion 2"),
+              (50, "ac-setseed 7")], 300, prints=("ac-bell", "ac-mnote"), d=d, extra=fprobe)
+secs, phs = rows(log, "SEC"), rows(log, "PH")
+# (a section that starts after a phrase's last chord: the chord sounding then was the phrase's 4th, index 3)
+ends = [r[0] for r in secs[1:]]
+check(not errors(log) and len(secs) >= 3 and all(e == 3 for e in ends),
+      f"sections change at a phrase's end ({len(secs)} sections; the chord before each: {ends})")
+halves = {(int(r[0]), int(r[1])) for r in phs if r[0] >= 0}
+check(halves and all(m == (p >= 2) for p, m in halves), f"Answer motion by the phrase's halves (place, turn: {sorted(halves)})")
+calm = {(int(r[4]), int(r[3])) for r in secs}
+check(all(c_ == (rl in (0, 5, 7)) for rl, c_ in calm), f"calm sections: emerge, break, dissolve ({sorted(calm)})")
+# (dorian: a closing phrase's V borrows melodic minor, and its I is dorian again)
+lt = [(int(a_[2]), int(b_[2])) for a_, b_ in zip(phs, phs[1:]) if a_[2] == 13]
+check(lt and all(b_ == 1 for _, b_ in lt), f"leading-tone cadences: melodic minor on the V, dorian after ({lt})")
+# no parallel 5ths or octaves: a motion note after the bells moved never repeats the perfect interval it made
+L_ = log.splitlines()
+L_ = L_[max(k for k, l in enumerate(L_) if l.startswith("ac-setseed")):]
+bell, prev, par, n_ = None, None, 0, 0
+for l in L_:
+    if l.startswith("ac-bell:"):
+        bell = float(l.split()[1])
+    elif l.startswith("ac-mnote:") and bell is not None:
+        m = float(l.split()[1])
+        iv = int(m - bell) % 12
+        if prev and prev[1] != bell and prev[0] != m and prev[2] == iv and iv in (0, 7):
+            par += 1
+        n_ += 1
+        prev = (m, bell, iv)
+check(n_ > 50 and par <= n_ * 0.02, f"counterpoint: parallel 5ths / octaves with the bells {par} in {n_} motion notes")
+# the echo: three notes played, the bells answer with them (in the key, an octave up) before the motif
+log, _ = run([(10, "acmbell 2"), (10, "acans 2"), (50, "ac-setseed 7")] + sum(
+    [[(20000 + 400 * i, f"ac-livenote 1 {n} 100"), (20200 + 400 * i, f"ac-livenote 1 {n} 0")] for i, n in enumerate((61, 66, 68))], [])
+    + [(21200, "h-mark bang")], 40, prints=("ac-bell", "h-mark"), d=d)
+after = [float(l.split()[1]) for l in log.split("h-mark: bang")[-1].splitlines() if l.startswith("ac-bell:")]
+# (seed 7: Db dorian, the register spaced - 84-103: Db Gb Ab come back two octaves up)
+sub_ = lambda xs, want: (lambda it: all(w in it for w in want))(iter(xs))
+check(sub_(after[:6], [85.0, 90.0, 92.0]), f"Answer you: the bells echo your phrase, in the key and register ({after[:6]})")
+# the factory pieces of the writing load from slots 7-9
+log, _ = run([(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {(6 + 0.5) / GS.NSLOTS}"),
+              (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")], 3, d=d)
+check("slot 7: Chorale" in log.replace("\\ ", " "), "factory piece Chorale loads from slot 7")
+
+# 80. ARC: the motion on the bells' rhythm (shared), the phrase's dynamics and tension, a dominant pedal before the
+#     return, a ground bass, the counter-melody in the song voice
+def aprobe(c):
+    ex = ["acphpos", "acdyn", "acten", "acbright", "acpedal", "acrole"]
+    e = c.ch(c.obj("r ac-flash"), "t b", "expr " + "; ".join(ex))
+    pk = c.obj("pack " + " ".join(["f"] * len(ex)))
+    for i in range(len(ex) - 1, -1, -1):
+        c.c(e, i, pk, i)
+    c.c(pk, 0, c.obj("print AP"), 0)
+    m = c.obj("metro 50")
+    c.c(c.obj("loadbang"), 0, m, 0)
+    e2 = c.to(m, "expr int(acstep/acmdiv); acrcm[int(acms) % int(acrcn)]; acrcn")
+    pk2 = c.obj("pack f f f")
+    for i in (2, 1, 0):
+        c.c(e2, i, pk2, i)
+    c.c(pk2, 0, c.obj("print RC"), 0)
+d = build_tmp()
+cut = lambda log: log.splitlines()[max(k for k, l in enumerate(log.splitlines()) if l.startswith("ac-setseed")):]
+log, _ = run([(10, "actide 0"), (10, "aclen 0"), (10, "acmbell 2"), (10, "acmmotion 2"), (10, "acbassm 3"),
+              (10, "acmtex 2"), (50, "ac-setseed 7")], 150, prints=("ac-mnote", "ac-subp", "ac-dronep", "ac-song", "ac-bell"),
+             d=d, extra=aprobe)
+L_ = cut(log)
+ap = [[float(x) for x in l.split(":", 1)[1].split()] for l in L_ if l.startswith("AP:")]
+# (dynamics: louder towards the V, softer on the I; tension: rising to the V)
+dy = {int(r[0]): round(r[1], 2) for r in ap if r[0] >= 0}
+tn = {int(r[0]): round(r[2], 2) for r in ap if r[0] >= 0}
+check(not errors(log) and dy.get(0, 1) < dy.get(2, 0) and dy.get(3, 1) < dy.get(2, 0) and tn.get(2, 0) > tn.get(0, 1),
+      f"Arc: dynamics {dy}, tension {tn} by the chord's place in the phrase")
+br = sorted({round(r[3], 3) for r in ap})
+check(len(br) >= 3, f"Arc tension: the brightness moves with the phrase ({br[:6]})")
+# (a custom form: emerge, develop, return - in the develop the drone holds the home key's dominant, Ab for Db)
+log2, _ = run([(10, "actide 0"), (10, "acsform 6"), (10, "acsroles 0 0 2 6 7 8 8 8 8 8 8 8 8"), (10, "acscount 4"),
+               (50, "ac-setseed 7"), (20000, "ac-secgo bang"), (21000, "h-mark bang")], 60, prints=("ac-dronep", "h-mark"), d=d,
+              extra=aprobe)
+ped = [r for r in [[float(x) for x in l.split(":", 1)[1].split()] for l in cut(log2) if l.startswith("AP:")] if r[4] == 1]
+drp = sorted({float(l.split()[1]) for l in log2.split("h-mark: bang")[-1].splitlines() if l.startswith("ac-dronep:")})
+check(ped and drp == [44.0], f"Bass pedal: the section before the return holds the dominant ({len(ped)} chords, drone {drp})")
+sp_ = [float(l.split()[1]) for l in L_ if l.startswith("ac-subp:")]
+check(len(sp_) > 12 and len({round(x, 1) for x in sp_}) <= 6, f"Bass ground: the sub a short repeating line ({len(sp_)} notes, "
+      f"{sorted({round(x, 1) for x in sp_})[:6]} Hz)")
+sg = [l for l in L_ if l.startswith("ac-song:")]
+check(len(sg) >= 5, f"Counter: the song voice sings the motif ({len(sg)} notes)")
+# (shared: each motion note falls on a step of the bells' rhythm cell)
+rc = [[float(x) for x in l.split(":", 1)[1].split()] for l in L_ if l.startswith("RC:")]
+check(rc and max(r[2] for r in rc) >= 4 and log.count("ac-mnote:") > 10,
+      f"Rhythm shared: the motion follows the bells' rhythm cell ({int(rc[-1][2])} 8ths a round, "
+      f"{log.count('ac-mnote:')} motion notes)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

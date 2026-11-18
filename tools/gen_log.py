@@ -43,9 +43,12 @@ def _parts():
     pads = lambda t: [on("ac-g-pad")] + [SendL(f"ac-v{k}-flav", [str(t)]) for k in range(4)]
     parts = [("baseline", [])]
     parts += [(f"pad-{n}", pads(i)) for i, n in enumerate(FLAVOURS)]
+    # SHAPE's drive and width (gen_dsp.shape_drive): the pads with drive and width on, against pad-sine without
+    parts += [("pad-sine-shape", pads(FLAVOURS.index("sine")) + [SendL("ac-shp-p", ["20000", "5", "0.6", "1.5"])])]
     parts += [("pad-crossfade", pads(FLAVOURS.index("sine")) + [Later("ac-profxf", 1500)])]
     parts += [(f"drone-{n}", [on("ac-g-drone" if i == 0 else f"ac-g-drone{i}")]) for i, n in enumerate(DRONES)]
-    parts += [("sub", [on("ac-g-sub")])]
+    from data import SUBTYPES
+    parts += [(f"sub-{n}", [on("ac-g-sub"), SendL("ac-subt", [str(i)])]) for i, n in enumerate(SUBTYPES)]
     parts += [(f"bells-{n}", [on(f"ac-g-bel{i}")]) for i, n in enumerate(STRIKES)]
     parts += [(f"motion-{n}", [on("ac-g-motion"), on(f"ac-g-mot{i}")]) for i, n in enumerate(STRIKES)]
     parts += [(f"texture-{n}", [on(f"ac-g-tex{i}")]) for i, n in enumerate(TEXTURES)]
@@ -63,10 +66,18 @@ def _parts():
 
 
 # every gain a part switches on, back to 0 before the next part
-OFF = (["ac-g-pad", "ac-g-drone", "ac-g-sub", "ac-g-motion", "ac-g-cloud", "ac-g-rvb", "ac-g-rvh", "ac-shim", "ac-g-res",
-        "ac-g-tape", "ac-g-bands", "ac-g-voc", "ac-g-mem", "ac-g-glint", "ac-g-sink", "ac-insw", "ac-trk"]
-       + [f"ac-g-drone{i}" for i in range(1, 5)] + [f"ac-g-bel{i}" for i in range(6)] + [f"ac-g-mot{i}" for i in range(6)]
-       + [f"ac-g-tex{i}" for i in range(12)] + [f"ac-g-atm{i}" for i in range(5)] + [f"ac-g-ch{i}" for i in range(1, 5)])
+# (counted from the type lists, so a new drone, engine or texture is switched off too: the list was once fixed at
+# the first types, and the newer ones stayed on into the parts after theirs)
+def _off():
+    from data import DRONES, STRIKES, TEXTURES, ATMOS_NAMES, CHARACTERS
+    return (["ac-g-pad", "ac-g-drone", "ac-g-sub", "ac-g-motion", "ac-g-cloud", "ac-g-rvb", "ac-g-rvh", "ac-shim",
+             "ac-g-res", "ac-g-tape", "ac-g-bands", "ac-g-voc", "ac-g-mem", "ac-g-glint", "ac-g-sink", "ac-insw", "ac-trk"]
+            + [f"ac-g-drone{i}" for i in range(1, len(DRONES))] + [f"ac-g-bel{i}" for i in range(len(STRIKES))]
+            + [f"ac-g-mot{i}" for i in range(len(STRIKES))] + [f"ac-g-tex{i}" for i in range(len(TEXTURES))]
+            + [f"ac-g-atm{i}" for i in range(len(ATMOS_NAMES))] + [f"ac-g-ch{i}" for i in range(1, len(CHARACTERS))])
+
+
+OFF = _off()
 
 GLOBALS = dict(acprof=0, acprst=0, acprsum=0, acprn=0, acprmax=0, aclogwas=0, aclogon=0, aclgsum=0, aclgn=0, aclgmax=0, aclgw=0, aclgpart=0, aclgfile=0, aclgl=0)
 ARRAYS = dict(aclogbuf=len(FIELDS), acprfl=4, acamwl=4410, acamwr=4410, acamwc=4410)
@@ -82,7 +93,8 @@ def perflog():
     # every 100 ms while logging: the load of that window (CPU time / logical time)
     met = c.obj("metro 100")
     c.c(c.recv("ac-logrun"), 0, met, 0)
-    tb = c.to(met, "t b b b b")
+    mt = c.to(met, "t b b")              # (right to left: the load of the window, then how late it ended)
+    tb = c.to((mt, 1), "t b b b b")
     ct, tm = c.obj("cputime"), c.obj("timer")
     pk = c.obj("pack f f")
     c.c(tb, 3, tm, 1)
@@ -99,7 +111,7 @@ def perflog():
     # and how late the window ended by the wall clock: real time over 100 ms means the scheduler fell behind
     rt = c.obj("realtime")
     c.c(c.to(c.recv("ac-logrun"), "t b"), 0, rt, 0)
-    lt = c.to(met, "t b b")
+    lt = c.to((mt, 0), "t b b")
     c.c(lt, 1, rt, 1)
     c.c(lt, 0, rt, 0)
     lu = c.ch(rt, "expr $f1 - 100", "t b f")
@@ -142,7 +154,8 @@ def perflog():
     parts = _parts()
     pt = c.obj("text define acprofile")
     base = [SendL(g, ["0"], "$1 20") for g in OFF] + \
-           [SendL("ac-livenote", [str(2 + k), str(55 + 5 * k), "0"]) for k in range(4)]
+           [SendL("ac-livenote", [str(2 + k), str(55 + 5 * k), "0"]) for k in range(4)] + \
+           [Call("ac-shpupd")]          # (SHAPE and the sub's sound back to the piece's: a part may have set them)
     proc(c, "ac-profile", [If("acprof == 0", [
         If("acstopped == 0", [Call("ac-stop")]), Send("ac-master", "0 300"),
         Send("ac-chgstop"), Send("ac-secstop"), V("acsetup", "0"), Call("ac-oledall"),

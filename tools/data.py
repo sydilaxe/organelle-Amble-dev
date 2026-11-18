@@ -19,7 +19,10 @@ SCALES = [
     ("melmin",   [0, 2, 3, 5, 7, 9, 11]),
     ("slendro",  [0, 2.4, 4.8, 7.2, 9.6]),                      # 5-tone equal
     ("pelog",    [0, 1.2, 2.7, 5.4, 6.8, 7.9, 10.4]),
+    ("6thdim",   [0, 2, 4, 5, 7, 8, 9, 11]),                    # Barry Harris: major 6th + diminished 7th
+    ("harmmin",  [0, 2, 3, 5, 7, 8, 11]),                       # harmonic minor (an aeolian cadence's V borrows it)
 ]
+SCALE_AUTO = 16            # (a piece picks among the first 16; the later ones by hand, or with SETUP HARMONY New types)
 
 # Chord voicing families for the 4 pad voices: (name, type, offsets)
 #   type 0: offsets are scale degrees above the chord root (voice-led per voice)
@@ -49,26 +52,27 @@ MOVES_P = [3, -3, 4, -4, 3, -4, 2, -2, 2, -2, 5, -1]
 MODS_P = [7, -7, 5, -5, 7, -5, 7, -7, 5, -5, 7, -7]
 
 FLAVOURS = ["fm", "vox", "bow", "part", "fold", "pulsr", "saws", "pwm", "digi", "sync", "tine", "sine", "glass", "beat",
-            "reed", "organ", "air"]
+            "reed", "organ", "air", "cz", "choir", "vosim", "whistle", "lissa", "chip"]
 FLAV_AUTO = 14             # (a piece picks among the first 14; the later ones by hand)          # pad synthesis types
 # texture output gains (calibrated so each texture sits near the others, see tools/ci_check.py)
 TEXG = dict(RAIN_PAT=1.4, RAIN_PLOP=30.0, RAIN_G=1.0, MURMUR_G=1.5, MURMUR_X=0.3, ECHO_G=1.1, WHISPER_G=0.26,
-            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18)
+            LEAVES_G=0.2, BROOK_G=0.5, BUBBLE_G=2.2, CRICKET_G=0.2, HARP_G=1.0, SONG_G=0.18, PULSAR_G=0.35)
 TEXTURES = ["rain", "wind", "ember", "chirp", "radio", "data", "buzz", "murmur", "echoes", "whisper",
-            "leaves", "brook", "bubbles", "crickets", "harp", "song"]
+            "leaves", "brook", "bubbles", "crickets", "harp", "song", "pulsar"]
 # a piece picks its textures among the first 12 (so a seed, and a saved piece, plays what it always did); the
 # later ones are chosen by hand (SETUP SOUNDS, the textures' page)
 TEX_AUTO = 12
-DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral"]
+DRONES = ["pure", "analog", "organ", "fm", "frost", "choir", "bowed", "spectral", "gendy"]
 DRONE_AUTO = 5             # (a piece picks among the first 5; the later ones by hand)
 # the sub's sound (its SHAPE page): sine as always, or warm, pulse, fm
 SUBTYPES = ["sine", "warm", "pulse", "fm"]
-CHARACTERS = ["clean", "chorus", "tape", "ring", "crush"]
+CHARACTERS = ["clean", "chorus", "tape", "ring", "crush", "rotor", "dim"]
 # SETUP SOUNDS "raw": the pad types of the first demos (vox, partials, fold, pulsar), with no character effect
-RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr")]
-RAW_EXPR = "if(acr1<0.25, %d, if(acr1<0.5, %d, if(acr1<0.75, %d, %d)))" % tuple(RAW_FLAVOURS)
+RAW_FLAVOURS = [FLAVOURS.index(n) for n in ("vox", "part", "fold", "pulsr", "chip")]
+RAW_EXPR = "".join(f"if(acr1<{(i + 1) / len(RAW_FLAVOURS):.3f}, {f}, " for i, f in enumerate(RAW_FLAVOURS[:-1])) + \
+    str(RAW_FLAVOURS[-1]) + ")" * (len(RAW_FLAVOURS) - 1)
 SUBMODES = ["pedal", "bassline", "both"]
-INMODES = ["auto", "reso", "cloud", "tape", "ghost", "bands", "vocode", "morph"]
+INMODES = ["auto", "reso", "cloud", "tape", "ghost", "bands", "vocode", "morph", "octave", "formant"]
 NOTE_NAMES = "C Db D Eb E F Gb G Ab A Bb B".split()
 # chord names on the screen: the root and the triad the scale gives it (+ = augmented, 5 = Resolve's open fifths)
 CHORD_SUFFIXES = ["", "m", "dim", "+", "sus", "5"]
@@ -194,7 +198,7 @@ FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1
 # the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
-STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck"]
+STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg", "gong", "chip"]
 # (a piece's own pick, Auto, is among the first 6 - the weights below - so a seed plays what it did; the later
 # engines are chosen by hand: SETUP VOICES, the layer's page)
 # auto: what a piece picks (bells lean to bars and metal, motion to the FM pings and blips)
@@ -204,11 +208,22 @@ MOTION_ENGINE_WEIGHTS = [0.4, 2.0, 1.5, 0.9, 0.9, 0.5]
 # level and equal peaks (the short, spiky wood and blip would be too loud at equal level) - see tools/ci_check.py;
 # then the decay in ms on the bells, and the motion's decay as a factor of its piece decay (250-950 ms)
 STRIKE_GAIN = dict(bell=dict(bars=1.0, fm=0.8, blip=2.8, wood=1.0, wave=1.05, metal=1.2, kalimba=0.7, steel=0.9,
-                             pluck=0.85),
+                             pluck=0.85, bowl=0.62, plate=1.0, crystal=0.57, lpg=7.5, gong=0.75, chip=1.0),
                    motion=dict(bars=14.0, fm=1.0, blip=18.0, wood=7.0, wave=9.0, metal=10.0, kalimba=8.0, steel=8.0,
-                               pluck=8.0))
-STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000)
-STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0)
+                               pluck=8.0, bowl=8.0, plate=8.0, crystal=8.0, lpg=48.0, gong=8.0, chip=8.0))
+STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600, kalimba=1800, steel=2400, pluck=2000,
+                  bowl=7000, plate=3800, crystal=5200, lpg=1500, gong=6500, chip=900)
+STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
+                   bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8, gong=1.4, chip=0.6)
+# modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
+# impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
+# with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
+MODES = dict(
+    bowl=[(1, 0.45, 1.0, 0.6), (2.76, 0.26, 0.75, 1.1), (5.40, 0.13, 0.45, 0), (8.93, 0.07, 0.3, 0)],      # singing bowl
+    plate=[(1, 0.36, 1.0, 0), (1.59, 0.27, 0.8, 0), (2.14, 0.2, 0.65, 0), (2.30, 0.16, 0.6, 0), (2.65, 0.13, 0.5, 0),
+           (3.60, 0.07, 0.35, 0)],                                                                    # a thin plate
+    crystal=[(1, 0.5, 1.0, 0.4), (2.32, 0.17, 0.55, 0), (4.25, 0.08, 0.3, 0), (6.63, 0.04, 0.2, 0)],   # a wine glass
+)
 # the glassy wavetables (harmonic number: amplitude), shared by the glass pad and the wave engine
 WAVETABLES = dict(acwtA={1: 1, 2: 0.25, 3: 0.4, 4: 0.08, 5: 0.22, 7: 0.15, 9: 0.1},
                   acwtB={1: 0.6, 3: 0.15, 4: 0.35, 6: 0.3, 8: 0.38, 11: 0.25, 13: 0.2, 16: 0.12})
@@ -246,4 +261,12 @@ FACTORY = [
                         acchdc="wide", acsclc="dorian")),
     ("Frost", 6610, dict(acmodesel=1, acsdrone="frost", acspad="beat", acjour=1, acjpad=1, acblur=0.3,
                          acsclc="lydian", acchdc="triad")),
+    # the writing: a chorale (phrases of 8, smooth voices, the pads carrying the motif, bowls answering); a canon
+    # (the motion answers each bell, phasing, the motif as counterpoint); chip (the raw console sounds, growing)
+    ("Chorale", 1207, dict(acmodesel=0, acsform="arch", acphr=2, acvlead=1, acpadm=1, acmelm=0, acans=0, acmotion=0.25,
+                           acspad="choir", acsbell="bowl", acchdc="triad", aclen=0.5, acsclc="aeolian")),
+    ("Canon", 3907, dict(acmodesel=0, acmelm=4, accanon=4, acphase=1, acsmot="lpg", acsbell="crystal", acrhythm=0.6,
+                         acmotion=0.6, acchdc="open")),
+    ("Chip", 8086, dict(acmodesel=0, acspad="chip", acsbell="chip", acsmot="chip", acmelm=2, acstempo="110 bpm",
+                        acrhythm=0.8, accolor=0.7, acchdc="triad", acschar=1)),
 ]

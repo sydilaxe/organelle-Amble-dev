@@ -145,6 +145,10 @@ def cc_map():
     ] + [If(f"actg == {19 + m}", [V("acmcn", str(m)), V("acmcin", "acctlv"), Call("ac-macro")]) for m in range(4)] + [
         If("actg == 23", [If("acctlv >= 0.5 && acjx == 0", [Call("ac-jstepall")]), V("acjx", "acctlv >= 0.5")]),
         If("actg == 28", [V("acspark", "acctlv"), Call("ac-sparkupd")]),
+        # writing: up = moving, down = still (SETUP WRITING)
+        If("actg == 29", [If("(acctlv >= 0.5) != acwrite", [X("acctlv >= 0.5; 0; 0; 1500", "v acwrite", "v acrestb", "v acrestp",
+                                                               "v acfade"), Call("ac-layers"),
+                                                             If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])]),
     ] + [If(f"actg == {t}", [T("acparams", knobs.index(n), "acctlv"), SendL("ac-param", [str(knobs.index(n)), "acctlv"])])
          for t, n in _S.TARGET_KNOB.items()])
     # a new note takes its channel's tone and level
@@ -187,6 +191,8 @@ def live():
         SendL("ac-lvbr", ["acvi", "if(acbrmode, max(acbrch[int(aclch)], acbrch[1]), 1)"]),
         If("acroute == 0", [SendL("ac-lvon", ["acvi", "aclnote + acbendt[int(aclch)]", "aclvel/127"])]),
         V("aclnt", "acnow"),
+        If("(acans*acwrite) == 2", [V("acyrn", "aclnote"), Call("ac-yrec"),
+                                    X("acnow; aclnote", "v acanst", "v acant")]),     # (SETUP DIALOGUE Answer you)
         T("achpc", "int(aclnote) % 12", "achpc[int(aclnote) % 12] + 1"),
         X("int(aclnote) % 12; acnow; 0", "v acfocus", "v acfocust", "v acfkdone"),
         # SETUP Notes to: chords / drone / bells / cloud

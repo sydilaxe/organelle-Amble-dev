@@ -73,8 +73,12 @@ for _n, _lab in (("acmxd", "drone"), ("acmxs", "sub"), ("acmxp", "pads"), ("acmx
                               "down in even steps (about 0.5 dB a percent) to -24 dB at 5 %, then out.")
 
 FKEY_DESC = {
-    "SHAPE page": "Knobs: Dens, Tide, Colr, In.",
-    "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once.",
+    "SHAPE page": "Knobs: Dens, Tide, Colr, In. Held half a second: the WRITING page as a quick page (Writing still / "
+                  "moving, Pads carry, Drone level, Ending - SETUP WRITING's rows); aux leaves.",
+    "PERFORM page": "Knobs: Sink, Blur, Swell, Harm - the whole sound at once. Held half a second: the GLIDE page "
+                    "too - the glide times together while you play: knob 1 the chord Glide (SETUP VOICES), 2 Morph "
+                    "and 3 Anchor glide (SETUP RECALL), 4 the Memory glide (SETUP MEMORY). They are the same "
+                    "settings as there. Aux leaves the page.",
     "Freeze | aux: ANCHOR": "Freeze: the reverb tail and the cloud hold still; again to release. Aux + A: ANCHOR - the "
                             "first time it keeps the sound as it is now (ANC shows); then each aux + A glides every "
                             "knob and the layer keys back there over Anchor glide (SETUP RECALL), while the piece plays "
@@ -82,12 +86,18 @@ FKEY_DESC = {
     "new piece | hold: COMPARE | + key: load | aux: SAVES": "A tap (on its release): a new piece. Held 0.6 s: COMPARE - "
         "the slot as loaded or saved, while you hold it. Held, then a key: that slot loads (low C-B = slots 1-12, top "
         "C-D# = 13-16); with aux held too, the piece is saved to that slot. Aux + a tap: the SAVES page.",
-    "SPACE page": "Knobs: reverb Mix, Verb, Time, Tone.",
-    "PIECE page": "Knobs: Len, Weird, Mot, Rhy.",
-    "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view.",
-    "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view.",
-    "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view).",
-    "SENDS 2 page": "Knobs: the reverb sends of textures, cloud, atmosphere, input (MIX view).",
+    "SPACE page": "Knobs: reverb Mix, Verb, Time, Tone. Held half a second: the COLOUR page as a quick page "
+                  "(pre-delay, era, sparkle - SETUP COLOUR's rows); aux leaves.",
+    "PIECE page": "Knobs: Len, Weird, Mot, Rhy. Held half a second: the FORM page as a quick page (form, tempo, "
+                  "meter, atmosphere - SETUP FORM's rows); aux leaves.",
+    "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view. Held half a second: "
+                  "the PHRASE page as a quick page (phrases, voicing, key plan, breath); aux leaves.",
+    "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view. Held "
+                  "half a second: the GROOVE page as a quick page (pump, duck - SETUP GROOVE's rows); aux leaves.",
+    "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view). Held half a second: the "
+                    "DIALOGUE page as a quick page (motif, answer, phasing, register); aux leaves.",
+    "SENDS 2 page": "Knobs: the reverb sends of textures, cloud, atmosphere, input (MIX view). Held half a second: the "
+                    "HARMONY page as a quick page (moves, how often, dominants, new types); aux leaves.",
     "Root (hold)": "Hold it and press an Organelle key, play a MIDI note or turn knob 1: that note is the next key "
                    "(it arrives with the next chord change). While it is not held, MIDI notes play as usual.",
     "Resolve": "The harmony moves to the tonic as open fifths (root, 5th, octave, 12th) and stays there - no "
@@ -218,6 +228,89 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
                "section comes again - the piece replayed, or loaded from its slot - those knobs glide back to where you "
                "left them (the others stay as they are). Saved with the piece; a new piece starts with an empty memory."),
     "Glide": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
+    "Hints": ("off, on", "A key that does something when held says so: a quarter second into the hold, the line "
+              "under the form shows what holding it does (hold: CHORD page, hold: compare / load...). A tap shows "
+              "nothing."),
+    "Scope": ("off, on", "The play view's middle shows the sound instead of the pitch ladder: 24 points of the "
+              "output, side (left minus right) across and mid (left plus right) up. A mono sound is a vertical "
+              "line, a wide one a cloud; pure intervals draw still figures. It computes only while it is shown."),
+    "Scope gain": (", ".join(n for n, _ in S.SSCOPEG), "How large the scope draws: Amble plays quietly, so x4 "
+                   "fills the middle for most pieces."),
+    "LED": (", ".join(S.SLEDM), "state: the LED shows the piece (green drifting, blue composing, white on a chord "
+            "change). beat: it blinks with the beating of the drone and sub, lit while they swell above their "
+            "average."),
+    # LINES, HARMONY, PHRASE, DIALOGUE, WRITING: how the piece writes (all act only while WRITING Writing is moving)
+    "Melody": (", ".join(S.SMELM), "What the motion plays. arp: the chord tones (as Rhy and the rhythm pick them). 1/f: "
+               "a melody of mostly small steps and now and then a leap (three dice changing at 1, 2 and 4 steps). grow: "
+               "the arpeggio adds a note each round (1, 12, 123, 1234). mutate: an 8-step loop of chord tones whose "
+               "steps change now and then (Mutate). motif: the bells' motif as counterpoint - its intervals, moving "
+               "against the bells, a chord tone on the pattern's first step; with Answer motion, a 5th up, as the "
+               "answer to the bells' subject."),
+    "Mutate": (", ".join(n for n, _ in S.SMUTP), "With Melody mutate: how often a step of the loop changes (locked: "
+               "never - the loop repeats)."),
+    "Canon": (", ".join(S.SCANON), "Each bell note again, later (Canon delay), on the other side: an octave up, a 5th "
+              "up (in a 7-note scale; otherwise the octave), two octaves up - or played by the motion an octave down, "
+              "so the line passes from one layer to the other."),
+    "Canon delay": (", ".join(n for n, _ in S.SCAND), "How much later the canon's voice comes in."),
+    "Moves": (", ".join(S.SMOVM), "Key moves the piece makes of its own between chords: a chromatic mediant (to the "
+              "major or minor key a 3rd away), a tonnetz step (P: the parallel, R: the relative, L: the leading-tone "
+              "exchange; major turns minor and back), or both. Not with a fixed key or scale, nor in a scale that is "
+              "not near 12-tone or has no 5th."),
+    "How often": (", ".join(n for n, _ in S.SMOVP), "How often a chord change becomes such a key move. by form: "
+                  "where the form wants tension - often while intensifying and at the climax, now and then while "
+                  "establishing and developing, never in the return."),
+    "Dominants": (", ".join(n for n, _ in S.SSECD), "Secondary dominants: before a chord (not the tonic) its own V "
+                  "comes, a major chord a 5th above it, the drone staying on the key. Only in a 12-tone scale of 7 "
+                  "notes or more; a pentatonic piece ignores them."),
+    "New types": ("off, on", "On: a piece's own picks also take the types added later (pads, textures, drones, "
+                  "rhythms, the 6thdim scale). Off: only the original ones."),
+    "Phrases": (", ".join(S.SPHR), "The chords come in phrases of 4 or 8, in pairs: the first ends open (IV, then V), "
+                "the second closed (V, then I) - and after a closed phrase the bells and the motion breathe (Breath). "
+                "The closing V borrows the leading tone in a minor-ish mode (aeolian from harmonic minor, dorian "
+                "from melodic minor, mixolydian from ionian). While moving, the phrases shape the piece: a section "
+                "changes only at a phrase's end, the motion thins on its last chord, the pads swell into its V and "
+                "settle on its I, and with Answer motion the bells call in its first half, the motion answers in the "
+                "second. A key move starts a new phrase; a scale without a 5th ignores them."),
+    "Voicing": (", ".join(S.SVLEAD), "smooth: each pad voice takes the free chord tone nearest to it, so common tones "
+                "stay and the others move by step."),
+    "Key plan": (", ".join(S.SKPLAN), "The keys of a COMPOSE piece's sections: the piece's own (auto), home only, "
+                 "or each section away from home a 5th or a major 3rd further. The opening, the return and the end "
+                 "stay home."),
+    "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
+               "bells and motion; the bells and the motion rest a bar as a section "
+               "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
+               "the pads hold through."),
+    "Motif": (", ".join(S.SMDEV), "develops: away from the opening and the return, each section may also play the "
+              "motif backwards, slower, faster, or in fragments (its first two notes, sequenced up)."),
+    "Answer": (", ".join(S.SANS), "Call and response. motion: the motion and the bells take 2 bars each in turn. you: "
+               "the bells answer what you play (MIDI notes, or the sung or played input) with the piece's motif near "
+               "your note, while you play and after, fading out 4-12 s after your last note. Once you have been quiet "
+               "0.8 s, they first echo your phrase (up to 6 notes): its notes in the key, an octave up, in its "
+               "rhythm. With Melody motif and Answer motion, the bells open their turn imitating the motion's last "
+               "three notes."),
+    "Phasing": (", ".join(n for n, _ in S.SPHASE), "A second motion voice on the other side plays the same notes, "
+                "drifting later a little each step around the whole pattern, until they meet again (as in Reich)."),
+    "Register": (", ".join(S.SREG), "spaced: each layer in its own octaves - the pads up to 76, the motion 67-84, the "
+                 "bells 84-103 - so the lines stay clear of one another."),
+    "Writing": (", ".join(S.SWRITE), "still: none of LINES, HARMONY, PHRASE, DIALOGUE or WRITING act - the static, "
+                "droning piece - and your choices there are kept for moving again. moving: they act. Also low C held "
+                "(the WRITING page), and a CC mapped to writing (up: moving)."),
+    "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
+                   "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
+                   "through it - the motif, very slowly, under the active bells and motion."),
+    "Rhythm": (", ".join(S.SRCELL), "shared: the motion's hits follow the bells' motif rhythm, twice as fast (its "
+               "onsets in 8ths) - one rhythm cell for both layers; your own rhythm (top E held + low keys) still wins."),
+    "Arc": (", ".join(S.SARC), "The phrase's arc. dynamics: the bells and the motion grow louder towards the phrase's V "
+            "and softer on its cadence. tension: the sound brightens and the harmony grows more adventurous towards "
+            "the V, relaxing on the I. both: the two together."),
+    "Bass": (", ".join(S.SBASSM), "pedal: in the section before a return, the drone and the sub hold the home key's "
+             "dominant while the harmony moves above it; the return resolves it home. ground: the sub plays a "
+             "4-note line from the motif's degrees, one note a bar, under the changing chords (a ground bass)."),
+    "Counter": (", ".join(S.SCTR), "song: the distant song voice sings the motif slowly (twice as slow, a bar's rest "
+                "after each round) as a third voice, while the pads play - also when the song texture is not chosen."),
+    "Drone level": (", ".join(S.SDRSUB), "subtle: the drone 6 dB lower while the piece is moving."),
+    "Ending": (", ".join(S.SENDP), "fade: everything stops and fades over 30 s. by phrase: the chords stop, the motion "
+               "stops, the bells play on 9 s, then the pads and the drone fade last."),
     "Clear sec": ("turn up", "Fully up: forget what the playing section kept."),
     "Clear all - turn up": ("turn up", "Fully up: forget every section's knobs."),
     "Compare": ("yours, saved", "Up: the slot as loaded or saved; down: yours again (as holding top B)."),
@@ -286,6 +379,10 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
 }
 
 INMODE_DESC = {
+    "octave": "your sound with its octave above and its octave below (and the fifth between), an organ-like "
+              "doubling that follows your pitch.",
+    "formant": "the chord sings your vowel: a choir on the chord's tones takes the two formants of what you sing "
+               "(a, e, i, o, u and between) and follows your level.",
     "auto": "Amble decides from what it hears: pitched sound rings chord strings and retunes the grains, and your "
             "pitch steers the harmony; plucked sound rings bells; texture plays tuned bands.",
     "reso": "4 comb strings tuned to the chord ring with your sound.",
@@ -313,6 +410,14 @@ FLAV_DESC = {
             "vibrato",
     "organ": "drawbars 16' 8' 5 1/3' 4' 2', the upper ones drawn out with brightness, a slow rotary swell",
     "air": "a flute: a pure tone with breath around it (more with brightness) and a slow vibrato",
+    "choir": "a choir: glottal pulses through three formants drifting slowly through nine vowels, each side its own",
+    "vosim": "VOSIM: trains of fading sin-squared pulses at a formant - vowel-like, a little nasal; brighter, higher",
+    "whistle": "the chord whistled two octaves up: an unsteady pure tone with breath and a growing vibrato",
+    "lissa": "Lissajous: the note on one side, its fifth on the other slowly turning in phase - the image rotates",
+    "chip": "raw chiptune: a console's pulse stepping between 12.5, 25 and 50 % duty, unfiltered, and the 4-bit "
+            "stepped triangle on the other side - the sample rate held down a little",
+    "cz": "phase distortion (the Casio CZ): a cosine through a bent phase - from a sine towards a saw with brightness, "
+          "and on the right the resonant wave, its resonance sweeping slowly",
 }
 TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few heavier plops",
             "wind": "filtered air", "ember": "crackling embers", "chirp": "bird-like chirps",
@@ -326,7 +431,9 @@ TEX_DESC = {"rain": "rain: a soft hiss, a dense patter of tiny drops and a few h
             "bubbles": "water drops tuned to the chord - sines rising in pitch as they die (a bubble model)",
             "crickets": "three crickets chirping on a high chord tone, each its own pace, one far off",
             "harp": "an aeolian harp: three strings tuned to the chord, sung by gusts of wind (a string model)",
-            "song": "a distant FM voice singing slow gliding phrases on chord tones"}
+            "song": "a distant FM voice singing slow gliding phrases on chord tones",
+            "pulsar": "two pulse trains on chord tones (pulsar synthesis): the pulse rate wanders between a rhythm "
+                      "and a low pitch, some pulses dropped at random, the trains on opposite sides"}
 STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)",
                "fm": "FM pings: a carrier and a modulator at the piece's ratio, the index falling fast "
                      "(the motion's own)",
@@ -336,7 +443,15 @@ STRIKE_DESC = {"bars": "struck bars, 3 partials tuned per piece (the bells' own)
                "metal": "a metallophone: vibraphone modes, a beating twin, the motor's tremolo",
                "kalimba": "a thumb piano: a warm tine, far overtones that fade quickly, the click of the thumb",
                "steel": "a steel pan: the note, its octave and twelfth, a hair of pitch bend at the strike",
-               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner"}
+               "pluck": "a plucked string: harmonics at 1/n, the higher ones dying sooner",
+               "bowl": "a singing bowl: its modes (1 : 2.76 : 5.4 : 8.9), the lower ones beating, long and soft",
+               "plate": "a thin metal plate: close, inharmonic modes - a gong-like shimmer, shorter",
+               "crystal": "a wine glass: pure, long modes (1 : 2.32 : 4.25 : 6.63), the fundamental beating slowly",
+               "gong": "an FM gong (as the DX7's bells): two inharmonic modulators whose brightness blooms just "
+                       "after the strike, then fades slower than the sound",
+               "chip": "a game console's pulse: narrower when hard, its level stepping down in 4-bit steps",
+               "lpg": "a west-coast pluck: a sine through a wavefolder and a low-pass gate - soft notes round, hard "
+                      "ones folded brighter, blooming and closing like a vactrol"}
 DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "analog": "saws and a square through a slow resonant sweep",
               "organ": "drawbars with a rotary shimmer", "fm": "an electric growl",
@@ -345,9 +460,14 @@ DRONE_DESC = {"pure": "tonic, a beating twin, an interval and breath tubes",
               "choir": "three voices (the note, a hair sharp, the fifth) through vowel formants moving between ah, "
                        "oh and oo",
               "bowed": "a cello: a bowed saw with a slow pressure swell and vibrato through the body's resonances",
-              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting"}
+              "spectral": "eight harmonics, each swelling on its own slow cycle - the spectrum keeps shifting",
+              "gendy": "Xenakis' stochastic synthesis, gently: a wave of 12 breakpoints, each taking small random "
+                       "steps, so the tone breathes and never repeats while the pitch holds"}
 CHAR_DESC = {"clean": "no effect", "chorus": "a wide chorus", "tape": "wow, flutter, saturation and a little hiss",
-             "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush"}
+             "ring": "ring modulation on the chord", "crush": "bit and sample-rate crush",
+             "rotor": "a slow rotary speaker: horn and drum turning apart, Doppler and swell, the sides a quarter "
+                      "turn apart", "dim": "the Dimension D's gentle width: two short, very slowly swept delays, "
+                                         "opposite on the two sides - wider without wobble"}
 ATMOS_DESC = {"haze": "air shimmering on the chord", "deep": "low rumble with distant thunder",
               "space": "air ringing in combs tuned to the chord", "night": "distant insects",
               "tides": "waves washing across the stereo field"}
