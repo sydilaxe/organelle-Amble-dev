@@ -33,7 +33,7 @@ GLOBALS = dict(
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
     acmdg=0, acbdir=0, acbpl=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
-    acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0,
+    acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
     acyon=0, acyoi=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
@@ -93,8 +93,9 @@ DATA_TABLES = dict(
     actlo=[lo for _, lo, _ in TEMPOS], acthi=[hi for _, _, hi in TEMPOS],
 )
 DATA_TABLES.update(_P.DATA_TABLES)
+DATA_TABLES.update(_S.DATA_TABLES)                 # (SETUP's groups: each page's group, place, count)
 
-# the layers a custom section sets (SETUP page 12), in the order of the layer keys
+# the layers a custom section sets (SETUP SECTION MIX), in the order of the layer keys
 SEC_LAYERS = ["drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud"]
 ROLE_ENERGY = [0.15, 0.4, 0.55, 0.75, 1.0, 0.3, 0.5, 0.2]     # a custom section's energy, by role
 SEC_LENS = [0.6, 1.0, 1.5]                                     # short, normal, long
@@ -302,7 +303,7 @@ def piece():
     proc(c, "ac-newkey", [Call("ac-memclearall"),
                           If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
-    # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
+    # COMPOSE / DRIFT (aux + A#, SETUP GENERAL): while stopped, the piece is prepared again in that mode, ready;
     # while playing, it switches at once
     proc(c, "ac-modetoggle", [
         V("acmode", "1-acmode"), V("acmodesel", "1-acmode"), Send("ac-dirty"),
@@ -505,7 +506,10 @@ def section():
              Call("ac-secovr"), Call("ac-padpick")]
     for i, lay in enumerate(LAYERS):
         extra = {"drone": " || acdens < 0.3", "cloud": " || accapt"}.get(lay, "")
-        rest += [RNG, V("acf" + lay, f"acr1 < acrmask[int(acrole)*6+{i}]{extra}")]
+        # (while moving, the bells - the motif's voice - come in at least 4 sections in 5, but the calm ones)
+        chance = (f"if(acwrite && acrole != 0 && acrole != 5 && acrole != 7, max(0.8, acrmask[int(acrole)*6+{i}]), "
+                  f"acrmask[int(acrole)*6+{i}])" if lay == "bell" else f"acrmask[int(acrole)*6+{i}]")
+        rest += [RNG, V("acf" + lay, f"acr1 < {chance}{extra}")]
     rest += [
         RNG,
         X("if(acr1<0.5, actexA, actexB); if(acr2<0.5, actexB, int(acr3*%s))" % TEX_N, "v actex1a", "v actex2a"),
@@ -673,10 +677,11 @@ def layers():
         ("tex", f"(acshed < 2)*(acetex>0)*(1-acended)*max(acftex*{th(0.28)}, acetex==2)"),
         ("cloud", f"(acshed < 1)*(acecloud>0)*(1-acended)*max(max(acfcloud*{th(0.42)}, acecloud==2), max(((acinmode==2) || (acinmode==0)*(acinclass>=1))"
                   f"*min(1, acinput*2)*0.8, (acroute==4)*0.85))"),
-        ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th(0.45)}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
+        # (while moving, the bells need less density: 0.25 for 0.45 - they carry the motif)
+        ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th('if(acwrite, 0.25, 0.45)')}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
         ("motion", f"(acemotion>0)*(1-acended)*max(acfmotion*{th(0.3)}*min(1, acrhythm*2.5), acemotion==2)"),
     ]
-    # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP page 12)
+    # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP SECTION MIX)
     steps = [V(f"ace{n}", f"if(acm{n} != 1, acm{n}, if(acsx{n} == 1, 0, if(acsx{n} == 2, 2, 1)))") for n in SEC_LAYERS]
     # the MIX knobs as gains (data.level: even dB steps; 50 % = x1)
     # (asleep - stopped, after the fade - every layer is off, so its subpatch stops computing)
@@ -691,7 +696,7 @@ def layers():
             # the sub: auto follows the drone; on plays it alone too
             steps += [V("acgsub", "(acesub>0)*(1-acended)*if(acesub==2, 1, acgdrone)"),
                       SendL("ac-g-sub", ["acmgs*acslsub*acgsub", "acfade"])]
-        elif name == "bell":    # the engine chosen in SETUP page 9, or the piece's (auto)
+        elif name == "bell":    # the engine chosen in SETUP VOICES, or the piece's (auto)
             steps += [SendL(f"ac-g-bel{i}", [f"acmgb*acslbell*acgbell*(if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela)) == {i})", "acfade"])
                       for i in range(len(STRIKES))]
         elif name == "motion":  # the echoes, and the engine through them
@@ -801,7 +806,10 @@ def verb():
     proc(c, "ac-shpupd", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
                                                 f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
                                                 f"acsh{x}d", f"2*acsh{x}w"]) for x in SHAPE_LAYERS]
-         + [SendL("ac-subt", ["acsubt"])])         # (and the sub's sound: its SHAPE page)
+         + [SendL("ac-subt", ["acsubt"])]          # (and the sub's sound: its SHAPE page)
+         # (each layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
+         + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for x in "dsptac" for j in "pq"]
+         + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for x in "dsptac" for j in "pq"])
     # (after the defaults: ac-init's other receivers set them, in no set order)
     c.c(c.to(c.recv("ac-init"), "delay 20"), 0, c.obj("s ac-shpupd"), 0)
     proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])
@@ -1177,7 +1185,7 @@ def players():
             X("(0.35+0.65*acr2)*if((acans*acwrite) == 2, min(1, max(0, (12000 - (acnow - acanst))/8000)), 1); min(0.97, max(0.03, acscn[int(acscene)*10 + 4] + acscn[int(acscene)*10 + 5]*(acr3 - 0.5)))",
               "v acbv", "v acbpan"),
             SendL("ac-bell", ["acbp", "acbv*acdyn", "acbpan"]),
-            X("(acbp > acbpl) - (acbp < acbpl); acbp", "v acbdir", "v acbpl"),
+            X("(acbp > acbpl) - (acbp < acbpl); acbp; acnow", "v acbdir", "v acbpl", "v acblt"),
             # SETUP LINES Canon: the note again an octave, a scale's 5th or two octaves up, later, on the other side
             If("(accanon*acwrite) == 4", [SendL("ac-mlater", ["acbp - 12", "acbv*0.6", "0", "1 - acbpan",
                                                     f"60000/{BPMH}*if(accand == 3, acmeter, {_S._pick('accand', _S.SCAND)})"])]),
@@ -1216,7 +1224,9 @@ def players():
             RNG,
             # (SETUP DIALOGUE Answer: the bells' turn, or after you play; PHRASE Breath: not resting)
             # (a calm section: the bells play less than half as often)
-            If("acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.6) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && acansm == 0) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
+            # (bells you bring in with their key - acebell 2 - play through a calm section and both halves of a
+            # phrase: you asked for them; a calm section otherwise keeps about 2 in 3 of them)
+            If("acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.45 || acebell == 2) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && (acansm == 0 || acebell == 2)) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
                "acnow - acanst < 12000)) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 1) && ((acendp*acwrite) == 0 || acfinb == 0)", play),
             V("acbi", "(acbi+1) % 5"),
             If("acbi==0 && acr3<0.6", [RNG, T("acmotif", "int(acr1*5)", "acmotif[int(acr1*5)] + int(acr2*5) - 2")]),

@@ -4,10 +4,10 @@ harmony, form, layers, transport, ANCHOR, quick save / recall), aux, the footswi
 The key layout is LOW_KEYS / TOP_KEYS (the manual documents them in that order); keys() wires them, and the
 gestures that use a key's release (low A tap / hold, top B tap / hold / + key, aux + top A) are handled at the top
 of keys()."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line, Later
 from data import *
 from pdlib import Toast, Arm
-from gen_setup import NSET
+from gen_setup import NSET, SETUP_NAMES, GROUP_KEYS, GROUP_START
 from data import MIX_KNOBS
 import gen_setup as _S
 
@@ -36,9 +36,9 @@ NP = len(PAGES)
 # The Organelle keys are always functions (notes come from MIDI). Low octave: the playing pages on the white keys
 # (SHAPE, SPACE, PIECE, PERFORM), the level pages on the black keys beside them (MIX 1, MIX 2, SENDS 1, SENDS 2),
 # then harmony and form (G Root, A chord, A# Resolve, B section); top octave: the layers, then input, Freeze and the
-# transport. Aux + a low key opens that SETUP page (C = 1). The manual (tools/manual.py) documents these, in this order.
+# transport. Aux + a white low key opens a SETUP group (gen_setup.SETUP_GROUPS). The manual (tools/manual.py) documents these, in this order.
 LOW_PAGES = {0: 0, 1: 5, 2: 1, 3: 6, 4: 2, 5: 7, 6: 3, 8: 4}     # low key -> knob page (data.PAGE_NAMES)
-SAVES_PAGE = 12                         # SETUP SAVES (aux + top B)
+SAVES_PAGE = SETUP_NAMES.index("SAVES")  # SETUP SAVES (aux + top B)
 LOW_KEYS = ["SHAPE page", "MIX 1 page", "SPACE page", "MIX 2 page", "PIECE page", "PERFORM page", "SENDS 1 page",
             "Root (hold)", "SENDS 2 page", "chord change now (hold: CHORD page)", "Resolve", "next section (hold: hold section)"]
 LAYER_KEYS = [("acmdrone", "drone", "acgdrone"), ("acmsub", "sub", "acgsub"), ("acmpad", "pads", "acgpad"),
@@ -84,7 +84,16 @@ def knobs():
             c.c(rt_, 1, c.obj("v acrootk"), 0)
             run_steps(c, (rt_, 0), [V("acrootn", "int(acrootk*11.99)"),
                                                      If("acrootn != acpend", [Call("ac-rootset")])])
-        mo = c.ch(kr, f"expr if(acroothold && {k} == 0, -1000, if(acsetup, -1 - $f1, $f1))", "moses 0")
+        if k == 0:     # in SETUP, aux held: knob 1 picks the page (all of them, back and forth)
+            k2 = c.to(kr, "t f f")
+            tb = c.to((k2, 1), "t b f")
+            c.c(tb, 1, c.obj("v acscrk"), 0)
+            run_steps(c, (tb, 0), [If(f"acsetup && acauxheld && acsetpg < {NSET}", [
+                X(f"1; min({NSET - 1}, int(acscrk*{NSET}))", "v acauxused", "v acsnew"),
+                If("acsnew != acsetpg", [V("acsetpg", "acsnew"), Call("ac-oledsetup")])])])
+            kr = (k2, 0)
+        mo = c.ch(kr, f"expr if((acroothold || (acsetup && acauxheld && acsetpg < {NSET})) && {k} == 0, -1000, "
+                      f"if(acsetup, -1 - $f1, $f1))", "moses 0")
         sk = c.to((mo, 0), "moses -500")
         c.c(c.m(c.to((sk, 1), "expr -1 - $f1"), f"{k} $1"), 0, c.obj("s ac-setknob"), 0)
         t = c.to((mo, 1), "t f f")
@@ -182,7 +191,11 @@ def keys():
     def layer(i, var, label, g):
         # a tap (on its release): in (always on) if it's silent now, out if it plays; held 0.5 s: its SHAPE page;
         # aux + tap: the layer's page (its sound, in / out / auto, level, reverb send)
-        proc(c, f"ac-laytog{i}", [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")]),
+        # (the bells: out only if you could hear them - in, or a strike in the last 6 s: a layer that is on but has
+        # not struck yet sounds silent; brought in, a note at once, as the fade begins)
+        on = f"{g} > 0.01" + (" && (acmbell == 2 || acnow - acblt < 6000)" if label == "bells" else "")
+        now = [Later("ac-bellnow", 400)] if label == "bells" else []
+        proc(c, f"ac-laytog{i}", [If(on, [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")] + now),
                                   V("acfade", _S.LFADE), Call("ac-layers")])
         return [If("acauxheld", [V("acsetup", "1"), V("acsetpg", str(_S.LAYER_PAGE0 + i)), Call("ac-oledsetup")],
                    [X(f"{i}; 0", "v acshk", "v acshkh"), Arm("ac-shphold", "500", stop="ac-shpstop")])]
@@ -221,8 +234,9 @@ def keys():
         # then neither opens its SHAPE page nor takes the layer in / out when let go; aux + a low key: that SETUP page
         pick = [V("acrsel", str(i)), Send("ac-shpstop"), V("acshkh", "1")]
         run_steps(c, (b, 0), [If("acrkey == 1", pick + [Call("ac-mop")], [
-            If("acrkey == 2", pick + [Call("ac-bop")], [If("acauxheld", [If(f"{i} < {NSET}", [
-                V("acsetup", "1"), V("acsetpg", str(i)), Call("ac-oledsetup")])], f)])])])
+            If("acrkey == 2", pick + [Call("ac-bop")], [If("acauxheld", [
+                V("acsetup", "1"), V("acsetpg", str(GROUP_START[GROUP_KEYS.index(i)])), Call("ac-oledsetup")]
+                if i in GROUP_KEYS else [], f)])])])
         c.col(170)
     for i, f in enumerate(top):
         b = c.obj("t b")
@@ -257,12 +271,14 @@ def keys():
     # aux: knob page
     a = c.ch(c.recv("aux"), "sel 0")
     b = c.to((a, 1), "t b")
-    run_steps(c, (b, 0), [X("1; 0; acnow", "v acauxheld", "v acauxused", "v acauxt")])
-    run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [
+    run_steps(c, (b, 0), [X("1; 0; acnow; 0", "v acauxheld", "v acauxused", "v acauxt", "v acauxlong")])
+    run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxlong", [V("acauxlong", "0"), If("acauxused == 0", [
+        V("acsetup", "0"), Send("ac-save"), Call("ac-oledall"), Toast("settings saved")])], [
+        If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [
         # (a quick page: aux leaves it)
         V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")], [
         V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")])], [
-        V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])
+        V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])])
     f = c.ch(c.recv("fs"), "sel 0")
     c.c(c.to((f, 1), "t b"), 0, c.obj("s ac-change"), 0)
     return c

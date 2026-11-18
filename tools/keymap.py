@@ -196,7 +196,7 @@ AUX_MORE = {     # what the short aux names in TOP_KEYS mean
     "capture": "record 8 s of the input into the cloud, kept as a memory",
     "ANCHOR": "set the anchor, then glide every knob back to it; held 0.8 s: anchor here anew",
     "COMPOSE / DRIFT": "switch the mode (COMPOSE: a form of sections; DRIFT: endless)",
-    "SAVES": "tap: the SAVES page (SETUP 13); held with a key: save to that slot",
+    "SAVES": "tap: the SAVES page (SETUP SAVES); held with a key: save to that slot",
 }
 
 
@@ -216,11 +216,11 @@ def aux_panel(c, x, y, w):
     # alone
     yy = text_block(c, x0, y - 16, col - 10, [
         ("Tap:", "the next knob page (in SETUP: the next SETUP page)."),
-        ("Hold 1 s:", "SETUP; hold again to leave (settings are saved)."),
+        ("Hold 1 s:", "SETUP; in SETUP, hold and let go to leave (settings are saved)."),
     ])
     # with a low key
     text_block(c, x0 + col, y - 16, col - 10, [
-        ("+ low key:", "that SETUP page, C = 1 to B = 12 (keyboard above)."),
+        ("+ low key:", "a white key: a SETUP group (page 2); in SETUP, + knob 1: scroll the pages."),
         ("+ top B, + key:", "save to that slot (low C-B = 1-12, top C-D# = 13-16)."),
     ])
     # with a top key
@@ -260,23 +260,25 @@ def build(out, version="dev"):
     c.drawString(36, y2 - 16, "White keys C D E F: the playing pages; the black key beside each: a level page. "
                               "A knob page shows its four knobs for 6 s; MIX and SENDS show the MIX view.")
     c.drawString(36, y2 - 28, "Footswitch: chord change now.   Aux tap: next knob page.   Aux held 1 s: SETUP "
-                              "(held again: leave and save).   Page 2: aux + key, slots, knobs.")
+                              "(held and let go again: leave and save).   Page 2: aux + key, slots, knobs.")
     c.showPage()
 
     # ---- page 2: aux + key (SETUP pages), the slots, the knob pages, the other controls
     header(c, W, H, "Amble - aux, slots and knobs",
-           "Hold aux and press a low key: that SETUP page. Hold top B and press a key: a save slot.", version)
-    setup = {k: (f"SETUP {k + 1}", [S.SETUP_NAMES[k]], "setup") for k in range(12)}
+           "Hold aux and press a white low key: a SETUP group. Hold top B and press a key: a save slot.", version)
+    setup = {k: ("-", ["free"], "setup") for k in range(12)}
+    setup.update({k: (g, ps[:3] + (["..."] if len(ps) > 3 else []), "setup") for k, (g, ps) in zip(S.GROUP_KEYS, S.SETUP_GROUPS)})
     yk = H - 80 - 120
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(INK)
-    c.drawString(36, yk + 126, "AUX + LOW KEY: SETUP PAGES 1-12")
+    c.drawString(36, yk + 126, "AUX + LOW KEY: SETUP GROUPS (their first page)")
     keyboard(c, 36, yk, kw, 120, setup, "low")
-    rest = ", ".join(f"{i + 1} {n}" for i, n in enumerate(S.SETUP_NAMES) if i >= 12)
+    groups = "; ".join(f"{g}: {', '.join(ps)}" for g, ps in S.SETUP_GROUPS)
     y = text_block(c, 36, yk - 16, kw, [
-        ("More SETUP pages:", f"in SETUP, aux taps step on: {rest}. Aux + top B opens {S.SETUP_NAMES[12]} (13)."),
-        ("In SETUP:", "the four knobs set the four rows (absolute). Hold aux 1 s, or press a knob page key, to leave; "
-                      "settings are saved."),
+        ("The groups:", f"{groups}. Aux + top B opens SAVES."),
+        ("In SETUP:", "aux taps step through the pages; aux held + knob 1 scrolls through all of them, back and forth. "
+                      "The four knobs set the four rows (absolute). Hold aux and let go (without knob 1), or press a "
+                      "knob page key, to leave; settings are saved."),
     ])
     # the slots
     y -= 6

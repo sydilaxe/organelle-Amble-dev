@@ -130,7 +130,16 @@ for _var, _name, _g in U.LAYER_KEYS:
         f"A tap (on its release): bring the {_name} in (on at its MIX level, whatever the piece does) if it is "
         "silent, or take it out if it plays. The fade takes SETUP LIVE Key fade. Held half a second: its SHAPE "
         "page - knob 1 its sound, knob 2 Tone (50 % open; down darkens with a low-pass, up thins with a "
-        "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider); "
+        "high-pass), knobs 3 and 4 the sound's own two parameters, named on the page for the sound playing (50 % as "
+        "designed; the overall stereo width is SETUP OUTPUT Width). The bells' and the motion's engines: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
+        "is the raw console square, its Arp off below 50 %. The pads too have their type's own two (while the voices "
+        "play different types, Character and Movement, each type answering in its way): " +
+        "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.PAD_PARAMS.items()) + ". The drone's designs: " +
+        "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.DRONE_PARAMS.items()) + ". The sub's sounds: " +
+        "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.SUB_PARAMS.items()) + ". The textures (two may sound: the page "
+        "names the first): " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.TEX_PARAMS.items()) + ". The "
+        "atmospheres: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ATMOS_PARAMS.items()) + ". The cloud: "
+        f"{DT.CLOUD_PARAMS[0]} (its grains' length) / {DT.CLOUD_PARAMS[1]} (their stereo scatter); "
         "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (
@@ -182,14 +191,14 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Pads": ("auto, raw, " + ", ".join(DT.FLAVOURS), "The pad types. auto: the piece's palette, new picks each "
              "section. raw: the dry, buzzy types of the first demos (vox, part, fold, pulsr), no character effect. "
              "A type name: all four pad voices (and the notes you play) use it. Applies at once, crossfaded. "
-             "On SECTIONS (page 11): the pad type of that section only (auto = the SOUNDS choice). On JOURNEY (page "
-             "19): off, or the set of types the pad voices travel through - soft, bright or all - each voice on its "
+             "On SECTIONS: the pad type of that section only (auto = the SOUNDS choice). On JOURNEY: "
+             "off, or the set of types the pad voices travel through - soft, bright or all - each voice on its "
              "own schedule."),
     "Drone": ("auto, " + ", ".join(DT.DRONES) + " / off, on", "SOUNDS: the drone's design; auto = the piece's (and its "
               "break's). JOURNEY: on, the drone travels through its designs, crossfaded."),
     "Texture": ("auto, " + ", ".join(DT.TEXTURES), "The texture layer; auto = the section's two."),
     "Character": ("auto, " + ", ".join(DT.CHARACTERS), "The effect on the pads; auto = the piece's."),
-    "Bells": ("auto, " + ", ".join(DT.STRIKES) + " / off, bells, motion, both", "JOURNEY (page 19): the bells' and the "
+    "Bells": ("auto, " + ", ".join(DT.STRIKES) + " / off, bells, motion, both", "JOURNEY: the bells' and the "
               "motion's engines travel. VOICES: the engine that plays the bells (the motif, and your notes when "
               "Notes to = bells); auto = the piece's (mostly bars or metal). Applies at once, crossfaded."),
     "Motion": ("auto, " + ", ".join(DT.STRIKES), "The engine of the motion arpeggio, through its tempo echoes; "
@@ -279,7 +288,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
                "bells and motion; the bells and the motion rest a bar as a section "
                "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
-               "the pads hold through."),
+               "the pads hold through. Bells you bring in with their key play through the calm sections."),
     "Motif": (", ".join(S.SMDEV), "develops: away from the opening and the return, each section may also play the "
               "motif backwards, slower, faster, or in fragments (its first two notes, sequenced up)."),
     "Answer": (", ".join(S.SANS), "Call and response. motion: the motion and the bells take 2 bars each in turn. you: "
@@ -321,7 +330,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Duck release": (", ".join(n for n, _ in S.SDUCKR), "How long the piece takes to come back after you stop."),
     "Macro": ("1-4", "The macro the rows below set (both MACRO pages). A macro is a CC target (macro 1-4) that moves "
               "two knobs at once."),
-    "Mode": ("COMPOSE, DRIFT / offset, latch", "SETUP page 1: the mode of the next piece (also aux + top A#). MACRO A: "
+    "Mode": ("COMPOSE, DRIFT / offset, latch", "SETUP GENERAL: the mode of the next piece (also aux + top A#). MACRO A: "
              "offset - the knobs move away from where they are set while the macro is up, and come back as it comes "
              "down; latch - the macro drags the knobs' values, which stay where they are left."),
     "A": ("off, a knob", "The macro's first knob (any knob but In and the reverb type)."),
@@ -576,7 +585,7 @@ def story():
                "(aux + top A#) and press <b>top A#</b> to start it. The screen shows the piece as a live score; the "
                "knobs shape it; the Organelle keys are functions (pages, harmony, form, layers, transport) and you "
                "play notes from a MIDI controller; hold <b>aux</b> for 1 s for SETUP, or press aux + a low key for "
-               "that SETUP page."),
+               "a SETUP group."),
           para("<b>Audio input.</b> Amble uses the Organelle's line input. Set the Organelle's mic/line switch to "
                "<b>Line</b>, plug in, and raise the <b>In</b> knob (SHAPE page). At In 0 the input is ignored, and "
                "In always starts at 0 when Amble loads."),
@@ -640,13 +649,15 @@ def story():
                "or breath controller). The <b>low octave</b> opens the knob pages and steers harmony and form; the "
                "<b>top octave</b> brings layers in and out and runs input, Freeze and the transport. Every one is a "
                "single press, so a hand can leave your instrument for a moment."),
-          para(f"<b>Aux + a low key</b> opens that SETUP page (C = page 1 ... B = page 12); aux + top B opens SAVES "
-               f"(page 13); aux taps reach the rest ({S.NSET} pages)."),
+          para("<b>Aux + a white low key</b> opens a SETUP group at its first page: "
+               + esc(", ".join(f"{SHARPS[k]} {g}" for k, (g, _) in zip(S.GROUP_KEYS, S.SETUP_GROUPS)))
+               + ". The black low keys with aux are free. Aux + top B opens SAVES."),
           table(frows, [0.9, 1.9, 3.9]),
           Spacer(1, 6),
           table([["Control", "What it does"],
                  ["Aux tap", "Next knob page (in SETUP: next SETUP page)."],
-                 ["Aux held 1 s", "Enter SETUP; hold again to leave and save."],
+                 ["Aux held + knob 1", "In SETUP: scroll through every SETUP page, back and forth."],
+                 ["Aux held 1 s", "Enter SETUP; in SETUP, hold aux (without knob 1) and let go to leave and save."],
                  ["Footswitch", "Chord change now."]], [1.4, 5.3])]
 
     s += [Paragraph("Performing", H2),
@@ -664,11 +675,11 @@ def story():
                "choices switch at once), as a whole piece or as its sound only. A dot at the right of the chord line "
                "shows that the sound has changed since the slot. Empty slots 1-6 hold factory pieces: "
                + esc(", ".join(n for n, _, _ in DT.FACTORY)) + "."),
-          para("<b>JOURNEY</b> (SETUP 19) lets the pad voices, the drone and the bells' and motion's engines travel "
+          para("<b>JOURNEY</b> (SETUP JOURNEY) lets the pad voices, the drone and the bells' and motion's engines travel "
                "through their engines, slowly crossfaded; a CC (journey step) moves them on by hand. <b>PUMP</b> and "
-               "<b>DUCK</b> (SETUP 16) make the bed breathe on the grid and the piece dip under your playing. Four "
-               "<b>macros</b> (SETUP 17-18, CC targets macro 1-4) each move two knobs, offset or latched. <b>CC OUT</b> "
-               "(SETUP 21) sends what moves inside to your other instruments.")]
+               "<b>DUCK</b> (SETUP GROOVE) make the bed breathe on the grid and the piece dip under your playing. Four "
+               "<b>macros</b> (SETUP MACRO A and B, CC targets macro 1-4) each move two knobs, offset or latched. <b>CC OUT</b> "
+               "(SETUP CC OUT) sends what moves inside to your other instruments.")]
 
     items = setup_items()
     srows = [["Page", "Row", "Item", "Choices", "What it does"]]
@@ -676,23 +687,15 @@ def story():
         ch, desc = SETUP_DESC[label]
         srows.append([str(pg), str(row), label, ch, desc])
     s += [PageBreak(), Paragraph("5  SETUP", H1),
-          para("The header names the page: " + esc(", ".join(f"{i + 1} {n}" for i, n in enumerate(S.SETUP_NAMES))) + "."),
-          para(f"Hold <b>aux</b> for 1 s. A tap on aux turns the {S.NSET} pages; knobs 1-4 set the 4 rows "
-               "(absolute positions). Hold aux for 1 s again to leave; settings are saved."),
+          para("The pages come in 7 groups; the header names the group, the page and where it is in the group: "
+               + esc("; ".join(f"{g}: {', '.join(ps)}" for g, ps in S.SETUP_GROUPS)) + "."),
+          para(f"Hold <b>aux</b> for 1 s. A tap on aux turns the {S.NSET} pages; with aux held, knob 1 scrolls through "
+               "all of them, back and forth; aux + a white low key jumps to a group. Knobs 1-4 set the 4 rows "
+               "(absolute positions). Hold aux and let it go (without turning knob 1) to leave; settings are saved."),
           table(srows, [0.45, 0.4, 1.0, 1.75, 3.1]),
           Spacer(1, 6),
-          Table([[shot("setup", 3.1, "SETUP page 1"), shot("setup_page2", 3.1, "SETUP page 2")],
-                 [shot("setup_page3", 3.1, "SETUP page 3"), shot("setup_page4", 3.1, "SETUP page 4")],
-                 [shot("setup_page5", 3.1, "SETUP page 5: SOUNDS"), shot("setup_page6", 3.1, "SETUP page 6: MUSIC")],
-                 [shot("setup_page7", 3.1, "SETUP page 7: MIDI IN"), shot("setup_page8", 3.1, "SETUP page 8: CC MAP")],
-                 [shot("setup_page9", 3.1, "SETUP page 9: VOICES"), shot("setup_page10", 3.1, "SETUP page 10: FORM")],
-                 [shot("setup_page11", 3.1, "SETUP page 11: SECTIONS"),
-                  shot("setup_page12", 3.1, "SETUP page 12: SECTION MIX")],
-                 [shot("setup_page13", 3.1, "SETUP page 13: SAVES"), shot("setup_page14", 3.1, "SETUP page 14: LIVE")],
-                 [shot("setup_page15", 3.1, "SETUP page 15: RECALL"), shot("setup_page16", 3.1, "SETUP page 16: GROOVE")],
-                 [shot("setup_page17", 3.1, "SETUP page 17: MACRO A"), shot("setup_page18", 3.1, "SETUP page 18: MACRO B")],
-                 [shot("setup_page19", 3.1, "SETUP page 19: JOURNEY"), shot("setup_page20", 3.1, "SETUP page 20: COLOUR")],
-                 [shot("setup_page21", 3.1, "SETUP page 21: CC OUT"), ""]],
+          Table([[shot("setup" if n == 1 else f"setup_page{n}", 3.1, f"SETUP {S.SETUP_NAMES[n - 1]}")
+                  for n in (k, k + 1) if n <= 21] + ([""] if k == 21 else []) for k in range(1, 22, 2)],
                 colWidths=[3.35 * inch, 3.35 * inch])]
 
     s += [PageBreak(), Paragraph("6  How a piece is composed", H1),
@@ -746,7 +749,7 @@ def story():
           table([["Type", "Sound"]] + [[f, FLAV_DESC[f]] for f in DT.FLAVOURS], [1.2, 5.5]),
           para("The electronic and bell-like types come up most often."),
           Paragraph("Bells and motion engines", H2),
-          para("Both layers can play on any of these engines (SETUP page 9). Auto: each piece picks one for each "
+          para("Both layers can play on any of these engines (SETUP VOICES). Auto: each piece picks one for each "
                "layer - the bells mostly bars or metal, the motion mostly fm or blip."),
           table([["Engine", "Sound"]] + [[e, STRIKE_DESC[e]] for e in DT.STRIKES], [1.2, 5.5]),
           Paragraph("Drones, character, textures, atmospheres", H2),
@@ -809,7 +812,7 @@ def story():
                "rate; heavy changes are spread over a few milliseconds. The <b>CPU guard</b> measures the load "
                "each second: above 78 % it gets lighter in steps - 1 cloud and atmosphere off, 2 textures and the "
                "pad character off, 3 the automatic vocoder off - and steps back after 20 s below 50 %. The pads, "
-               "drone, sub, bells, motion and reverb are never changed. SETUP page 4 shows the load and the "
+               "drone, sub, bells, motion and reverb are never changed. SETUP NOTES OUT shows the load and the "
                "guard's level and can turn the guard off. The CPU reading is an average over a second; short spikes "
                "inside it are absorbed by the audio buffer, which Amble sets to 25 ms in <b>pd-opts.txt</b> "
                "(the Organelle starts Pd with 6 ms)."),
@@ -819,7 +822,7 @@ def story():
                "effects, the page), and the sound: its level, loudest sample, bass, treble and sub-bass, any DC "
                "offset, samples the output had to cut, near-silence while playing, and how far Pd fell behind "
                "real time (a dropout risk). A file holds 10 minutes; it is written each minute and when the piece stops. "
-               "For each part's cost alone, turn SETUP 4's CPU knob fully up: the <b>profile</b> (about 9 minutes, "
+               "For each part's cost alone, turn SETUP NOTES OUT's CPU knob fully up: the <b>profile</b> (about 9 minutes, "
                "silent) writes <b>logs/profile-NNNN.txt</b>, then the piece is back as it was, stopped. Copy the "
                "logs folder off the card; tools/perf_report.py reads it and says what is cheap enough to make "
                "richer and what is worth optimising. Logging itself is light: a sum every 100 ms and a small file "
@@ -835,7 +838,7 @@ def story():
                                                           "6 ms); raise the number in Patches/Amble/pd-opts.txt, "
                                                           "e.g. to 40. Lower it for less delay when playing live."],
                  ["Crackle when a lot is playing", "Leave the CPU guard on; check the CPU reading on SETUP "
-                                                   "page 4; lower Dens or choose Bloom instead of Shimmer."],
+                                                   "CPU (SYSTEM group); lower Dens or choose Bloom instead of Shimmer."],
                  ["The Organelle keys play no notes", "They are functions; play from a MIDI controller."],
                  ["Silence and READY on the screen", "A piece waits: top A# starts it."],
                  ["A layer never comes in", "Check its layer key (aux + key: its page, Play auto), its MIX level and, "

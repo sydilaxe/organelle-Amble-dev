@@ -39,7 +39,7 @@ LAYERS AND THEIR RHYTHMS (one clock, 40-72 BPM by default, meter 3-7)
   Motion   Euclidean patterns (e.g. 5 in 8, 7 in 16) arpeggiating the chord,
            swing, tempo echoes; on FM pings or another engine (below)
   Bells    the motif, phrased in beats with rubato, on struck bars or another
-           engine. Engines (both layers, SETUP page 9): bars, fm, blip (a
+           engine. Engines (both layers, SETUP VOICES): bars, fm, blip (a
            filtered analog blip), wood (marimba-like), wave (a glassy
            wavetable), metal (a vibraphone-like metallophone); by hand
            also kalimba, steel (a steel pan), pluck (a plucked string)
@@ -97,7 +97,7 @@ THE COMPOSER LISTENS
     waits for you (up to 3 x 30 s)
   - silence: the piece leads
 
-THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
+THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   Low octave
   (the white keys C-F: the playing pages; the black keys: the levels)
   C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells)
@@ -123,7 +123,7 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
-        page (sound, tone, drive, width); aux + tap: the
+        page (sound, tone, and the sound's own two); aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
         3 its level, 4 its reverb send; aux leaves. E (motion) or D#
         (bells) held + low keys: C random, C# the piece's own, D/D# rotate,
@@ -187,12 +187,16 @@ THE MIX VIEW (while a MIX or SENDS page is open)
   (the four the knobs turn underlined); a dot on top = on (a layer key), a
   dash at the foot = out; the column a knob turns is framed with its value
 
-SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
-1 s to leave, save)
+SETUP (hold aux 1 s; aux tap = next page; in SETUP, aux held + knob 1 scrolls
+through all the pages, back and forth; aux + a white low key = a group:
+C PIECE, D WRITING, E SOUND, F LIVE, G SAVES, A MIDI, B SYSTEM; hold aux
+and let go, without knob 1, to leave and save)
+  - PIECE -
+  GENERAL:
   1 MIDI out   off / tempo only / tempo+note / notes only
      tempo: MIDI clock, 24 a beat at the piece's tempo, Start/Stop with it
      (Continue when a stopped piece plays on)
-     notes, by channel from the base channel (page 2):
+     notes, by channel from the base channel (PLAYING):
        base  the chord as voiced (held)     +1  the tonic (held)
        +2    bells                          +3  the motion arpeggio
        +4    the bass (the sub's note)      +5  the ARP CHORD: the chord in
@@ -201,20 +205,51 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
                Start restarts the bar and the piece, Stop stops it)
   3 Mode       COMPOSE / DRIFT (the next piece; saved)
   4 Bloom      clean / vintage (13-bit, as the unit)
-  page 2: Follow you (how much chords follow what you play), MPE bend
-  range (12/24/48/96), MIDI out base channel, breath curve.
-  page 3: Output (stereo wide / mono - for mono rigs and external effects /
-  split - pads and drone left, everything else right, as mono stems),
-  Width (50-150 %), Pan motion (how far the voices travel), Tempo range:
-  ambient 40-72, slow 24-48, wide 30-110, pulse 60-100, fast 90-140. Above
-  84 BPM bells, breathing and the drone swell move at half time.
-  page 4: MIDI notes (all / harmony: no bells or motion / arp only),
-  Arp octave (C1-C5, where the arp chord starts), CPU (the load now and
-  the guard's level; turn its knob fully up for the profile: every
-  part alone, about 9 min, into logs/profile-NNNN.txt), CPU guard (off,
-  on, off + log, on + log: with log, a line every 5 s into
-  logs/perf-NNNNPP.txt - the load and what was playing).
-  page 5, SOUNDS (each auto = the piece chooses; a choice applies at
+  MUSIC (a fixed choice stays: no modulation, no scale change):
+    Key        auto / C .. B (applies at once, with a chord change)
+    Scale      auto / one of the 16 scales
+    Chords     auto / one voicing: spread quartal cluster fifths ninths
+               spectral mirror sus
+    Pulse      off / gentle / normal / strong - the drone and sub swell
+               on every bar
+  FORM:
+    Form       auto / arch / build / waves / twin / journey / custom (your
+               sections, SECTIONS and SECTION MIX)
+    Tempo      auto / a fixed tempo 40-140 bpm
+    Meter      auto / 3-7 beats
+    Atmos      auto / one atmosphere
+  SECTIONS (editing one turns the form to custom):
+    Section    now (follows the playing section) / 1-12
+    Role       the section's role, or end (the piece ends there)
+    Length     short / normal / long
+    Pads       the section's pad type (auto = SOUNDS)
+  SECTION MIX:
+    Section    now / 1-12      Layer  drone .. cloud
+    Play       auto / off / on / in 1/4, 1/2, 3/4 (silent, then it swells in
+               to its level) / out 1/4, 1/2, 3/4
+    Level      0-200 % in this section (on top of MIX)
+  - WRITING -
+  How the piece writes - one motif carried between the
+  bells, the motion and (held, slowly) the pads, in phrases that close
+  and breathe:
+  WRITING: Writing (still: the static, droning piece; moving),
+  Pads carry (the motif), Drone level (subtle), Ending (by phrase)
+  LINES: Melody (arp, 1/f, grow, mutate, motif), Mutate,
+  Canon (8va, 5th, 15ma, or by the motion), Canon delay
+  HARMONY: Moves (mediants, tonnetz), How often, Dominants
+  (secondary), New types (a piece's picks take the later types too)
+  PHRASE: Phrases (4 / 8 chords, open then closed), Voicing
+  (smooth), Key plan (home, fifths, thirds), Breath (rests after a
+  closed phrase)
+  DIALOGUE: Motif (develops), Answer (motion, you), Phasing,
+  Register (spaced)
+  ARC: Rhythm (shared: the motion on the bells' rhythm), Arc
+  (dynamics and tension over the phrase), Bass (a dominant pedal before
+  the return; a ground bass), Counter (the song voice sings the motif)
+  A feature the scale can't carry (no 5th, not 12-tone, pentatonic for
+  the dominants) steps aside.
+  - SOUND -
+  SOUNDS (each auto = the piece chooses; a choice applies at
   once, crossfaded, and stays for every section - for auditioning):
     Pads       auto / raw / one type for all four voices: fm vox bow part
                fold pulsr saws pwm digi sync tine sine glass beat reed organ
@@ -226,14 +261,45 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
                murmur / echoes / whisper / leaves / brook / bubbles /
                crickets / harp / song
     Character  auto / clean / chorus / tape / ring / crush
-  page 6, MUSIC (a fixed choice stays: no modulation, no scale change):
-    Key        auto / C .. B (applies at once, with a chord change)
-    Scale      auto / one of the 16 scales
-    Chords     auto / one voicing: spread quartal cluster fifths ninths
-               spectral mirror sus
-    Pulse      off / gentle / normal / strong - the drone and sub swell
-               on every bar
-  page 7, MIDI IN:
+  VOICES (auto = the piece's; a choice applies at once):
+    Bells      auto / bars / fm / blip / wood / wave / metal / kalimba /
+               steel / pluck
+    Motion     the same
+    Glide      off / fast / short / medium / long / slow - how the pad
+               voices slide to a new chord (slow = up to 75 % of the time
+               between changes; off = they jump, all together)
+    Sub        auto / pedal / root / both
+  COLOUR: Pre-delay (0-200 ms), Era (70s / 80s / 90s / now),
+  Sparkle (GLINT: small FM bells high on the chord tones), its octave
+  JOURNEY: Speed, Pads (off / soft / bright / all), Drone,
+  Bells (off / bells / motion / both) - they travel through their
+  engines, slowly crossfaded
+  - LIVE -
+  PLAYING: Follow you (how much chords follow what you play), MPE bend
+  range (12/24/48/96), MIDI out base channel, breath curve.
+  LIVE:
+    Mix CCs    off / CC 20-35 / CC 102-117: 8 layer levels, then 8 in/out
+               buttons, for a controller's faders and pads
+    Program    off / load slot (program 1-16)
+    Key fade   0.5-20 s: a layer key bringing a layer in or out
+    Entry fade 2-40 s: a section's layer coming in or going out
+  GROOVE: Pump (off / 4 bars .. beat), Pump depth, Duck (the
+  piece dips while you play), Duck release
+  MACRO A / B: four macros (CC targets macro 1-4), each
+  moving two knobs with a depth (-100..+100 %), offset or latch
+  - SAVES -
+  SAVES (also aux + top B): 16 slots in saves.txt (an update
+  keeps them). Slot (its name); Save - turn knob 2 fully up; Load - turn
+  knob 3 fully up (stopped: it waits ready; playing: it plays now); Name
+  (auto = the key and scale, or a word).
+  RECALL: Morph (cut .. 2 min: how a load glides in), Recall
+  (piece / sound only), Anchor glide (2-30 s), Compare (yours / saved)
+  MEMORY: Memory on keeps the knobs you turn in each section;
+  when the section comes again (the piece replayed, or loaded from its
+  slot) they glide back over Glide; Clear sec / Clear all (turn up).
+  Saved with the piece; a new piece starts with an empty memory
+  - MIDI -
+  MIDI IN:
     Notes to   what MIDI notes play: voice (the live voice) /
                chords (your held notes are the pad chord) / drone (drone
                and sub on your note) / bells (a bell per note) / cloud
@@ -242,7 +308,7 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
                swell (the whole level, like an expression pedal)
     Press      what channel / poly pressure does (a target, below)
     Breath in  the breath level arriving now
-  page 8, CC MAP (knob 1 picks a CC: 1 2 7 11 64 71 74; knob 2 its target):
+  CC MAP (knob 1 picks a CC: 1 2 7 11 64 71 74; knob 2 its target):
     targets    off / breath (into Breath to) / vibrato / voice tone /
                voice level / voice type / hold (sustain) / density /
                colour / reverb / swell / motion / resolve. Voice tone and level act
@@ -250,86 +316,31 @@ SETUP (hold aux 1 s, or aux + a low key; aux tap = next page (21); hold aux
     defaults   1 vibrato, 2 7 11 breath, 64 hold, 71 off, 74 voice tone
     Last CC    the last CC in and its value
     Vib rate   3-8 Hz
-  page 9, VOICES (auto = the piece's; a choice applies at once):
-    Bells      auto / bars / fm / blip / wood / wave / metal / kalimba /
-               steel / pluck
-    Motion     the same
-    Glide      off / fast / short / medium / long / slow - how the pad
-               voices slide to a new chord (slow = up to 75 % of the time
-               between changes; off = they jump, all together)
-    Sub        auto / pedal / root / both
-  page 10, FORM:
-    Form       auto / arch / build / waves / twin / journey / custom (your
-               sections, pages 11-12)
-    Tempo      auto / a fixed tempo 40-140 bpm
-    Meter      auto / 3-7 beats
-    Atmos      auto / one atmosphere
-  page 11, SECTIONS (editing one turns the form to custom):
-    Section    now (follows the playing section) / 1-12
-    Role       the section's role, or end (the piece ends there)
-    Length     short / normal / long
-    Pads       the section's pad type (auto = SOUNDS)
-  page 12, SECTION MIX:
-    Section    now / 1-12      Layer  drone .. cloud
-    Play       auto / off / on / in 1/4, 1/2, 3/4 (silent, then it swells in
-               to its level) / out 1/4, 1/2, 3/4
-    Level      0-200 % in this section (on top of MIX)
-  page 13, SAVES (also aux + top B): 16 slots in saves.txt (an update
-  keeps them). Slot (its name); Save - turn knob 2 fully up; Load - turn
-  knob 3 fully up (stopped: it waits ready; playing: it plays now); Name
-  (auto = the key and scale, or a word).
-  page 14, LIVE:
-    Mix CCs    off / CC 20-35 / CC 102-117: 8 layer levels, then 8 in/out
-               buttons, for a controller's faders and pads
-    Program    off / load slot (program 1-16)
-    Key fade   0.5-20 s: a layer key bringing a layer in or out
-    Entry fade 2-40 s: a section's layer coming in or going out
-  page 15, RECALL: Morph (cut .. 2 min: how a load glides in), Recall
-  (piece / sound only), Anchor glide (2-30 s), Compare (yours / saved)
-  page 16, GROOVE: Pump (off / 4 bars .. beat), Pump depth, Duck (the
-  piece dips while you play), Duck release
-  pages 17-18, MACRO A / B: four macros (CC targets macro 1-4), each
-  moving two knobs with a depth (-100..+100 %), offset or latch
-  page 19, JOURNEY: Speed, Pads (off / soft / bright / all), Drone,
-  Bells (off / bells / motion / both) - they travel through their
-  engines, slowly crossfaded
-  page 20, COLOUR: Pre-delay (0-200 ms), Era (70s / 80s / 90s / now),
-  Sparkle (GLINT: small FM bells high on the chord tones), its octave
-  page 21, CC OUT: 16 CCs of what moves inside (layer levels, energy,
+  NOTES OUT: MIDI notes (all / harmony: no bells or motion / arp only),
+  Arp octave (C1-C5, where the arp chord starts).
+  CC OUT: 16 CCs of what moves inside (layer levels, energy,
   density, brightness, the way to the next chord ...), Channel, From CC,
   Rate
-  page 22, MEMORY: Memory on keeps the knobs you turn in each section;
-  when the section comes again (the piece replayed, or loaded from its
-  slot) they glide back over Glide; Clear sec / Clear all (turn up).
-  Saved with the piece; a new piece starts with an empty memory
-  page 23, DISPLAY: Hints (a held key says what holding does), Scope
+  - SYSTEM -
+  OUTPUT: Output (stereo wide / mono - for mono rigs and external effects /
+  split - pads and drone left, everything else right, as mono stems),
+  Width (50-150 %), Pan motion (how far the voices travel), Tempo range:
+  ambient 40-72, slow 24-48, wide 30-110, pulse 60-100, fast 90-140. Above
+  84 BPM bells, breathing and the drone swell move at half time.
+  DISPLAY: Hints (a held key says what holding does), Scope
   (the play view's middle draws the output), Scope gain, LED (state /
   beat: blinks with the drone's beating)
-  pages 24-28, how the piece writes - one motif carried between the
-  bells, the motion and (held, slowly) the pads, in phrases that close
-  and breathe:
-  page 24, LINES: Melody (arp, 1/f, grow, mutate, motif), Mutate,
-  Canon (8va, 5th, 15ma, or by the motion), Canon delay
-  page 25, HARMONY: Moves (mediants, tonnetz), How often, Dominants
-  (secondary), New types (a piece's picks take the later types too)
-  page 26, PHRASE: Phrases (4 / 8 chords, open then closed), Voicing
-  (smooth), Key plan (home, fifths, thirds), Breath (rests after a
-  closed phrase)
-  page 27, DIALOGUE: Motif (develops), Answer (motion, you), Phasing,
-  Register (spaced)
-  page 28, WRITING: Writing (still: the static, droning piece; moving),
-  Pads carry (the motif), Drone level (subtle), Ending (by phrase)
-  page 29, ARC: Rhythm (shared: the motion on the bells' rhythm), Arc
-  (dynamics and tension over the phrase), Bass (a dominant pedal before
-  the return; a ground bass), Counter (the song voice sings the motif)
-  A feature the scale can't carry (no 5th, not 12-tone, pentatonic for
-  the dominants) steps aside.
+  CPU: CPU (the load now and the guard's level; turn knob 1 fully up
+  for the profile: every part alone, about 9 min, into
+  logs/profile-NNNN.txt), CPU guard (off, on, off + log, on + log: with
+  log, a line every 5 s into logs/perf-NNNNPP.txt - the load and what
+  was playing).
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
 lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,
 2 textures and the pad character off, 3 the automatic vocoder off. Below
 50 % for 20 s it steps back. Nothing else changes: the pads, drone, sub,
-bells, motion and reverb always keep their full sound. SETUP page 4 can
+bells, motion and reverb always keep their full sound. SETUP NOTES OUT can
 turn it off. pd-opts.txt asks the Organelle for a 25 ms audio buffer (its
 default is 6 ms), so brief spikes don't crackle; lower the number for less
 delay when playing live, raise it if you still hear crackles. Heavy changes (a new piece, a new section, a chord) are

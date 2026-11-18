@@ -69,6 +69,17 @@ def ctl(c, dest, recv, expr=None, inlet=1, first=False):
 SHAPE_LAYERS = "dspbmtac"          # drone, sub, pads, bells, motion, textures, atmosphere, cloud
 
 
+def prm(s, x, j):
+    """a layer's SHAPE parameter (j 0: knob 3, 1: knob 4) as a signal, 0..1 - 0.5 the sound as designed (the bells'
+    and the motion's engines read theirs at each note instead)"""
+    return s.ch(s.recv(f"ac-prm-{x}{'pq'[j]}"), "line~")
+
+
+def prmc(s, x, j):
+    """the same parameter as a control value (for an object's control inlet: a filter's Q, a rate)"""
+    return s.recv(f"ac-prmc-{x}{'pq'[j]}")
+
+
 def LAYER_OF(gain):
     for pre, x in (("ac-g-drone", "d"), ("ac-g-sub", "s"), ("ac-g-bel", "b"), ("ac-g-mot", "m"), ("ac-g-tex", "t"),
                    ("ac-g-atm", "a"), ("ac-g-cloud", "c")):
@@ -209,13 +220,14 @@ def flav_fm():
     s.comment("FM: a modulator at a per-piece ratio; index follows brightness and Weird. Right: a slightly "
               "detuned carrier with a softer index")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     rat = s.to(f, "*~ 1")
     s.c(s.recv("ac-fmr"), 0, rat, 1)
-    mo = s.to(rat, "osc~")
+    mo = s.to(mul(s, rat, s.to(Q, "+~ 0.5")), "osc~")
     ix = s.ch(b, "*~ 2.2", "+~ 0.15")
     w = s.to(ix, "*~ 1")
     ctl(s, w, "ac-weird", "0.5 + 1.5*$f1")
-    dev = mul(s, mul(s, mo, w), f)
+    dev = mul(s, mul(s, mul(s, mo, w), f), s.to(P, "*~ 2"))
     car = s.ch(add(s, f, dev), "osc~", "*~ 0.42")
     carR = s.ch(add(s, s.to(f, "*~ 1.0021"), s.to(dev, "*~ 0.8")), "osc~", "*~ 0.42")
     _out(s, car, ln, add(s, s.to(car, "*~ 0.5"), s.to(carR, "*~ 0.65")))   # mono-safe (no full cancellation)
@@ -232,14 +244,19 @@ def flav_vox():
     bm = s.ch(b, "*~ 0.8", "+~ 0.35")
     # (shared by both sides: the low body, and the formant centres - the right side's is the mirror image)
     body = s.ch(saw, "lop~ 600", "*~ 0.2")
-    c1 = s.ch(l1, "*~ 450", "+~ 505")              # 280 + 450*(0.5 + l1)
-    c2 = s.ch(l2, "*~ 1000", "+~ 1400")            # 900 + 1000*(0.5 + l2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    vw = s.ch(P, "*~ 0.8", "+~ 0.6")
+    c1 = mul(s, s.ch(l1, "*~ 450", "+~ 505"), vw)              # 280 + 450*(0.5 + l1)
+    c2 = mul(s, s.ch(l2, "*~ 1000", "+~ 1400"), vw)            # 900 + 1000*(0.5 + l2)
+    rq = s.to(prmc(s, "p", 1), "expr 0.3 + 1.4*$f1; 7*(0.3 + 1.4*$f1); 10*(0.3 + 1.4*$f1)")
     outs = []
     for sign in (1, -1):
         cf1 = c1 if sign == 1 else s.ch(c1, "*~ -1", "+~ 1010")
         cf2 = c2 if sign == 1 else s.ch(c2, "*~ -1", "+~ 2800")
         v1 = s.obj("vcf~ 7")
         v2 = s.obj("vcf~ 10")
+        s.c(rq, 1, v1, 2)
+        s.c(rq, 2, v2, 2)
         for v, cf in ((v1, cf1), (v2, cf2)):
             s.c(saw, 0, v, 0)
             s.c(cf, 0, v, 1)
@@ -256,7 +273,8 @@ def flav_bow():
     s, ln = switched("bow", "$0-fw2", block=16)
     s.comment("Bow: a string kept ringing by filtered noise (block 16 for short delays)")
     f, b, dl = _flav_inlets(s, 3)
-    exc = mul(s, s.ch(s.obj("noise~"), "lop~ 2500"), s.ch(b, "*~ 0.03", "+~ 0.006"))
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    exc = mul(s, mul(s, s.ch(s.obj("noise~"), "lop~ 2500"), s.ch(b, "*~ 0.03", "+~ 0.006")), s.to(P, "*~ 2"))
     a = s.obj("+~")
     s.c(exc, 0, a, 0)
     s.to(a, "delwrite~ $0-bw 60")
@@ -264,7 +282,7 @@ def flav_bow():
     s.c(dl, 0, vd, 0)
     damp = s.to(vd, "lop~ 3000")
     ctl(s, damp, "ac-bright", "1500 + 5500*$f1", first=True)
-    s.c(s.to(damp, "*~ 0.993"), 0, a, 1)
+    s.c(mul(s, damp, s.ch(Q, "*~ 0.012", "+~ 0.987")), 0, a, 1)
     _out(s, s.ch(vd, "hip~ 40", "*~ 9"), ln, outlets=True)
     return s
 
@@ -275,6 +293,7 @@ def flav_part():
               "the fundamental in the middle, the upper partials alternating left and right")
     f, b = _flav_inlets(s, 2)
     up = s.to(s.recv("ac-partials"), "unpack f f f")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     lt = s.to(s.recv("$0-lb"), "t f f f f")
     b2 = mul(s, b, b)
     b3 = mul(s, b2, b)
@@ -287,10 +306,10 @@ def flav_part():
             r = s.to(f, f"*~ {k + 1}")
             s.c(up, k - 1, r, 1)
             o = s.to(r, "osc~")
-        amp = s.ch((lt, k), f"* {[1, 1.37, 1.71, 2.13][k]}", "osc~", "*~ 0.35", "+~ 0.65")
+        amp = s.to(mul(s, s.ch((lt, k), f"* {[1, 1.37, 1.71, 2.13][k]}", "osc~", "-~ 1"), s.to(Q, "*~ 0.7")), "+~ 1")
         p = mul(s, o, amp)
         if tilt[k] is not None:
-            p = mul(s, p, tilt[k])
+            p = mul(s, mul(s, p, tilt[k]), s.to(P, "*~ 2"))
         gl, gr = [(1, 1), (1.45, 0.15), (0.15, 1.45), (1.3, 0.35)][k]
         s.c(s.to(p, f"*~ {gl}"), 0, L, 0)
         s.c(s.to(p, f"*~ {gr}"), 0, R, 0)
@@ -303,9 +322,11 @@ def flav_fold():
     s.comment("Fold: a sine wavefolded (sin of a driven sine), ring-modulated by its sub-octave; the right "
               "side folds a little less")
     f, b = _flav_inlets(s, 2)
-    dr = s.ch(b, "*~ 4", "+~ 0.5", "*~ 1")
-    ctl(s, dr, "ac-weird", "0.3 + 1.2*$f1")
-    sub = s.ch(f, "*~ 0.5", "osc~", "*~ 0.22", "+~ 0.78")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    dr0 = s.ch(b, "*~ 4", "+~ 0.5", "*~ 1")
+    ctl(s, dr0, "ac-weird", "0.3 + 1.2*$f1")
+    dr = mul(s, dr0, s.to(P, "*~ 2"))
+    sub = s.to(mul(s, s.ch(f, "*~ 0.5", "osc~", "-~ 1"), s.to(Q, "*~ 0.44")), "+~ 1")
     outs = []
     for k, d in ((1, 1.0), (0.7, 1.0017)):
         x = s.ch(s.to(f, f"*~ {d}"), "osc~")
@@ -323,7 +344,8 @@ def flav_pulsar():
               "side's formant sits higher")
     f, b = _flav_inlets(s, 2)
     form = s.ch(s.recv("$0-la"), "* 0.7", "osc~", "*~ 0.5", "+~ 0.5")
-    fsig = s.to(add(s, s.to(form, "*~ 900"), s.to(b, "*~ 1400")), "+~ 450")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    fsig = mul(s, s.to(add(s, s.to(form, "*~ 900"), s.to(b, "*~ 1400")), "+~ 450"), s.to(P, "+~ 0.5"))
     ph = s.to(f, "phasor~")
     outs = []
     for m in (1, 1.18):
@@ -332,7 +354,7 @@ def flav_pulsar():
         s.c(f, 0, k, 1)
         u = s.ch(mul(s, ph, s.to(k, "max~ 1")), "clip~ 0 1")
         win = s.ch(u, "cos~", "*~ -0.5", "+~ 0.5")
-        car = s.ch(u, "*~ 3", "cos~")
+        car = s.to(mul(s, u, s.to(Q, "*~ 6")), "cos~")
         outs.append(s.ch(mul(s, win, car), "hip~ 30", "*~ 0.75"))
     _out(s, outs[0], ln, outs[1])
     return s
@@ -443,8 +465,9 @@ def drone():
     sL, sR = s.obj("lop~ 1000"), s.obj("lop~ 1000")
     for sm in (sL, sR):
         ctl(s, sm, "ac-bright", "350 + 3500*$f1", first=True)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     root = s.ch(f, "osc~", "*~ 0.26")
-    twin = s.ch(f, "*~ 1.0035", "osc~", "*~ 0.13")
+    twin = s.ch(mul(s, f, s.ch(P, "*~ 0.007", "+~ 1")), "osc~", "*~ 0.13")
     iv = s.to(f, "*~ 1.5")
     s.c(s.recv("ac-dint"), 0, iv, 1)
     ivs = mul(s, s.to(iv, "osc~"), s.ch(s.obj("osc~ 0.031"), "*~ 0.06", "+~ 0.1"))
@@ -454,7 +477,7 @@ def drone():
         tube = s.obj("vcf~ 40")
         s.c(s.obj("noise~"), 0, tube, 0)
         s.c(mul(s, f, s.to(harm, f"*~ {hm}")), 0, tube, 1)
-        tubes.append(mul(s, s.to(tube, "*~ 5"), s.ch(s.obj(f"osc~ {rt}"), "*~ 0.5", "+~ 0.5")))
+        tubes.append(mul(s, mul(s, s.to(tube, "*~ 5"), s.ch(s.obj(f"osc~ {rt}"), "*~ 0.5", "+~ 0.5")), s.to(Q, "*~ 2")))
     # the twin and the interval orbit in opposite directions; the two tubes drift on their own cycles
     s.c(s.to(root, "*~ 0.7"), 0, sL, 0)
     s.c(s.to(root, "*~ 0.7"), 0, sR, 0)
@@ -484,6 +507,7 @@ def tex_rain():
     s, ln = switched("rain", "ac-g-tex0")
     s.comment("Rain: a soft hiss, a dense patter of tiny unpitched ticks (sparse noise impulses ringing bright "
               "bands that wander), and a few heavier plops - each side its own")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     swell = s.ch(s.obj("osc~ 0.031"), "*~ 0.3", "+~ 0.7")
     outs = []
     for side in range(2):
@@ -494,7 +518,8 @@ def tex_rain():
         plop = s.obj("vcf~ 6")
         s.c(s.ch(s.obj("noise~"), "-~ 0.9997", "max~ 0", "*~ 1500"), 0, plop, 0)
         s.c(s.obj(f"sig~ {850 + 150 * side}"), 0, plop, 1)
-        o = add(s, add(s, bed, s.to(pat, f"*~ {TEXG['RAIN_PAT']}")), s.to(plop, f"*~ {TEXG['RAIN_PLOP']}"))
+        o = add(s, add(s, bed, mul(s, s.to(pat, f"*~ {TEXG['RAIN_PAT']}"), s.to(P, "*~ 2"))),
+                mul(s, s.to(plop, f"*~ {TEXG['RAIN_PLOP']}"), s.to(Q, "*~ 2")))
         outs.append(mul(s, mul(s, o, swell), ln))
         s.col(220)
     throws(s, s.to(outs[0], f"*~ {TEXG['RAIN_G']}"), s.to(outs[1], f"*~ {TEXG['RAIN_G']}"), mix=0.5, send=0.35)
@@ -510,13 +535,17 @@ def tex_wind():
     s.c(up, 2, p2, 1)
     s.c(up, 1, p2, 0)
     s.c(up, 0, p1, 0)
-    gust = s.ch(add(s, s.obj("osc~ 0.043"), s.ch(s.obj("osc~ 0.071"), "*~ 0.6")), "*~ 0.4", "+~ 0.55", "max~ 0.05")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
+    gust = s.ch(mul(s, s.ch(add(s, s.obj("osc~ 0.043"), s.ch(s.obj("osc~ 0.071"), "*~ 0.6")), "*~ 0.4"), s.to(Q, "*~ 2")),
+                "+~ 0.55", "max~ 0.05")
+    wq = s.to(prmc(s, "t", 0), "expr 25*(0.3 + 1.4*$f1)")
     outs = []
     for p, rate in ((p1, 0.05), (p2, 0.037)):
         cf = mul(s, s.ch(p, "line~"), s.ch(s.obj(f"osc~ {rate}"), "*~ 0.12", "+~ 1"))
         v = s.obj("vcf~ 25")
         s.c(s.obj("noise~"), 0, v, 0)
         s.c(cf, 0, v, 1)
+        s.c(wq, 0, v, 2)
         outs.append(mul(s, mul(s, s.to(v, "*~ 4"), gust), ln))
     throws(s, outs[0], outs[1], mix=0.5, send=0.5)
     return s
@@ -525,19 +554,21 @@ def tex_wind():
 def tex_ember():
     s, ln = switched("ember", "ac-g-tex2")
     s.comment("Embers: sparse crackles and soft wood knocks (thresholded noise into resonant filters)")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     swell = s.ch(s.obj("osc~ 0.02"), "*~ 0.4", "+~ 0.6")
     outs = []
     for cf, th in ((2600, 0.9993), (1700, 0.9993)):
         v = s.obj("vcf~ 4")
         s.c(s.ch(s.obj("noise~"), f"-~ {th}", "max~ 0", "*~ 700"), 0, v, 0)
         s.c(s.obj(f"sig~ {cf}"), 0, v, 1)
-        outs.append(v)
+        outs.append(mul(s, v, s.to(P, "*~ 2")))
     k = s.obj("vcf~ 9")
     s.c(s.ch(s.obj("noise~"), "-~ 0.9997", "max~ 0", "*~ 1500"), 0, k, 0)
     s.c(s.obj("sig~ 380"), 0, k, 1)
     g = mul(s, s.to(swell, "*~ 15"), ln)
-    L = mul(s, add(s, outs[0], s.to(k, "*~ 0.7")), g)
-    R = mul(s, add(s, outs[1], s.to(k, "*~ 0.7")), g)
+    kq = mul(s, s.to(k, "*~ 0.7"), s.to(Q, "*~ 2"))
+    L = mul(s, add(s, outs[0], kq), g)
+    R = mul(s, add(s, outs[1], kq), g)
     throws(s, L, R, mix=0.5, send=0.5)
     return s
 
@@ -546,14 +577,14 @@ def tex_chirp():
     s, ln = switched("chirp", "ac-g-tex3")
     s.comment("Chirps: creature calls - a fast pitch sweep with a buzz, in bursts")
     tl = s.to(s.recv("ac-chirp"), "t l l")
-    ex = s.to((tl, 0), "expr $f1; $f1*$f2; $f3")
+    ex = s.to((tl, 0), "expr $f1*(0.5 + acshtp); $f1*$f2*(0.5 + acshtp); $f3")      # (knob 3, Pitch)
     pk = s.obj("pack f f f")
     for i in (2, 1, 0):
         s.c(ex, i, pk, i)
     fr = s.ch(s.m(pk, "$1, $2 $3"), "vline~")
     env = s.ch(s.m(s.to((tl, 1), "expr $f3*1.3"), "1, 0 $1"), "vline~")
     pn = s.to((tl, 1), "expr cos($f4*1.5708); sin($f4*1.5708)")
-    buzz = s.ch(s.obj("osc~ 33"), "*~ 0.05", "+~ 1")
+    buzz = s.to(mul(s, s.ch(s.obj("osc~ 33"), "*~ 0.05"), s.to(prm(s, "t", 1), "*~ 2")), "+~ 1")      # (knob 4, Buzz)
     sig = mul(s, s.to(mul(s, buzz, fr), "osc~"), mul(s, env, env))
     sig = mul(s, s.to(sig, "*~ 0.5"), ln)
     L, R = s.to(sig, "*~ 1"), s.to(sig, "*~ 1")
@@ -567,7 +598,9 @@ def cloud():
     s, ln = switched("cloud", "ac-g-cloud", hook="ac-cloud-on")
     s.comment("Cloud: 4 overlapping grain streams from the 8 s buffer, each transposed by a chord-friendly ratio "
               "(sometimes reversed)")
-    rate = s.to(s.recv("ac-gdur"), "expr 1000/$f1")
+    # (CLOUD SHAPE knob 3, Grain: the grains' length x1/4 .. x4; knob 4, Spread: how far they scatter in stereo)
+    rate = mul(s, s.ch(s.recv("ac-gdur"), "expr 1000/$f1", "sig~"), s.to(prm(s, "c", 0), "expr~ pow(4, 1 - 2*$v1)"))
+    Qc = s.to(prm(s, "c", 1), "*~ 2")
     on = s.recv("ac-cloud-on")
     L, R = s.obj("*~ 0.7"), s.obj("*~ 0.7")
     for i in range(4):
@@ -585,7 +618,7 @@ def cloud():
         gsp = s.obj("*~ 0.48")
         s.c(s.obj("noise~"), 0, gsp, 0)
         s.c(s.recv("ac-cloudspread"), 0, gsp, 1)
-        gp = s.ch(gsp, "+~ 0.5", "samphold~")
+        gp = s.ch(mul(s, gsp, Qc), "+~ 0.5", "clip~ 0 1", "samphold~")
         s.c(ph, 0, gp, 1)
         gl, gr = span(s, g, gp)
         s.c(gl, 0, L, 0)
@@ -632,10 +665,15 @@ def bells():
         # the note's place; its upper partials fan out a little to either side
         bpn = s.to((up, 2), "expr cos($f1*1.5708); sin($f1*1.5708); cos(max(0, $f1-0.22)*1.5708); "
                             "sin(max(0, $f1-0.22)*1.5708); cos(min(1, $f1+0.22)*1.5708); sin(min(1, $f1+0.22)*1.5708)")
+        # (the BELLS SHAPE page's Bright and Decay: the upper partials x0..x2, the decay x1/3..x3)
         for k, (amp, dec) in enumerate(((0.32, 5200), (0.15, 2600), (0.08, 1100))):
             fr = s.to(mf, "* 1")
             s.c(bs, k, fr, 1)
-            env = s.ch(s.m(s.to((up, 1), f"* {amp}"), f"$1, 0 {dec}"), "vline~")
+            ex = s.to((up, 1), f"expr $f1*{amp}" + ("*2*acshbp" if k else "") + f"; {dec}*pow(3, acshbq*2 - 1)")
+            pk = s.obj("pack f f")
+            s.c(ex, 1, pk, 1)
+            s.c(ex, 0, pk, 0)
+            env = s.ch(s.m(pk, "$1, 0 $2"), "vline~")
             part = mul(s, s.to(fr, "osc~"), mul(s, env, env))
             for side, dst in ((0, L), (1, R)):
                 m = s.to(part, "*~ 0.7")
@@ -876,10 +914,15 @@ def motion_fm():
         ap = s.obj("pack f 500")
         s.c(vel, 1, ap, 0)
         s.c(t2, 1, ap, 1)
-        aenv = s.ch(s.m(ap, "$1 4, 0 $2 4"), "vline~")
+        # (the MOTION SHAPE page's Index and Decay: the FM index x0..x2, the decay x1/3..x3)
+        apx = s.to(ap, "expr $f1; $f2*pow(3, acshmq*2 - 1)")
+        ap2 = s.obj("pack f f")
+        s.c(apx, 1, ap2, 1)
+        s.c(apx, 0, ap2, 0)
+        aenv = s.ch(s.m(ap2, "$1 4, 0 $2 4"), "vline~")
         iv = s.to((vel, 0), "* 2")
         s.c(t2, 0, iv, 1)
-        ienv = s.ch(s.m(iv, "$1, 0 140"), "vline~")
+        ienv = s.ch(s.m(s.to(iv, "expr $f1*2*acshmp"), "$1, 0 140"), "vline~")
         # pitch: carrier, and a modulator at the piece's ratio
         hz = s.ch((pp, 0), "mtof", "t f f")
         fsig = s.to((hz, 1), "sig~")
@@ -902,7 +945,7 @@ def motion_fm():
 
 def motion():
     s, ln = switched("motion", "ac-g-motion")
-    s.comment("Motion: the engine chosen (SETUP page 9; FM pings by default) through tempo echoes and a soft limit")
+    s.comment("Motion: the engine chosen (SETUP VOICES; FM pings by default) through tempo echoes and a soft limit")
     L, R = s.obj("catch~ ac-mvL"), s.obj("catch~ ac-mvR")
     # echoes: 3/4 beat left, 1/2 beat right, darkening
     beat = s.to(s.recv("ac-bpm"), "t f f")

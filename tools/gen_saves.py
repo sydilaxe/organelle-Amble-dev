@@ -1,4 +1,4 @@
-"""SAVES (SETUP page 13) and the factory pieces.
+"""SAVES (SETUP SAVES) and the factory pieces.
 
 saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA, SAVE_TAIL and
 SAVE_MORE (all in gen_setup). A load sets them (the knobs through the morph engine, gen_perform) and prepares the piece; an empty slot
@@ -41,7 +41,7 @@ def factory_rows():
 
 
 def saves():
-    """SAVES (SETUP page 13): saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS and
+    """SAVES (SETUP SAVES): saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS and
     SAVE_ARRAYS. Loading sets them all and prepares the piece from its seed (ready while stopped)."""
     c = Canvas("saves", w=2600)
     c.comment("Saves: slot lines in saves.txt (slot, seed, mode, knobs, sounds, form, sections, layer states)")

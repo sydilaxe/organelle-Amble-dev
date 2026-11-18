@@ -125,7 +125,7 @@ def perform():
     proc(c, "ac-anchortap", [If("acancs", [Call("ac-anchorgo")], [Call("ac-anchorset")])])
     proc(c, "ac-anchorgo", [Loop(str(NK), "aci", [T("acmto", "aci", "acanc[int(aci)]")]), Call("ac-verbcut")]
          + layers_from("acancm") + [V("acmdur", ANCG_MS), Call("ac-morphgo"), Toast("back to anchor")])
-    # ---- MEMORY (SETUP 22): a section's kept knobs glide back when it comes again (the others stay as they are)
+    # ---- MEMORY (SETUP MEMORY): a section's kept knobs glide back when it comes again (the others stay as they are)
     from gen_setup import NSNAP, SMEMG, _pick as _spick
     snap = f"acmsi*{NK} + aci"
     proc(c, "ac-memrecall", [X(f"int(acsec) % {NSNAP}; 0", "v acmsi", "v acmemk"),

@@ -266,7 +266,7 @@ L_ = log.splitlines()
 check("ac-fkey: 69" in L_ and "ac-toast: list chord change" in L_ and not any(l.startswith("ac-lvon: 0 69") for l in L_),
       "an Organelle key is a function and plays no note")
 check("ac-txt4: list Mix 45 Verb auto" in L_, "aux tap: next page")
-check("ac-sett0: list SETUP 3 OUTPUT" in L_, "aux + low D: SETUP page 3 (OUTPUT)")
+check("ac-sett0: list WRITING WRITING 1/6" in L_, "aux + low D: the WRITING group's first page")
 check("ac-toast: list key from you E" in L_, "a note held 6 s becomes the key")
 
 # 12. audio: pitch tracking and the input class
@@ -360,7 +360,7 @@ for what, pat in (("form strip", "gFillArea 3 0 0 128 8 0"), ("ladder", "gFillAr
                   ("voices", "gFillArea 3 0 41 128 10 0"), ("rhythm", "gFillArea 3 96 21 32 19 0"),
                   ("tempo", "bpm"), ("knob page", "page SHAPE")):
     check(any(pat in l for l in osc), f"OLED draws the {what}")
-check("ac-sett0: list SETUP 2 PLAYING" in log, "SETUP opens with aux held, aux tap turns its page")
+check("ac-sett0: list PIECE MUSIC 2/5" in log, "SETUP opens with aux held, aux tap turns its page")
 
 # 18. the wider sound world: drone designs, the sub, electric textures, character, the vocoder, variety
 from data import DRONES, TEXTURES, CHARACTERS, FLAVOURS
@@ -532,7 +532,7 @@ for r, (name, lo, hi) in enumerate(TEMPOS):
     b = [float(l.split()[1]) for l in log.splitlines() if l.startswith("ac-bpm")][1:]
     ok = b and min(b) >= lo * min(ROLE_TEMPO) - 0.01 and max(b) <= hi * max(ROLE_TEMPO) + 0.01
     check(ok and max(b) - min(b) > (hi - lo) * 0.25, f"tempo range {name}: {min(b):.0f}-{max(b):.0f} BPM")
-log, _ = run([(40, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 2"), (400, "ac-setknob 3 0.99")], 2,
+log, _ = run([(40, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('OUTPUT')}"), (400, "ac-setknob 3 0.99")], 2,
              prints=("ac-bpm", "ac-sett4"))
 b = [float(l.split()[1]) for l in log.splitlines() if l.startswith("ac-bpm")]
 check(b and b[-1] >= 90 * min(ROLE_TEMPO) and "4 Tempo fast 90-140" in log,
@@ -575,7 +575,7 @@ check(len(arp) >= 3 and arp[0] >= 48 and arp[-1] < 60 + 12 and arp[-1] - arp[0] 
 log, _ = run([(40, "acmout 2"), (41, "acmparts 2"), (45, "actime 0.1"), (50, "ac-setseed 7")], 12, prints=("ac-noteout",))
 chs = {int(l.split()[3]) for l in log.splitlines() if l.startswith("ac-noteout")}
 check(chs == {6}, f"MIDI parts = arp chord: only the arp chord channel ({sorted(chs)})")
-log, _ = run([(40, "acmout 2"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"),
+log, _ = run([(40, "acmout 2"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('NOTES OUT')}"),
               (400, "ac-setknob 0 0.99"), (500, "ac-setknob 1 0.0"), (3000, "acsetup 0")], 6,
              prints=("ac-noteout", "ac-sett1", "ac-sett2"))
 arp = sorted(held_notes(log).get(6, []))
@@ -583,12 +583,12 @@ check("1 MIDI notes arp\\ only" in log and "2 Arp octave C1" in log and arp
       and 24 <= arp[0] < 36, f"SETUP page 4: MIDI parts and Arp octave (arp chord now {arp})")
 
 # 24. CPU guard: under (simulated) overload the piece gets lighter step by step and comes back; off = never
-#     (the level is read from SETUP page 4: "CPU n% lite k")
+#     (the level is read from SETUP CPU, row 1: "CPU n% lite k")
 def lite_at(ev, secs, at):
-    ev = ev + [e for t in at for e in ((t, "acsetup 1"), (t + 10, "acsetpg 3"), (t + 20, "ac-oledsetup bang"),
+    ev = ev + [e for t in at for e in ((t, "acsetup 1"), (t + 10, f"acsetpg {GS.SETUP_NAMES.index('CPU')}"), (t + 20, "ac-oledsetup bang"),
                                            (t + 30, "acsetup 0"))]
-    log, _ = run(ev, secs, prints=("ac-sett3",))
-    return [int(l.split("lite")[1]) for l in log.splitlines() if l.startswith("ac-sett3") and "lite" in l], log
+    log, _ = run(ev, secs, prints=("ac-sett1",))
+    return [int(l.split("lite")[1]) for l in log.splitlines() if l.startswith("ac-sett1") and "lite" in l], log
 lv, log = lite_at([(40, "acdens 1"), (50, "ac-setseed 7"), (5000, "acloadtest 0.9"), (24000, "acloadtest 0")], 92,
                   [22000, 90000])
 check(len(lv) >= 2 and lv[0] == 3 and lv[-1] == 0 and log.count("ac-toast: list CPU high - lighter") == 3,
@@ -669,15 +669,15 @@ vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC joined)
-check(len(vals) == len(GS.SETTINGS) == 147 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC and the engines' SHAPE parameters joined)
+check(len(vals) == len(GS.SETTINGS) == 163 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
 po = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "pd-opts.txt")).read()
 check("-audiobuf 25" in po, "pd-opts.txt asks for a 25 ms audio buffer (the OS default is 6 ms)")
 
-# 30. SETUP page 5, SOUNDS: one pad type for all four voices at once (and in every later section); raw = the
+# 30. SETUP SOUNDS: one pad type for all four voices at once (and in every later section); raw = the
 #     first demos' types (vox, partials, fold, pulsar) with no character; drone, texture and character by hand
 FL = ["ac-v%d-flav" % k for k in range(4)]
 def flav_vals(text):
@@ -686,7 +686,7 @@ def vprobe(c):
     m = c.obj("metro 250", 1400, 20)
     c.c(c.obj("loadbang", 1400, 0), 0, m, 0)
     c.c(c.ch(m, "expr acdcur*1000 + actex1*100 + actex2*10 + accheff"), 0, c.obj("print SV", 1400, 80), 0)
-sp = lambda v: [(300, "acsetup 1"), (310, "acsetpg 4"), (390, "h-mark bang"), (400, f"ac-setknob 0 {v}"),
+sp = lambda v: [(300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SOUNDS')}"), (390, "h-mark bang"), (400, f"ac-setknob 0 {v}"),
                (500, "acsetup 0")]
 log, _ = run([(50, "ac-setseed 7")] + sp((GS.SPADS.index("tine") + 0.5) / len(GS.SPADS)) +
              [(3000, "ac-section bang"), (3100, "h-mark2 bang")], 17,
@@ -706,7 +706,7 @@ vs = flav_vals(after)
 chs = [float(l.split()[1]) for l in after.splitlines() if l.startswith("ac-g-ch")]
 check(len(vs) >= 20 and set(vs) <= set(__import__("data").RAW_FLAVOURS) and len(set(vs)) >= 3 and chs and max(chs) == 0,
       f"SOUNDS Pads raw: only vox / partials / fold / pulsar / chip ({sorted(set(vs))}), no character")
-log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 4"), (400, f"ac-setknob 1 {(GS.SDRONES.index('fm') + 0.5) / len(GS.SDRONES)}"),
+log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SOUNDS')}"), (400, f"ac-setknob 1 {(GS.SDRONES.index('fm') + 0.5) / len(GS.SDRONES)}"),
               (450, f"ac-setknob 2 {(GS.STEXS.index('wind') + 0.5) / len(GS.STEXS)}"),
               (500, f"ac-setknob 3 {(GS.SCHARS.index('tape') + 0.5) / len(GS.SCHARS)}"), (550, "acsetup 0"), (2000, "ac-section bang")], 4,
              prints=("ac-sett2", "ac-sett3", "ac-sett4"), extra=vprobe)
@@ -714,14 +714,14 @@ sv = [l.split()[1:] for l in log.splitlines() if l.startswith("SV:")]
 check("2 Drone fm" in log and "3 Texture wind" in log and "4 Character tape" in log
       and sv[-1] == ["3112"], f"SOUNDS: Drone fm, Texture wind, Character tape applied and kept ({sv[-1]})")
 
-# 31. SETUP page 6, MUSIC (key, scale, chords stay as chosen; the bar pulse) and page 7, MIDI IN (where notes go,
+# 31. SETUP MUSIC (key, scale, chords stay as chosen; the bar pulse) and MIDI IN (where notes go,
 #     what breath does)
 import gen_setup as S
 def setk(pg, k, label, opts, t=400):
     return [(t - 100, "acsetup 1"), (t - 90, f"acsetpg {pg}"), (t, f"ac-setknob {k} {(opts.index(label) + 0.5) / len(opts)}"),
             (t + 100, "acsetup 0")]
-ev = [(40, "acmode 0"), (45, "actime 0.05"), (46, "acweird 1"), (50, "ac-setseed 7")] + setk(5, 0, "D", S.SKEYS) + \
-     setk(5, 1, "minpent", S.SSCALES, 700) + setk(5, 2, "quartal", S.SCHORDS, 1000) + [(1200, "h-mark bang"), (6000, "ac-setseed 99")]
+ev = [(40, "acmode 0"), (45, "actime 0.05"), (46, "acweird 1"), (50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MUSIC'), 0, "D", S.SKEYS) + \
+     setk(S.SETUP_NAMES.index('MUSIC'), 1, "minpent", S.SSCALES, 700) + setk(S.SETUP_NAMES.index('MUSIC'), 2, "quartal", S.SCHORDS, 1000) + [(1200, "h-mark bang"), (6000, "ac-setseed 99")]
 log, _ = run(ev, 14, prints=("ac-dronep", "h-mark", "ac-txt2"))
 after = log.split("h-mark")[-1]
 tonics = {int(float(l.split()[1])) % 12 for l in after.splitlines() if l.startswith("ac-dronep")}
@@ -729,14 +729,14 @@ s2 = [l for l in after.splitlines() if l.startswith("ac-txt2")]
 check(tonics == {2} and s2 and all("minpent quartal" in l for l in s2[-3:]),
       f"MUSIC: key D, minpent, quartal stay through changes and a new piece (tonics {sorted(tonics)}, {s2[-1:]})")
 def pulses(label):
-    log, _ = run([(50, "ac-setseed 7"), (60, "acrhythm 1")] + setk(5, 3, label, S.PULSES) +
+    log, _ = run([(50, "ac-setseed 7"), (60, "acrhythm 1")] + setk(S.SETUP_NAMES.index('MUSIC'), 3, label, S.PULSES) +
                  [(1000, "acrole 4"), (1001, "ac-pulseupd bang")], 2,
                  prints=("ac-pulse",))
     return [float(l.split()[1]) for l in log.splitlines() if l.startswith("ac-pulse")][-1]
 p0, p2, p3 = pulses("off"), pulses("normal"), pulses("strong")
 check(p0 == 0 and p3 > p2, f"MUSIC Pulse: off {p0}, normal {p2:.2f}, strong {p3:.2f}")
 def routed(label, notes, prints):
-    ev = [(50, "ac-setseed 7")] + setk(6, 0, label, S.ROUTES) + [(800, "h-mark bang")]
+    ev = [(50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MIDI IN'), 0, label, S.ROUTES) + [(800, "h-mark bang")]
     ev += [(1000 + 10 * i, f"ac-livenote 1 {n} 100") for i, n in enumerate(notes)]
     ev += [(2900, "h-mark2 bang")] + [(3000 + 10 * i, f"ac-livenote 1 {n} 0") for i, n in enumerate(notes)]
     log, _ = run(ev, 5, prints=prints + ("h-mark", "h-mark2", "ac-lvon"))
@@ -751,7 +751,7 @@ dr = [int(float(l.split()[1])) for l in held.splitlines() if l.startswith("ac-dr
 back = [int(float(l.split()[1])) for l in rel.splitlines() if l.startswith("ac-dronep")]
 check(dr and dr[-1] == 43 and back and back[0] != 43, f"MIDI IN Notes to drone: the drone on your note, home after ({dr}, {back})")
 def swell(v):
-    ev = [(50, "ac-setseed 7")] + setk(6, 1, "swell", S.BRTOS) + [(t, f"ac-livebreath 1 {v}") for t in range(800, 6000, 200)]
+    ev = [(50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MIDI IN'), 1, "swell", S.BRTOS) + [(t, f"ac-livebreath 1 {v}") for t in range(800, 6000, 200)]
     _, a = run(ev, 6)
     return rms_db(a[4 * SR:6 * SR, 0])
 lo, hi = swell(0), swell(127)
@@ -778,7 +778,7 @@ check([l for l in mid.splitlines() if l.startswith("ac-lvtim")] == ["ac-lvtim: 0
 check("ac-lvoff" not in mid and "ac-lvoff: 0" in late, "CC MAP: CC 64 holds a released note until it lets go")
 sel = lambda cc: (S.CCS.index(cc) + 0.5) / len(S.CCS)
 tgt = lambda t: (S.TARGETS.index(t) + 0.5) / len(S.TARGETS)
-ev = [(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 7"), (400, f"ac-setknob 0 {sel(71)}"),
+ev = [(50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('CC MAP')}"), (400, f"ac-setknob 0 {sel(71)}"),
       (450, f"ac-setknob 1 {tgt('density')}"), (500, "ac-ccin 71 64 1"), (550, "ac-oledsetup bang"),
       (600, f"ac-setknob 0 {sel(11)}"), (650, f"ac-setknob 1 {tgt('voice type')}"), (700, "acsetup 0"),
       (800, "ac-ccin 11 127 1")]
@@ -869,7 +869,7 @@ held = chord_pcs(log, "h-mark: bang", "h-mark2")
 iv = sorted({(p - ton[-1]) % 12 for p in held}) if ton else []
 check("resolve - open fifths" in log and len(held) >= 8 and iv == [0, 7],
       f"Resolve (low A#): the chord is the tonic in open fifths and stays ({len(held)} notes, intervals {iv})")
-ev2 = [(45, "actime 0.15"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 7"),
+ev2 = [(45, "actime 0.15"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('CC MAP')}"),
        (400, f"ac-setknob 0 {(GS.CCS.index(64) + 0.5) / len(GS.CCS)}"),
        (450, f"ac-setknob 1 {(GS.TARGETS.index('resolve') + 0.5) / len(GS.TARGETS)}"), (500, "acsetup 0"),
        (2990, "h-mark bang"), (3000, "ac-ccin 64 127 1"), (6000, "ac-change bang"), (8900, "h-mark2 bang"),
@@ -907,7 +907,7 @@ for layer, own in (("bell", "bars"), ("motion", "fm")):
               f"{layer} engine {name}: {lv:.1f} dB (own {own} {ref:.1f} dB), peak {pk:.2f} {er[:1]}")
 log, _ = run([(50, "ac-setseed 7"), (290, "ac-secstop bang")] + [(295, f"{m} 1") for m in ("acdens", "acenergy", "acfbell",
                                                                                          "acfmotion", "acrhythm")] +
-             [(300, "acsetup 1"), (310, "acsetpg 8"),
+             [(300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('VOICES')}"),
               (400, f"ac-setknob 0 {(GS.SBELLS.index('wood') + 0.5) / len(GS.SBELLS)}"),
               (450, f"ac-setknob 1 {(GS.SMOTS.index('blip') + 0.5) / len(GS.SMOTS)}"), (500, "acsetup 0"), (900, "h-mark bang")],
              2, prints=("ac-sett1", "ac-sett2", "h-mark") + tuple(f"ac-g-bel{k}" for k in range(len(STRIKES)))
@@ -933,7 +933,7 @@ check(len({p // 10 for p in picks}) >= 2 and len({p % 10 for p in picks}) >= 2,
 
 # Glide (page 9 row 3): off = the voices jump to a new chord together; slow = the full glide; short in between
 def glides(label):
-    log, _ = run([(45, "actime 0.15"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 8"),
+    log, _ = run([(45, "actime 0.15"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('VOICES')}"),
                   (400, f"ac-setknob 2 {(GS.GLIDES.index(label) + 0.5) / len(GS.GLIDES)}"), (500, "acsetup 0"),
                   (900, "h-mark bang"), (1000, "ac-change bang")], 2,
                  prints=tuple(f"ac-v{k}-pitch" for k in range(4)) + ("h-mark", "ac-sett3"))
@@ -955,7 +955,7 @@ check("ac-txt1: list READY COMPOSE - A# go" in log and rms_db(a[1 * SR:5 * SR]) 
 # 51. SECTION MIX: the section turned fully down follows the playing one; pads "in 1/2" stay out for the first
 #     half of it, then come in over the entry fade; hold (low B) keeps a section past its end
 k = lambda i, n: (i + 0.5) / n
-ev = [(45, "actime 0.05"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 11"),
+ev = [(45, "actime 0.05"), (50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SECTION MIX')}"),
       (400, "ac-setknob 0 0"), (450, f"ac-setknob 1 {k(2, 8)}"),
       (500, f"ac-setknob 2 {k(GS.SPLAY.index('in 1/2'), len(GS.SPLAY))}"), (600, "acsetup 0")]
 log, _ = run(ev, 12, prints=("ac-g-pad", "ac-sett1"))
@@ -972,10 +972,10 @@ check("ac-toast: list section held" in log and not any("COMP 2 of" in l for l in
 
 # 52. SAVES: a piece saved to a slot comes back after another piece (and after a restart)
 d = build_tmp()
-sv = [(50, "ac-setseed 777"), (300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"),
+sv = [(50, "ac-setseed 777"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"),
       (500, "ac-setknob 1 0.5"), (600, "ac-setknob 1 1"), (700, "acsetup 0")]
 log1, _ = run(sv, 3, d=d)
-log2, _ = run([(50, "ac-setseed 31"), (300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"),
+log2, _ = run([(50, "ac-setseed 31"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"),
                (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")], 3, d=d)
 seeds = [l for l in log2.splitlines() if l.startswith("ac-setseed")]
 check("ac-toast: list saved to slot 3" in log1 and "ac-toast: list loaded slot 3" in log2 and seeds[-1] == "ac-setseed: 777",
@@ -1089,14 +1089,17 @@ base = [(5, "acwrite 0"), (50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, 
 held = [(1000, "notesRaw 74 100"), (1700, "notesRaw 74 0")]
 sh = {}
 for name, ev in (("open", []), ("dark", held + [(1800, "knob2 0.1")]), ("thin", held + [(1800, "knob2 0.9")]),
-                 ("mono", held + [(1800, "knob4 0")])):
-    log, a = run(base + ev, 6, prints=("ac-sett0",))
+                 ("knob4", held + [(1800, "knob4 0.95")])):
+    log, a = run(base + ev, 6, prints=("ac-sett0", "ac-sett4"))
     x = a[3 * SR:]
-    sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log)
+    sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log,
+                np.abs(np.fft.rfft((x[:2 * SR, 0] + x[:2 * SR, 1]) * np.hanning(2 * SR))), log)   # (a fixed length: the bins line up)
+# (knob 4: the pads' second sound parameter - Movement while the voices play mixed types)
+kd = np.abs(20 * np.log10((sh["knob4"][3] + 1e-6) / (sh["open"][3] + 1e-6)))[:20000].mean()
 check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150 and sh["open"][1] < 0.95
-      and sh["mono"][1] > 0.99 and all(v[2] for k, v in sh.items() if k != "open"),
+      and kd > 1 and "4 Movement 95%" in sh["knob4"][4] and all(v[2] for k, v in sh.items() if k != "open"),
       f"pads key held: the PADS SHAPE page; tone {sh['dark'][0]:.0f} < {sh['open'][0]:.0f} < {sh['thin'][0]:.0f} Hz, "
-      f"width 0 mono (L/R {sh['mono'][1]:.2f}, as designed {sh['open'][1]:.2f})")
+      f"knob 4 Movement changes the sound ({kd:.1f} dB)")
 
 # top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
@@ -1251,10 +1254,10 @@ d = build_tmp()
 k = lambda i, n: (i + 0.5) / n
 run([(50, "ac-setseed 7"), (1000, "aux 1"), (1010, "notesRaw 83 100"), (1100, "notesRaw 62 100"), (1150, "notesRaw 62 0"),
      (1200, "notesRaw 83 0"), (1300, "aux 0"),
-     (2000, "acsetup 1"), (2010, "acsetpg 12"), (2100, f"ac-setknob 0 {k(3, 16)}"),
+     (2000, "acsetup 1"), (2010, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (2100, f"ac-setknob 0 {k(3, 16)}"),
      (2200, f"ac-setknob 3 {k(GS.NAME_WORDS.index('Ember'), len(GS.NAME_WORDS))}"),
      (2300, "ac-setknob 1 0.5"), (2400, "ac-setknob 1 1"), (2500, "acsetup 0")], 3, d=d)
-log, _ = run([(50, "ac-setseed 9"), (300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(2, 16)}"),
+log, _ = run([(50, "ac-setseed 9"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (400, f"ac-setknob 0 {k(2, 16)}"),
               (600, f"ac-setknob 0 {k(3, 16)}"), (800, f"ac-setknob 0 {k(4, 16)}")], 2, d=d, prints=("ac-sett1",))
 rows = {l.split("Slot ", 1)[-1] for l in log.splitlines() if l.startswith("ac-sett1") and "Slot" in l}
 auto = [r for r in rows if r.startswith("3 ")]
@@ -1291,10 +1294,10 @@ pr = glob.glob(os.path.join(d, "logs", "profile-*.txt"))
 rows = [l.split() for l in open(pr[0]).read().split(";") if l.strip()] if pr else []
 check("ac-toast: list profile stopped" in log and 1 < len(rows) < len(LG._parts()) and rms_db(a[-4 * SR:]) > -50,
       f"A# stops the profile ({len(rows) - 1} parts written), and starts the piece again ({rms_db(a[-4 * SR:]):.0f} dB)")
-log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, "acsetpg 3"), (400, "ac-setknob 2 0.5"),
-              (500, "ac-setknob 2 1"), (600, "ac-setknob 2 0.95")], 12, prints=("ac-toast",))
+log, _ = run([(50, "ac-setseed 7"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('CPU')}"), (400, "ac-setknob 0 0.5"),
+              (500, "ac-setknob 0 1"), (600, "ac-setknob 0 0.95")], 12, prints=("ac-toast",))
 starts = sum(f"profile: {LG.PROFILE_MIN} min" in l for l in log.splitlines() if l.startswith("ac-toast")) // 2
-check(starts == 1, f"SETUP 4 knob 3 fully up starts the profile once ({starts})")
+check(starts == 1, f"SETUP CPU knob 1 fully up starts the profile once ({starts})")
 
 # 70. MIX knobs: the level follows while the knob turns, in even steps (about 1.5 dB per 50 ms here), 50 % = x1;
 #     a text page after the MIX view clears the whole screen (the MIX header stayed on its top rows);
@@ -1394,7 +1397,7 @@ d = build_tmp()
 dens = lambda t: [float(l.split()[2]) for l in t.splitlines() if l.startswith("ac-param: 0 ")]
 ev = [(50, "ac-setseed 7"), (300, "acmemon 1"), (1000, "knob1 0.1"), (1100, "knob1 0.9"), (2000, "ac-secnow bang"),
       (3000, "knob1 0.5"), (3100, "knob1 0.2"),
-      (3500, "acsetup 1"), (3510, "acsetpg 12"), (3600, f"ac-setknob 0 {k(2, 16)}"), (3700, "ac-setknob 1 0.5"),
+      (3500, "acsetup 1"), (3510, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (3600, f"ac-setknob 0 {k(2, 16)}"), (3700, "ac-setknob 1 0.5"),
       (3800, "ac-setknob 1 1"), (3900, "acsetup 0"),
       (4000, "h-mark bang"), (5000, "ac-setseed 7"), (12000, "h-mark bang")]
 log, _ = run(ev, 13, d=d, prints=("ac-param", "h-mark"))
@@ -1405,7 +1408,7 @@ check(replay and replay[0] < 0.3 and replay[-1] > 0.85 and "memory: section 1" i
       f"MEMORY: section 1's Dens glides back on a replay ({replay[:1]} -> {replay[-1:]})")
 # saved with the piece: a new piece empties the memory; loading slot 3 brings it back, so its section 1 recalls
 ev = [(50, "ac-setseed 99"), (300, "acmemon 1"), (500, "ac-newkey bang"), (1000, "h-mark bang"), (1500, "acsetup 1"),
-      (1510, "acsetpg 12"), (1600, f"ac-setknob 0 {k(2, 16)}"), (1700, "ac-setknob 2 0.5"), (1800, "ac-setknob 2 1"),
+      (1510, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (1600, f"ac-setknob 0 {k(2, 16)}"), (1700, "ac-setknob 2 0.5"), (1800, "ac-setknob 2 1"),
       (1900, "acsetup 0"), (9000, "h-mark bang")]
 log, _ = run(ev, 10, d=d, prints=("ac-param", "h-mark"))
 seg = log.split("h-mark: bang")
@@ -1421,8 +1424,8 @@ log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 65 100"), (1050, "notesRaw 
               (2000, "notesRaw 65 100"), (2800, "notesRaw 65 0"), (3000, f"knob1 {k(5, len(GS.GLIDES))}"),
               (3200, f"knob2 {k(6, len(GS.SMORPH))}"), (3400, f"knob3 {k(0, len(GS.SANCG))}"),
               (3600, f"knob4 {k(4, len(GS.SMEMG))}"), (4000, "aux 1"), (4050, "aux 0"), (4500, "h-mark bang"),
-              (5000, "acsetup 1"), (5010, "acsetpg 8"), (5020, "ac-oledsetup bang"),
-              (5100, "acsetpg 14"), (5110, "ac-oledsetup bang"), (5200, "acsetpg 21"), (5210, "ac-oledsetup bang")], 6,
+              (5000, "acsetup 1"), (5010, f"acsetpg {GS.SETUP_NAMES.index('VOICES')}"), (5020, "ac-oledsetup bang"),
+              (5100, f"acsetpg {GS.SETUP_NAMES.index('RECALL')}"), (5110, "ac-oledsetup bang"), (5200, f"acsetpg {GS.SETUP_NAMES.index('MEMORY')}"), (5210, "ac-oledsetup bang")], 6,
              prints=("ac-sett0", "ac-sett1", "ac-sett2", "ac-sett3", "ac-sett4", "h-mark"))
 seg = log.replace("\\ ", " ").split("h-mark: bang")
 tap, held, after = (seg + ["", "", ""])[:3]
@@ -1574,9 +1577,9 @@ def pr(c):
     m = c.obj("metro 500", 1200, 20)
     c.c(c.obj("loadbang", 1200, 0), 0, m, 0)
     c.c(c.to(m, "expr acmelm*100 + acphr*10 + acans"), 0, c.obj("print P", 1200, 80), 0)
-ld = lambda slot: [(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {k(slot, GS.NSLOTS)}"),
+ld = lambda slot: [(300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (400, f"ac-setknob 0 {k(slot, GS.NSLOTS)}"),
                    (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")]
-sv = [(50, "ac-setseed 5"), (60, "acmelm 2"), (60, "acphr 2"), (60, "acans 1"), (300, "acsetup 1"), (310, "acsetpg 12"),
+sv = [(50, "ac-setseed 5"), (60, "acmelm 2"), (60, "acphr 2"), (60, "acans 1"), (300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"),
       (400, f"ac-setknob 0 {k(2, GS.NSLOTS)}"), (500, "ac-setknob 1 0.5"), (600, "ac-setknob 1 1"), (700, "acsetup 0")]
 run(sv, 2, d=dd)
 log, _ = run([(50, "acmelm 0"), (50, "acphr 0"), (50, "acans 0")] + ld(2), 2, d=dd, extra=pr)
@@ -1695,7 +1698,7 @@ after = [float(l.split()[1]) for l in log.split("h-mark: bang")[-1].splitlines()
 sub_ = lambda xs, want: (lambda it: all(w in it for w in want))(iter(xs))
 check(sub_(after[:6], [85.0, 90.0, 92.0]), f"Answer you: the bells echo your phrase, in the key and register ({after[:6]})")
 # the factory pieces of the writing load from slots 7-9
-log, _ = run([(300, "acsetup 1"), (310, "acsetpg 12"), (400, f"ac-setknob 0 {(6 + 0.5) / GS.NSLOTS}"),
+log, _ = run([(300, "acsetup 1"), (310, f"acsetpg {GS.SETUP_NAMES.index('SAVES')}"), (400, f"ac-setknob 0 {(6 + 0.5) / GS.NSLOTS}"),
               (500, "ac-setknob 2 0.5"), (600, "ac-setknob 2 1"), (700, "acsetup 0")], 3, d=d)
 check("slot 7: Chorale" in log.replace("\\ ", " "), "factory piece Chorale loads from slot 7")
 
@@ -1746,6 +1749,188 @@ rc = [[float(x) for x in l.split(":", 1)[1].split()] for l in L_ if l.startswith
 check(rc and max(r[2] for r in rc) >= 4 and log.count("ac-mnote:") > 10,
       f"Rhythm shared: the motion follows the bells' rhythm cell ({int(rc[-1][2])} 8ths a round, "
       f"{log.count('ac-mnote:')} motion notes)")
+
+# 81. the bells while moving: brought in with their key they play, also in a calm opening (seed 303: emerge, about
+#     1 note in 6 s) - the calm thinning and Answer motion's turns leave them alone
+log, _ = run([(10, "aclen 0.3"), (20, "acmbell 2"), (50, "ac-setseed 303")], 120, prints=("ac-bell",))
+L_ = log.splitlines()
+nb = sum(1 for l in L_[max(k for k, l in enumerate(L_) if l.startswith("ac-setseed")):] if l.startswith("ac-bell:"))
+check(not errors(log) and nb >= 12, f"bells brought in play in a calm opening ({nb} notes in 2 minutes)")
+# (and the bells key: on but not struck yet, the bells sound silent - a tap brings them in, a note at once)
+log, _ = run([(10, "acans 1"), (10, "acdens 0.2"), (10, "acsform 6"), (10, "acsroles 0 2 2 8 8 8 8 8 8 8 8 8 8"),
+              (50, "ac-setseed 303"), (4800, "h-mark bang"), (5000, "notesRaw 75 100"), (5100, "notesRaw 75 0")], 7,
+             prints=("ac-bell", "ac-toast", "h-mark"))
+seg = log.split("h-mark: bang")[-1]
+pre = [l for l in log.split("h-mark: bang")[0].splitlines()[-200:] if l.startswith("ac-bell:")]
+tl = [l.split("list ", 1)[1] for l in seg.splitlines() if l.startswith("ac-toast") and "bells" in l]
+check("bells in" in tl and sum(1 for l in seg.splitlines() if l.startswith("ac-bell:")) >= 1,
+      f"bells key: on but not struck yet, a tap brings them in and they sound at once ({tl}, before: {len(pre)} notes)")
+
+# 82. the bells' and motion's engine parameters (their SHAPE pages, knobs 3 and 4): the chip raw at Duty 0 (a square:
+#     odd harmonics only), its duty and arpeggio brought in; a character control brightens, a decay control lengthens
+from data import STRIKES
+def eng(layer, kind, P, Q, sparse=False):
+    x = "b" if layer == "bell" else "m"
+    k = STRIKES.index(kind)
+    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+         [(311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10"), (320, f"acsh{x}p {P}"), (320, f"acsh{x}q {Q}")]
+    if layer == "bell":
+        ev += [(600, f"ac-g-bel{k} 1 10")] + [(1000 + 2500 * i, "ac-bell 72 0.8 0.5") for i in range(3)]
+    else:
+        ev += [(600, "ac-g-motion 1 10"), (600, f"ac-g-mot{k} 1 10")] + [(1000 + (2500 if sparse else 400) * i, "ac-mnote 60 0.8 0 0.5")
+                                                                          for i in range(3 if sparse else 18)]
+    log, a = run(ev, 8)
+    seg = a[SR:8 * SR, 0]
+    S = np.abs(np.fft.rfft(seg * np.hanning(len(seg))))
+    fr = np.fft.rfftfreq(len(seg), 1 / SR)
+    band = lambda f: S[(fr > f * 0.98) & (fr < f * 1.02)].max()
+    fn = 523.25 if layer == "bell" else 261.63
+    cen = 100 * (S[fr > 1.5 * fn] ** 2).sum() / (S ** 2).sum()      # (the share of the power above the note, %)
+    return band, cen, seg, errors(log)
+f0_ = 261.63
+b0, *_ = eng("motion", "chip", 0, 0.5)
+b1, *_ = eng("motion", "chip", 1, 0.5)
+check(b0(2 * f0_) < 0.1 * b0(f0_) and b1(2 * f0_) > 0.2 * b1(f0_),
+      f"chip Duty: 0 the raw square (2nd harmonic {b0(2 * f0_) / b0(f0_):.2f} of the 1st), up a narrower pulse "
+      f"({b1(2 * f0_) / b1(f0_):.2f})")
+_, _, _, e = eng("motion", "chip", 0, 0.5)
+ba, *_ = eng("motion", "chip", 0, 1.0)
+check(ba(1.4983 * f0_) > 5 * b0(1.4983 * f0_), f"chip Arp: the 5th comes in ({ba(1.4983 * f0_) / max(1e-9, b0(1.4983 * f0_)):.0f}x)")
+for layer, kind in (("bell", "bars"), ("bell", "bowl"), ("motion", "fm"), ("motion", "lpg"), ("bell", "kalimba")):
+    _, c0, s0, e0 = eng(layer, kind, 0.1, 0.5)
+    _, c1, s1, e1 = eng(layer, kind, 0.9, 0.5)
+    _, _, d0, _ = eng(layer, kind, 0.5, 0.1, True)
+    _, _, d1, _ = eng(layer, kind, 0.5, 0.9, True)
+    w0, w1 = (1.2, 2.4) if layer == "bell" else (0.35, 0.7)          # (the motion's notes are short)
+    tail = lambda x: rms_db(x[int(w0 * SR):int(w1 * SR)]) - rms_db(x[:int(0.3 * SR)])
+    check(not (e0 or e1) and c1 > c0 * 1.3 + 0.1 and tail(d1) > tail(d0) + 3,
+          f"{layer} {kind}: character brightens (overtones {c0:.1f} -> {c1:.1f} % of the power), decay lengthens "
+          f"(tail {tail(d0):.0f} -> {tail(d1):.0f} dB)")
+
+# 83. the pads' two SHAPE parameters (knobs 3 and 4; data.PAD_PARAMS): each changes the sound of every pad type
+from data import FLAVOURS, PAD_PARAMS
+ev = [(50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang"), (310, "acmdrone 0"), (310, "acmsub 0"),
+      (310, "acmtex 0"), (310, "acmcloud 0"), (310, "acmbell 0"), (310, "acmmotion 0"), (310, "acmatm 0"), (310, "acfpad 1"),
+      (310, "acdens 1"), (320, "ac-layers bang"), (330, "ac-rwet 0 10"), (330, "ac-motion 0")] + \
+     [(340, f"ac-v{k}-flav -1") for k in (1, 2, 3)]
+T = 1000
+for fl in range(len(FLAVOURS)):
+    ev += [(T, f"ac-v0-flav {fl}"), (T, "ac-v0-pitch 57 0 0"), (T, "acshpp 0.5"), (T, "acshpq 0.5"), (T + 1, "ac-shpupd bang"),
+           (T + 4500, "acshpp 0.95"), (T + 4501, "ac-shpupd bang"), (T + 7500, "acshpp 0.5"), (T + 7500, "acshpq 0.95"),
+           (T + 7501, "ac-shpupd bang")]
+    T += 10500
+log, a = run(ev, T / 1000 + 1)
+def spec(x):
+    S = np.abs(np.fft.rfft(x * np.hanning(len(x)))) + 1e-9
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    bands = [S[(fr >= lo) & (fr < lo * 1.26)].mean() for lo in [100 * 1.26 ** k for k in range(28)]]
+    return 20 * np.log10(np.array(bands))
+T, same = 1000, []
+for fl, name in enumerate(FLAVOURS):
+    seg = lambda t0, t1: a[int((T + t0) * SR / 1000):int((T + t1) * SR / 1000)].mean(1)
+    base, sp, sq = spec(seg(2500, 4400)), spec(seg(5500, 7400)), spec(seg(8500, 10400))
+    dp, dq = np.abs(sp - base).mean(), np.abs(sq - base).mean()
+    if dp < 1.0 or dq < 1.0:
+        same.append(f"{name} {PAD_PARAMS[name][0]} {dp:.1f} / {PAD_PARAMS[name][1]} {dq:.1f} dB")
+    T += 10500
+check(not errors(log) and not same, f"pad parameters: each changes every type's sound (by 1 dB or more; unchanged: {same})")
+
+# 84. the drones' and the sub's two SHAPE parameters: each changes every drone design and sub sound
+from data import DRONES, DRONE_PARAMS, SUBTYPES, SUB_PARAMS
+ALLL = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud"]
+def bands(x):
+    S = np.abs(np.fft.rfft(x * np.hanning(len(x)))) + 1e-9
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    return 20 * np.log10(np.array([S[(fr >= lo) & (fr < max(lo * 1.26, lo + 2))].mean() for lo in [25 * 1.26 ** k for k in range(28)]]))
+def sweep_params(x, sounds, setup):
+    """for each sound: 4 s as designed, then knob 3 up, then knob 4 up - the spectra compared"""
+    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALLL] + \
+         [(311, "acfade 10"), (313, "ac-rwet 0 10")]
+    T = 1000
+    for i in range(len(sounds)):
+        ev += setup(T, i) + [(T, f"acsh{x}p 0.5"), (T, f"acsh{x}q 0.5"), (T + 1, "ac-shpupd bang"),
+                             (T + 4500, f"acsh{x}p 0.95"), (T + 4501, "ac-shpupd bang"), (T + 7500, f"acsh{x}p 0.5"),
+                             (T + 7500, f"acsh{x}q 0.95"), (T + 7501, "ac-shpupd bang")]
+        T += 10500
+    log, a = run(ev, T / 1000 + 1)
+    T, same = 1000, []
+    for i, name in enumerate(sounds):
+        st = lambda t0, t1: a[int((T + t0) * SR / 1000):int((T + t1) * SR / 1000)]
+        # (a parameter may change the spectrum, or what moves in time - beating, a rotary, a sweep - or the stereo:
+        # it counts when any of the three changes: 1 dB of spectrum, 0.5 dB of fluctuation, 0.05 of L/R correlation)
+        def feat(x2):
+            m = x2.mean(1)
+            w = int(0.05 * SR)
+            env = 20 * np.log10(np.sqrt((m[:len(m) // w * w] ** 2).reshape(-1, w).mean(1)) + 1e-9)
+            return bands(m), env.std(), np.corrcoef(x2[:, 0], x2[:, 1])[0, 1]
+        b0, e0, c0 = feat(st(2500, 4400))
+        res = []
+        for t0, t1 in ((5500, 7400), (8500, 10400)):
+            b1, e1, c1 = feat(st(t0, t1))
+            res.append((np.abs(b1 - b0).mean(), abs(e1 - e0), abs(c1 - c0)))
+        ok_ = [d >= 1.0 or de >= 0.5 or dc >= 0.05 for d, de, dc in res]
+        if not all(ok_):
+            same.append(f"{name} " + " / ".join(f"{d:.1f} dB, {de:.1f} dB, {dc:.2f}" for d, de, dc in res))
+        print(f"      {x} {name}: " + "; ".join(f"knob {3 + j}: spectrum {d:.1f} dB, movement {de:.1f} dB, L/R {dc:.2f}"
+                                          for j, (d, de, dc) in enumerate(res)))
+        T += 10500
+    return errors(log), same
+e, same = sweep_params("d", DRONES, lambda T, i: [(T, "acmdrone 1"), (T, "acfdrone 1"), (T, f"acdcur {i}"), (T + 1, "ac-layers bang"),
+                                                  (T + 2, "ac-g-sub 0 10")])
+check(not e and not same, f"drone parameters: each changes every design (by 1 dB or more; unchanged: {same})")
+e, same = sweep_params("s", SUBTYPES, lambda T, i: [(T, "acmsub 2"), (T + 1, "ac-layers bang"), (T + 2, f"ac-subt {i}"),
+                                                    (T + 3, "ac-subp 55 0")])
+check(not e and not same, f"sub parameters: each changes every sound (by 1 dB or more; unchanged: {same})")
+
+# 85. the textures', the atmospheres' and the cloud's two SHAPE parameters: each changes every sound (the helpers:
+#     section 84)
+from data import TEXTURES, ATMOS_NAMES
+# (the event textures get their events steadily, so no window falls silent; the whisper's syllables leave it silent
+#  for long stretches, so a 2 s window may hold nothing: it is left out here)
+STIM = dict(chirp="ac-chirp 2000 0.7 120 0.5", data="ac-data 84 40", bubbles="ac-bub 0 800 60 0.3 0.5",
+            echoes="ac-echo 1200 0.5", song="ac-song 600 300 280")
+def tstim(T, i):
+    name = TEXTURES[i]
+    ev = [(T, "acmtex 2"), (T, f"actex1 {i}"), (T, f"actex2 {i}"), (T + 1, "ac-layers bang")]
+    if name in STIM:
+        ev += [(T + 100 + 300 * k, STIM[name]) for k in range(34)]
+    return ev
+e, same = sweep_params("t", [n for n in TEXTURES if n != "whisper"],
+                       lambda T, i: tstim(T, TEXTURES.index([n for n in TEXTURES if n != "whisper"][i])))
+check(not e and not same, f"texture parameters: each changes every texture but whisper (unchanged: {same})")
+e, same = sweep_params("a", ATMOS_NAMES, lambda T, i: [(T, "acmatm 2"), (T, f"acatmcur {i}"), (T + 1, "ac-layers bang")])
+check(not e and not same, f"atmosphere parameters: each changes every atmosphere (unchanged: {same})")
+e, same = sweep_params("c", ["cloud"], lambda T, i: [(T, "acmcloud 2"), (T, "acmpad 2"), (T + 1, "ac-layers bang")])
+check(not e and not same, f"cloud parameters: Grain and Spread change it (unchanged: {same})")
+
+# 86. SETUP's groups: aux held, knob 1 scrolls through every page, back and forth (and SETUP stays open when aux is let
+#     go); a long aux hold without the knob closes it; aux + a black low key does nothing (left free)
+log, _ = run([(500, "aux 1"), (1700, "aux 0"), (2000, "aux 1"), (2100, "knob1 0.99"), (2300, "knob1 0.4"), (2500, "knob1 0.05"),
+              (3600, "aux 0"), (4000, "h-mark bang"), (4100, "aux 1"), (5400, "aux 0"), (5600, "h-mark bang"),
+              (5700, "aux 1"), (5750, "notesRaw 61 100"), (5800, "notesRaw 61 0"), (5900, "aux 0")], 7,
+             prints=("ac-sett0", "h-mark", "ac-toast"))
+a_, b_, c_ = (log.split("h-mark: bang") + ["", ""])[:3]
+hd = [l.split("list ", 1)[1] for l in a_.splitlines() if l.startswith("ac-sett0")]
+hdr = {p: f"{g} {p} {i + 1}/{len(ps)}" for g, ps in GS.SETUP_GROUPS for i, p in enumerate(ps)}
+want = [hdr[GS.SETUP_NAMES[min(len(GS.SETUP_NAMES) - 1, int(v * len(GS.SETUP_NAMES)))]] for v in (0.99, 0.4, 0.05)]
+want = [w for i, w in enumerate(want) if hd.index(w) > (hd.index(want[i - 1]) if i else -1)] if all(w in hd for w in want) else []
+check(len(want) == 3 and "settings saved" not in a_, f"aux + knob 1: the pages back and forth, SETUP open ({hd})")
+check("settings saved" in b_, "aux held long, no knob: SETUP closes when it is let go")
+check(not any(l.startswith("ac-sett0") for l in c_.splitlines()), "aux + a black low key: nothing (free)")
+
+# 87. load time: Pd checks each new connection against every one already in its window, so a window's load cost grows
+#     with the square of its connections. No window may hold more than 2000 (the setup window held 7000: a long load)
+import os
+win, stack = [], []
+for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "main.pd")).read().split(";\n"):
+    if l.startswith("#N canvas"):
+        stack.append([l.split()[-2], 0])
+    elif l.startswith("#X connect"):
+        stack[-1][1] += 1
+    elif l.startswith("#X restore"):
+        win.append(stack.pop())
+win = sorted(win + stack, key=lambda w: -w[1])
+check(win[0][1] <= 2000, f"no window over 2000 connections (largest: {win[0][0]} {win[0][1]})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

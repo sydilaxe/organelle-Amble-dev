@@ -131,10 +131,33 @@ def run_steps(c, src, steps):
     if len(steps) == 1:
         steps[0](c, src)
         return
+    if len(steps) > CHUNK and not getattr(c, "_chunk", False):
+        steps = Chunks((c.name or "main") + "-steps", steps)
     t = c.obj("t " + " ".join(["b"] * len(steps)))
     c.c(*(src if isinstance(src, tuple) else (src, 0)), t, 0)
     for i, st in enumerate(steps):
         st(c, (t, len(steps) - 1 - i))
+
+
+CHUNK = 12          # a longer list of steps runs in subpatches of this many (see Sub)
+
+
+def Sub(name, steps):
+    """steps run inside a child subpatch [pd name] (its own connections: Pd checks each new connection against every
+    one already in its window, so one huge window loads in quadratic time)"""
+    def st(c, src):
+        sc = Canvas(name, w=2600)
+        sc._chunk = len(steps) <= CHUNK
+        run_steps(sc, (sc.obj("inlet"), 0), steps)
+        c.c(*(src if isinstance(src, tuple) else (src, 0)), c.sub(sc), 0)
+    return st
+
+
+def Chunks(name, steps, size=None):
+    """steps in order, in subpatches of `size` steps each (see Sub)"""
+    size = size or CHUNK
+    steps = [s for s in steps if s is not None]
+    return [Sub(f"{name}-{k // size + 1}", steps[k:k + size]) for k in range(0, len(steps), size)]
 
 
 PROCS = set()

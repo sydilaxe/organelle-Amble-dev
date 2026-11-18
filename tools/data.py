@@ -162,7 +162,7 @@ BELL_RHYTHMS = [("even", [1, 1, 1, 1, 1]), ("long-short", [1.5, 0.5, 1.5, 0.5, 1
                 ("triplet", [0.67, 0.67, 0.67, 1, 1]), ("sparse", [2, 2, 1, 2, 3]), ("rush", [0.5, 0.5, 0.5, 0.5, 2]),
                 ("swing", [1.33, 0.67, 1.33, 0.67, 1]), ("slow", [2, 2, 2, 2, 2])]
 METERS = [4, 4, 3, 5, 6, 7]
-# tempo ranges (SETUP page 3): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
+# tempo ranges (SETUP OUTPUT): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
 # (pad breathing, bells, the drone's bar swell) feel the beat at half speed and the arpeggio counts in 8ths.
 TEMPOS = [("ambient", 40, 72), ("slow", 24, 48), ("wide", 30, 110), ("pulse", 60, 100), ("fast", 90, 140)]
 HALFTIME = 84
@@ -195,7 +195,7 @@ SCENE_DATA = [
 SCENE_ROLE = [[2, 0, 2], [0, 4, 0], [1, 4, 0], [3, 1, 3], [3, 0, 4], [1, 2, 1], [0, 4, 0], [2, 3, 2]]
 # preferences: the electronic and bell-like sounds come up more often
 FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1.3]
-# the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
+# the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP VOICES for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
 STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg", "gong", "chip"]
@@ -215,6 +215,36 @@ STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600,
                   bowl=7000, plate=3800, crystal=5200, lpg=1500, gong=6500, chip=900)
 STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
                    bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8, gong=1.4, chip=0.6)
+# the two SHAPE parameters of each struck engine (its layer's key held, knobs 3 and 4; 50 % = as designed): the
+# character, then the decay (the chip: its duty - 0 the raw square - and its arpeggio)
+ENGINE_PARAMS = dict(bars=("Bright", "Decay"), fm=("Index", "Decay"), blip=("Cutoff", "Decay"),
+                     wood=("Mallet", "Decay"), wave=("Morph", "Decay"), metal=("Bright", "Decay"),
+                     kalimba=("Tine", "Decay"), steel=("Bright", "Decay"), pluck=("Bright", "Decay"),
+                     bowl=("Hardness", "Ring"), plate=("Hardness", "Ring"), crystal=("Hardness", "Ring"),
+                     lpg=("Fold", "Gate"), gong=("Bloom", "Ring"), chip=("Duty", "Arp"))
+# the pads' two SHAPE parameters by type (50 % = as designed); while the four voices play different types, the page
+# names them in general (each type answers in its own way)
+PAD_PARAMS = dict(fm=("Index", "Ratio"), vox=("Vowel", "Resonance"), bow=("Pressure", "Sustain"),
+                  part=("Spread", "Swell"), fold=("Fold", "Sub"), pulsr=("Formant", "Cycles"),
+                  saws=("Detune", "Filter"), pwm=("Width", "Sweep"), digi=("Ring", "Crush"), sync=("Sync", "Sweep"),
+                  tine=("Tine", "Strike"), sine=("Bright", "Chorus"), glass=("Morph", "Shimmer"),
+                  beat=("Formant", "Pulse"), reed=("Drive", "Vibrato"), organ=("Drawbars", "Rotary"),
+                  air=("Breath", "Vibrato"), cz=("Bend", "Resonance"), choir=("Vowel", "Breath"),
+                  vosim=("Formant", "Decay"), whistle=("Breath", "Vibrato"), lissa=("Ratio", "Turn"),
+                  chip=("Duty", "Crush"))
+MIXED_PARAMS = ("Character", "Movement")
+DRONE_PARAMS = dict(pure=("Beat", "Breath"), analog=("Detune", "Sweep"), organ=("Drawbars", "Rotary"),
+                    fm=("Index", "Cycle"), frost=("Detune", "Glass"), choir=("Vowel", "Breath"),
+                    bowed=("Pressure", "Body"), spectral=("Upper", "Drift"), gendy=("Steps", "Rough"))
+TEX_PARAMS = dict(rain=("Patter", "Plops"), wind=("Whistle", "Gusts"), ember=("Crackle", "Knocks"),
+                  chirp=("Pitch", "Buzz"), radio=("Static", "Whistle"), data=("Crush", "Pitch"), buzz=("Crackle", "Hum"),
+                  murmur=("Pitch", "Breath"), echoes=("Repeats", "Wobble"), whisper=("Formant", "Sibilance"),
+                  leaves=("Flutter", "Ticks"), brook=("Pitch", "Babble"), bubbles=("Pitch", "Rise"),
+                  crickets=("Pulse", "Chirp"), harp=("Wind", "Ring"), song=("Vibrato", "Bright"), pulsar=("Rate", "Mask"))
+ATMOS_PARAMS = dict(haze=("Focus", "Swell"), deep=("Rumble", "Thunder"), space=("Ring", "Air"), night=("Pulse", "Hiss"),
+                    tides=("Pace", "Bright"))
+CLOUD_PARAMS = ("Grain", "Spread")
+SUB_PARAMS = dict(sine=("Harmonics", "Body"), warm=("Octave", "Body"), pulse=("Width", "Body"), fm=("Growl", "Body"))
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
 # with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
