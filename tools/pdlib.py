@@ -13,6 +13,10 @@ def esc(text):
     return out
 
 
+class Ix(int):
+    """a box's index, which knows its canvas (connecting a box of another canvas stops the build)"""
+
+
 class Canvas:
     def __init__(self, name=None, w=1400, h=900, font=10):
         self.name, self.w, self.h, self.font = name, w, h, font
@@ -35,27 +39,34 @@ class Canvas:
     def obj(self, text, x=None, y=None):
         x, y = self._place(x, y)
         self.items.append(("obj", (x, y, text)))
-        return len(self.items) - 1
+        return self._ix()
 
     def msg(self, text, x=None, y=None):
         x, y = self._place(x, y)
         self.items.append(("msg", (x, y, text)))
-        return len(self.items) - 1
+        return self._ix()
 
     def comment(self, text, x=None, y=None):
         x, y = self._place(x, y)
         self.items.append(("text", (x, y, text)))
-        return len(self.items) - 1
+        return self._ix()
 
     def sub(self, canvas, x=None, y=None):
         x, y = self._place(x, y)
         self.items.append(("sub", (x, y, canvas)))
-        return len(self.items) - 1
+        return self._ix()
+
+    def _ix(self):
+        i = Ix(len(self.items) - 1)
+        i.cv = self
+        return i
 
     # ---- wiring
     def c(self, a, ao, b, bi=0):
         if isinstance(a, tuple):
             a, ao = a
+        for i in (a, b):
+            assert getattr(i, "cv", self) is self, f"a connection in [pd {self.name}] to a box of [pd {i.cv.name}]"
         self.conns.append((a, ao, b, bi))
 
     def to(self, src, text, ao=0, bi=0):
@@ -288,7 +299,24 @@ def Sub(name, steps):
         sc._chunk = len(steps) <= CHUNK
         run_steps(sc, (sc.obj("inlet"), 0), steps)
         c.c(*(src if isinstance(src, tuple) else (src, 0)), c.sub(sc), 0)
+    st.size = 1
     return st
+
+
+BOX = 10            # an If's branch bigger than this (see _size) runs in its own window
+
+
+def _size(steps):
+    """about how many boxes a list of steps makes (an If counts its branches)"""
+    return sum(getattr(st, "size", 2) for st in steps if st is not None)
+
+
+def _boxed(name, steps):
+    """a big If branch in its own window [pd name], created where its boxes would have been: same order"""
+    steps = [s for s in steps if s is not None]
+    if _size(steps) <= BOX:
+        return steps
+    return [Sub(name, steps)]
 
 
 def Chunks(name, steps, size=None):
@@ -411,10 +439,11 @@ def If(cond, steps, else_steps=None, pre=()):
         if steps:
             b = c.obj("b")
             c.c(s, 1, b, 0)
-            run_steps(c, (b, 0), steps)
+            run_steps(c, (b, 0), _boxed("then", steps))
         if else_steps:
-            run_steps(c, (s, 0), else_steps)
+            run_steps(c, (s, 0), _boxed("else", else_steps))
     st.cond = cond
+    st.size = 3 + _size(steps or []) + _size(else_steps or [])
     st.after = lambda seq: If(cond, steps, else_steps, list(seq) + list(pre))
     return st
 

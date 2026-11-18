@@ -606,7 +606,8 @@ def section():
                                       Call("ac-section")])])
     proc(c, "ac-rvback", [Send("ac-rvin", "1 5000")])
     # the end of a composition: fade out, then switch the layers off
-    fin_off = c.obj("delay")
+    # (ac-finarm N: switch the layers off N ms from now; a later one restarts the wait)
+    c.ch(c.recv("ac-finarm"), "delay", "s ac-finoff")
     # (SETUP WRITING Ending by phrase: the motion stops first, the bells 9 s later; the pads and drone fade last)
     proc(c, "ac-finbell", [V("acfinb", "1")])
     # (SETUP WRITING Ending by phrase: the chords stop and everything fades over 30 s, but the motion stops first, the
@@ -617,12 +618,11 @@ def section():
         V("acrun", "0"),
         Send("ac-master", "0 30000"),
         Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
-        X("30500*actime + 500", (fin_off, 0)),
+        SendL("ac-finarm", ["30500*actime + 500"]),
         Call("ac-scr"),
     ])])
     proc(c, "ac-fin2", [If("acrun", [
-        V("acrun", "0"), Call("ac-clockstop"), X("10500*actime + 500", (fin_off, 0)), Call("ac-scr")])])
-    c.c(fin_off, 0, c.obj("s ac-finoff"), 0)
+        V("acrun", "0"), Call("ac-clockstop"), SendL("ac-finarm", ["10500*actime + 500"]), Call("ac-scr")])])
     # Start / Stop (A#, or an incoming MIDI Start / Stop when following a clock): Stop fades out over 2.5 s and
     # freezes the piece where it is (section, chord, time left); Start fades back in and goes on from there.
     # After FIN, Start begins a new piece.
