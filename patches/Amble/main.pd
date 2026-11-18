@@ -6730,7 +6730,7 @@
 #X obj 20 1052 expr acr1 < acrmask[int(acrole)*6+3] || accapt;
 #X obj 20 1076 v acfcloud;
 #X obj 20 1100 s ac-rng;
-#X obj 20 1124 expr acr1 < acrmask[int(acrole)*6+4];
+#X obj 20 1124 expr acr1 < if(acwrite && acrole != 0 && acrole != 5 && acrole != 7 \, max(0.8 \, acrmask[int(acrole)*6+4]) \, acrmask[int(acrole)*6+4]);
 #X obj 20 1148 v acfbell;
 #X obj 20 1172 s ac-rng;
 #X obj 20 1196 expr acr1 < acrmask[int(acrole)*6+5];
@@ -9184,7 +9184,7 @@
 #X obj 20 1940 expr acmgc*acslcloud*acgcloud \; acfade;
 #X obj 20 1964 pack f f;
 #X obj 20 1988 s ac-g-cloud;
-#X obj 20 2012 expr (acebell>0)*(1-acended)*max(max(acfbell*min(1 \, max(0 \, (acdeff-0.45)/0.15)) \, acebell==2) \, max((acinmode==4)*min(1 \, acinput*2) \, (acroute==3)*0.9));
+#X obj 20 2012 expr (acebell>0)*(1-acended)*max(max(acfbell*min(1 \, max(0 \, (acdeff-if(acwrite \, 0.25 \, 0.45))/0.15)) \, acebell==2) \, max((acinmode==4)*min(1 \, acinput*2) \, (acroute==3)*0.9));
 #X obj 20 2036 v acgbell;
 #X obj 20 2060 expr acmgb*acslbell*acgbell*(if(acjbi >= 0 \, acjbi \, if(acsbell > 0 \, acsbell - 1 \, acbela)) == 0) \; acfade;
 #X obj 20 2084 pack f f;
@@ -10087,7 +10087,7 @@
 #X obj 940 116 b;
 #X obj 940 140 t b b b b;
 #X obj 940 164 s ac-rng;
-#X obj 940 188 expr acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.6) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && acansm == 0) || ((acans*acwrite) == 2 && acnow - acanst > 300 && acnow - acanst < 12000)) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 1) && ((acendp*acwrite) == 0 || acfinb == 0);
+#X obj 940 188 expr acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.45 || acebell == 2) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && (acansm == 0 || acebell == 2)) || ((acans*acwrite) == 2 && acnow - acanst > 300 && acnow - acanst < 12000)) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 1) && ((acendp*acwrite) == 0 || acfinb == 0);
 #X obj 940 212 sel 0;
 #X obj 940 236 b;
 #X obj 940 260 t b b b b b b b b b b b b;

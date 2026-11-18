@@ -1747,5 +1747,12 @@ check(rc and max(r[2] for r in rc) >= 4 and log.count("ac-mnote:") > 10,
       f"Rhythm shared: the motion follows the bells' rhythm cell ({int(rc[-1][2])} 8ths a round, "
       f"{log.count('ac-mnote:')} motion notes)")
 
+# 81. the bells while moving: brought in with their key they play, also in a calm opening (seed 303: emerge, about
+#     1 note in 6 s) - the calm thinning and Answer motion's turns leave them alone
+log, _ = run([(10, "aclen 0.3"), (20, "acmbell 2"), (50, "ac-setseed 303")], 120, prints=("ac-bell",))
+L_ = log.splitlines()
+nb = sum(1 for l in L_[max(k for k, l in enumerate(L_) if l.startswith("ac-setseed")):] if l.startswith("ac-bell:"))
+check(not errors(log) and nb >= 12, f"bells brought in play in a calm opening ({nb} notes in 2 minutes)")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

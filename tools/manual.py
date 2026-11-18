@@ -279,7 +279,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
                "bells and motion; the bells and the motion rest a bar as a section "
                "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
-               "the pads hold through."),
+               "the pads hold through. Bells you bring in with their key play through the calm sections."),
     "Motif": (", ".join(S.SMDEV), "develops: away from the opening and the return, each section may also play the "
               "motif backwards, slower, faster, or in fragments (its first two notes, sequenced up)."),
     "Answer": (", ".join(S.SANS), "Call and response. motion: the motion and the bells take 2 bars each in turn. you: "

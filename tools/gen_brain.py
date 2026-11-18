@@ -505,7 +505,10 @@ def section():
              Call("ac-secovr"), Call("ac-padpick")]
     for i, lay in enumerate(LAYERS):
         extra = {"drone": " || acdens < 0.3", "cloud": " || accapt"}.get(lay, "")
-        rest += [RNG, V("acf" + lay, f"acr1 < acrmask[int(acrole)*6+{i}]{extra}")]
+        # (while moving, the bells - the motif's voice - come in at least 4 sections in 5, but the calm ones)
+        chance = (f"if(acwrite && acrole != 0 && acrole != 5 && acrole != 7, max(0.8, acrmask[int(acrole)*6+{i}]), "
+                  f"acrmask[int(acrole)*6+{i}])" if lay == "bell" else f"acrmask[int(acrole)*6+{i}]")
+        rest += [RNG, V("acf" + lay, f"acr1 < {chance}{extra}")]
     rest += [
         RNG,
         X("if(acr1<0.5, actexA, actexB); if(acr2<0.5, actexB, int(acr3*%s))" % TEX_N, "v actex1a", "v actex2a"),
@@ -673,7 +676,8 @@ def layers():
         ("tex", f"(acshed < 2)*(acetex>0)*(1-acended)*max(acftex*{th(0.28)}, acetex==2)"),
         ("cloud", f"(acshed < 1)*(acecloud>0)*(1-acended)*max(max(acfcloud*{th(0.42)}, acecloud==2), max(((acinmode==2) || (acinmode==0)*(acinclass>=1))"
                   f"*min(1, acinput*2)*0.8, (acroute==4)*0.85))"),
-        ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th(0.45)}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
+        # (while moving, the bells need less density: 0.25 for 0.45 - they carry the motif)
+        ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th('if(acwrite, 0.25, 0.45)')}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
         ("motion", f"(acemotion>0)*(1-acended)*max(acfmotion*{th(0.3)}*min(1, acrhythm*2.5), acemotion==2)"),
     ]
     # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP page 12)
@@ -1216,7 +1220,9 @@ def players():
             RNG,
             # (SETUP DIALOGUE Answer: the bells' turn, or after you play; PHRASE Breath: not resting)
             # (a calm section: the bells play less than half as often)
-            If("acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.6) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && acansm == 0) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
+            # (bells you bring in with their key - acebell 2 - play through a calm section and both halves of a
+            # phrase: you asked for them; a calm section otherwise keeps about 2 in 3 of them)
+            If("acr1 > 0.18 && (acsecalm == 0 || acr1 > 0.45 || acebell == 2) && ((acans*acwrite) == 0 || ((acans*acwrite) == 1 && (acansm == 0 || acebell == 2)) || ((acans*acwrite) == 2 && acnow - acanst > 300 && "
                "acnow - acanst < 12000)) && ((acrests*acwrite) == 0 || acrestb == 0 || acrestl == 1) && ((acendp*acwrite) == 0 || acfinb == 0)", play),
             V("acbi", "(acbi+1) % 5"),
             If("acbi==0 && acr3<0.6", [RNG, T("acmotif", "int(acr1*5)", "acmotif[int(acr1*5)] + int(acr2*5) - 2")]),
