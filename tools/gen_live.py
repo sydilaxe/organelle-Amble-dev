@@ -171,7 +171,7 @@ def live():
                             If("acrun && acsecc", [V("acsecqn", "min(3, int(4*acsecel/max(1, acsecdur*actime)))"),
                                                    If("acsecqn != acsecq", [V("acsecq", "acsecqn"), Call("ac-secovr"),
                                                                             V("acfade", __import__("gen_setup").SFADE), Call("ac-layers")])]),
-                            # SETUP page 7 shows the breath level as it comes in
+                            # SETUP MIDI IN shows the breath level as it comes in
                             If("acsetup && acsetpg >= 6 && int(acnow) % 300 == 0", [Call("ac-oledsetup")])])
     # ---- notes
     up = c.to(c.recv("ac-livenote"), "unpack f f f")

@@ -1,4 +1,4 @@
-"""Bells and motion engines (SETUP page 9): the struck bars (the bells' own), FM pings (the motion's own), a filtered
+"""Bells and motion engines (SETUP VOICES): the struck bars (the bells' own), FM pings (the motion's own), a filtered
 analog blip, a wooden bar, a glassy wavetable and a metallophone - each one available to both layers.
 
 The bells' bars and the motion's FM pings stay in gen_dsp.bells() / motion_fm(); this module builds the other

@@ -945,7 +945,7 @@ def motion_fm():
 
 def motion():
     s, ln = switched("motion", "ac-g-motion")
-    s.comment("Motion: the engine chosen (SETUP page 9; FM pings by default) through tempo echoes and a soft limit")
+    s.comment("Motion: the engine chosen (SETUP VOICES; FM pings by default) through tempo echoes and a soft limit")
     L, R = s.obj("catch~ ac-mvL"), s.obj("catch~ ac-mvR")
     # echoes: 3/4 beat left, 1/2 beat right, darkening
     beat = s.to(s.recv("ac-bpm"), "t f f")

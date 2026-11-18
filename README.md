@@ -56,7 +56,8 @@ The layers and their rhythms:
     B next section (hold it: hold section);
   - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, and two parameters of that sound (a pad's Vowel, a drone's Beat, the chip's Duty ...); aux: the layer's page - its sound, in / out / auto, level and reverb send; E (motion) or D# (bells) held, the low keys change the rhythm - randomize, rotate, more or fewer hits, cycle length, harmony in the key, ratchets, ghost notes, swing or rubato); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
-  - aux + a low key opens that SETUP page.
+  - aux + a white low key opens a SETUP group (C PIECE, D WRITING, E SOUND, F LIVE, G SAVES, A MIDI, B SYSTEM);
+    in SETUP, aux held + knob 1 scrolls through every page, back and forth.
 - **Your own form:** SETUP FORM, SECTIONS and SECTION MIX build a piece section by section: roles, lengths, pad
   types, and per layer auto / off / on or coming in or going out at 1/4, 1/2, 3/4 of a section. With Section at
   *now* they edit the section that plays. **SAVES** keeps 16 pieces; a program change can load one (SETUP LIVE),
@@ -64,11 +65,11 @@ The layers and their rhythms:
 - **Performing:** a PERFORM knob page (low F) with Sink, Blur, Swell and Harm (0 = pleasing harmony only, up =
   other relationships drift in); ANCHOR (aux + top A) to come back to a sound; quick save and recall (hold top B
   and press a key), COMPARE (hold top B), loads that morph in; factory pieces in empty slots 1-6; JOURNEY (the
-  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP 22): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again. Holding a knob-page key opens the settings you change while playing: low F the GLIDE page (all the glide times), low D / D# / E the COLOUR, GROOVE and FORM pages; with SETUP DISPLAY Hints on, a held key says what holding it does.
+  pads, drone, bells and motion travelling through their engines); PUMP, DUCK, four macros and CC OUT; **MEMORY** (SETUP MEMORY): the knobs you turn in each section, kept and saved with the piece, glide back when the section comes again. Holding a knob-page key opens the settings you change while playing: low F the GLIDE page (all the glide times), low D / D# / E the COLOUR, GROOVE and FORM pages; with SETUP DISPLAY Hints on, a held key says what holding it does.
 - **Two screens:** the play view (the chord now and the next one coming, a live score, the voices that sound) and
   the MIX view (levels and sends, the column you turn framed with its value), which takes over while a MIX or
   SENDS page is open. SETUP DISPLAY can turn the play view's middle into a scope of the output, and the LED into a light that blinks with the drone's beating.
-- **How the piece writes** (SETUP 24-28: LINES, HARMONY, PHRASE, DIALOGUE, WRITING): one motif carried between the bells, the motion (as counterpoint, in canon, in call and response) and, held and slow, the pads; phrases that close (IV-V, then V-I) and breathe; mediant and tonnetz key moves, secondary dominants, smooth voicing, a key plan, phasing, spaced registers; an ending by phrase and a subtle drone. On by default; WRITING Writing still turns it all off for the static, droning piece. A feature the scale can't carry steps aside.
+- **How the piece writes** (SETUP WRITING group: WRITING, LINES, HARMONY, PHRASE, DIALOGUE, ARC): one motif carried between the bells, the motion (as counterpoint, in canon, in call and response) and, held and slow, the pads; phrases that close (IV-V, then V-I) and breathe; mediant and tonnetz key moves, secondary dominants, smooth voicing, a key plan, phasing, spaced registers; an ending by phrase and a subtle drone. On by default; WRITING Writing still turns it all off for the static, droning piece. A feature the scale can't carry steps aside.
 - **Listening:**
   - A held or sung pitch pulls the next chord to contain it.
   - A note held for 6 s becomes the key centre.
@@ -94,30 +95,30 @@ emulator, so the font only approximates the Organelle's.
 | **Score** | The form strip (one bar per section, height = energy, current one inverted, a playhead). Key and scale, with the time left. The pad voices gliding on a pitch ladder, with your held notes as boxes and a breath bar. Meters for every layer, the reverb and the input. The motion layer's Euclidean pattern with a moving cursor, the tempo and the reverb type. The section role and voicing, and K/M/E tags for who is playing and the clock. |
 | **Input** | While external audio plays, the right-hand column becomes an input panel: the last 6 s of the input as a waveform with its onsets ticked above, the input mode, and what Amble hears (pitch, pluck, texture), with a dot while it records a memory. A sung or played pitch is drawn as a line across the pitch ladder, so you see it against the pad voices. The rhythm column comes back 5 s after the input stops. |
 | **Knob page** | Shown for 6 s after you turn a knob or tap aux. |
-| **SETUP** | Hold aux for 1 s; aux taps turn the 9 pages. Page 1: MIDI out (off, tempo only, tempo + notes, notes only), Sync (internal or follow clock), Keys (auto, play, functions), Bloom (clean or vintage). Page 2: how much the chords follow you, MPE bend range, MIDI out channel, breath curve. Page 3: output, width, pan motion, tempo range. Page 4: which MIDI notes go out, arp octave, the CPU load (its knob fully up runs the profile), the CPU guard (off, on, either with a log). Page 5, **SOUNDS**: pad type, drone, texture and character, each auto or your choice (see below). Page 6, **MUSIC**: key, scale, chord voicing (auto or fixed) and the bar pulse. Page 7, **MIDI IN**: where notes go, what breath does, what pressure does, the breath level. Page 8, **CC MAP**: what each CC does. Page 9, **VOICES**: the engines of the bells and the motion, and **Glide** (off, fast, short, medium, long, slow: how the pad voices slide to a new chord; off = they jump). Saved in `settings.txt` with the knob values (except In, which always starts at 0). |
+| **SETUP** | Hold aux for 1 s. 30 pages in 7 groups, each opened at its first page by aux + a white low key: **PIECE** (C: GENERAL, MUSIC, FORM, SECTIONS, SECTION MIX), **WRITING** (D: WRITING, LINES, HARMONY, PHRASE, DIALOGUE, ARC), **SOUND** (E: SOUNDS, VOICES, COLOUR, JOURNEY), **LIVE** (F: PLAYING, LIVE, GROOVE, MACRO A, MACRO B), **SAVES** (G: SAVES, RECALL, MEMORY), **MIDI** (A: MIDI IN, CC MAP, NOTES OUT, CC OUT), **SYSTEM** (B: OUTPUT, DISPLAY, CPU). The header shows the group, the page and its place (e.g. `LIVE GROOVE 3/5`). Aux taps step to the next page; with aux held, knob 1 scrolls through all the pages, back and forth. Hold aux and let go (without knob 1) to leave. The black low keys with aux are free for later. Saved in `settings.txt` with the knob values (except In, which always starts at 0). |
 
-**SOUNDS** (SETUP page 5) lets you choose the sounds yourself, mid-piece, to audition them. Each item is **auto** (the piece chooses, as before) or your choice, applied at once (crossfaded) and kept for every later section:
+**SOUNDS** (SETUP SOUND group) lets you choose the sounds yourself, mid-piece, to audition them. Each item is **auto** (the piece chooses, as before) or your choice, applied at once (crossfaded) and kept for every later section:
 - **Pads:** auto; **raw** (the dry, buzzy types of the first demos: vox, partials, fold and pulsar, with no character effect); or one type for all four pad voices (fm, vox, bow, part, fold, pulsr, saws, pwm, digi, sync, tine).
 - **Drone:** auto, pure, analog, organ, fm, frost, choir, bowed, spectral.
 - **Texture:** auto, rain, wind, ember, chirp, radio, data, buzz, murmur, echoes, whisper, leaves, brook, bubbles, crickets, harp, song.
 - **Character:** auto, clean, chorus, tape, ring, crush.
 
-**MUSIC** (SETUP page 6): **Key** (auto or C to B), **Scale** (auto or one of the 16) and **Chords** (auto or one voicing) apply at once with a chord change; a fixed choice stays (no modulation or scale change). **Pulse** (off, gentle, normal, strong) sets how much the drone and sub swell on every bar.
+**MUSIC** (SETUP PIECE group): **Key** (auto or C to B), **Scale** (auto or one of the 16) and **Chords** (auto or one voicing) apply at once with a chord change; a fixed choice stays (no modulation or scale change). **Pulse** (off, gentle, normal, strong) sets how much the drone and sub swell on every bar.
 
-**MIDI IN** (SETUP page 7):
+**MIDI IN** (SETUP MIDI group):
 - **Notes to:** what MIDI notes play. **voice** (the live voice, as before); **chords** (the notes you hold are the pad chord; the composer waits until you let go); **drone** (the drone and sub move to your note); **bells** (a bell per note); **cloud** (each held note tunes a grain stream). The notes still steer the harmony.
 - **Breath to:** **voice+piece** (as before: the live voice's level and tone, and the piece's density), **voice**, **density**, **brightness**, **reverb** (the reverb sends) or **swell** (the whole level, like an expression pedal). Ten seconds without breath and it lets go.
 - **Pressure to:** what channel and poly pressure do (any CC MAP target; default breath).
 - **Breath in:** the breath level arriving now, to check your controller.
 
-**CC MAP** (SETUP page 8): knob 1 picks a CC (1, 2, 7, 11, 64, 71, 74), knob 2 sets what it does:
+**CC MAP** (SETUP MIDI group): knob 1 picks a CC (1, 2, 7, 11, 64, 71, 74), knob 2 sets what it does:
 - **breath** (into the breath path, then Breath to), **vibrato** (the live voices' vibrato depth; knob 4 sets the rate, 3 to 8 Hz),
 - **voice tone**, **voice level** (per note, on the CC's channel, so MPE controllers shape each note; channel 1 = every note), **voice type** (the live voice's synthesis type), **hold** (sustain),
 - **density**, **colour**, **reverb**, **motion** (move that knob), **swell** (the whole level), **resolve** (the tonic as open fifths while held), or **off**.
 
 Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 hold, 71 off, 74 voice tone. Row 3 shows the last CC that arrived, to find what your controller sends.
 
-**MIDI out** (SETUP page 1): off, **tempo only** (clock), **tempo + notes**, or **notes only**.
+**MIDI out** (SETUP GENERAL): off, **tempo only** (clock), **tempo + notes**, or **notes only**.
 - **Clock:** 24 ticks a beat at the piece's tempo (following the form's tempo changes), with Start, Stop and Continue (Continue when a stopped piece plays on)
   at the start and end of a piece.
 - **Notes**, so external synths and arpeggiators follow the composition. Each part has its own channel,
@@ -134,7 +135,7 @@ Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 ho
 
   Chord and bass velocities follow the piece's energy. Notes are rounded to the nearest semitone (just,
   harmonic-7th, slendro and pelog scales come out as the nearest 12-tone notes).
-- **MIDI notes** (SETUP page 4): all; harmony (the chords, tonic and bass, no bells or motion); or arp only
+- **MIDI notes** (SETUP NOTES OUT): all; harmony (the chords, tonic and bass, no bells or motion); or arp only
   (just the arp chord).
 
 **Sync:** Amble leads, or it follows an incoming clock. Incoming ticks drive its rhythm and Start resets the bar.
@@ -149,7 +150,7 @@ Defaults (as the DM48 Engine reads a DM48X): 1 vibrato, 2 / 7 / 11 breath, 64 ho
 | **Character** | On the pads: clean, chorus, tape (wow, saturation, hiss that follows the music), ring modulation, or crush. |
 | **Atmospheres** | In about half the pieces, mostly in the emerge, break and dissolve sections: haze (air shimmering on the chord), deep (rumble with distant thunder), space (air ringing in combs tuned to the chord), night (distant insects), tides (waves washing across the field). All stereo. |
 | **Textures** | 16: rain (hiss, patter, plops), wind, embers, chirps, radio (static and a tuning whistle), data (blip bursts), buzz (electric hum on the tonic), murmur (ghostly distant voices), echoes (alien blips in bending echoes), whisper, leaves (rustling trees), brook (babbling water); and four of oscillators and models, tuned to the chord: bubbles (rising drops), crickets, harp (an aeolian harp: strings sung by the wind), song (a gliding FM voice). |
-| **Bells and motion** | 9 engines each, chosen per piece or in SETUP page 9 (VOICES): **bars** (struck 3-partial bars tuned per piece; the bells' own), **fm** (FM pings; the motion's own), **blip** (a filtered analog blip: saw and sub, a pitch flick, a resonant low-pass closing fast), **wood** (a mallet knock and short marimba modes), **wave** (a glassy wavetable that strikes bright and settles), **metal** (a metallophone: vibraphone modes, a beating twin, the motor's tremolo), **kalimba** (a thumb piano), **steel** (a steel pan), **pluck** (a plucked string) (the last three are chosen by hand: a piece's own picks stay among the others, so a seed plays what it did). Auto leans the bells to bars and metal, the motion to fm and blip. |
+| **Bells and motion** | 9 engines each, chosen per piece or in SETUP VOICES: **bars** (struck 3-partial bars tuned per piece; the bells' own), **fm** (FM pings; the motion's own), **blip** (a filtered analog blip: saw and sub, a pitch flick, a resonant low-pass closing fast), **wood** (a mallet knock and short marimba modes), **wave** (a glassy wavetable that strikes bright and settles), **metal** (a metallophone: vibraphone modes, a beating twin, the motor's tremolo), **kalimba** (a thumb piano), **steel** (a steel pan), **pluck** (a plucked string) (the last three are chosen by hand: a piece's own picks stay among the others, so a seed plays what it did). Auto leans the bells to bars and metal, the motion to fm and blip. |
 | **Input** | Besides chord strings, cloud, tape, ghost and tuned bands: **vocode** (a 10-band vocoder; your sound speaks through a synth choir singing the chord) and **morph** (it speaks through the pads themselves). Auto mode vocodes pitched input in some pieces. |
 
 The four random streams are seeded through a hash, so nearby seeds don't share their sound choices. The
@@ -185,7 +186,7 @@ The choice depends on the section's role. The pads glide to their new places ove
 alternating left and right, offset formants, and bell partials fanned around each note. Every type is
 mono-safe: a mono sum dips by at most about 5 dB, never cancels.
 
-**SETUP page 3:**
+**SETUP OUTPUT:**
 - **Output:** stereo wide; mono for mono rigs and external effects; or split: two mono stems, the harmony bed
   (pads with their character, drone, sub) on the left and everything else on the right. Each side carries one side
   of the reverb.
@@ -267,10 +268,10 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
 - **CPU guard.** Amble measures its own load each second (CPU time over logical time). Above 78 % it gets
   lighter in steps: 1, cloud and atmosphere off; 2, textures and the pad character off; 3, the automatic
   vocoder off. Below 50 % for 20 s it steps back. The pads, drone, sub, bells, motion and reverb never change.
-  SETUP page 4 shows the load and the guard's level, and can turn the guard off.
+  SETUP CPU shows the load and the guard's level, and can turn the guard off.
 - **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples
-  cut at the output, near-silence, the scheduler falling behind). Turn SETUP 4's CPU knob fully up for a profile:
+  cut at the output, near-silence, the scheduler falling behind). Turn SETUP CPU's knob 1 fully up for a profile:
   every part alone for 6 s (about 9 minutes, silent) into `logs/profile-NNNN.txt`. Copy `logs/` off the card and run
   `python3 tools/perf_report.py path/to/logs`: the spikes and what caused them, what each thing costs while playing,
   and what is cheap enough to make richer or worth optimising.
@@ -290,7 +291,7 @@ without a description in `manual.py` stops the build. Build it locally with `pyt
 (needs reportlab and Pillow).
 
 **The key map** (`Amble-keymap-<version>.pdf`, also attached and inside the patch folder) draws both octaves of the
-Organelle with what each key does (tap, hold, aux), the SETUP pages under aux + key, the save slots and the knob
+Organelle with what each key does (tap, hold, aux), the SETUP groups under aux + key, the save slots and the knob
 pages. `tools/keymap.py` builds it from the same tables; a key without an entry there stops the build.
 
 ## Licence

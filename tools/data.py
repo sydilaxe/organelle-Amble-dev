@@ -162,7 +162,7 @@ BELL_RHYTHMS = [("even", [1, 1, 1, 1, 1]), ("long-short", [1.5, 0.5, 1.5, 0.5, 1
                 ("triplet", [0.67, 0.67, 0.67, 1, 1]), ("sparse", [2, 2, 1, 2, 3]), ("rush", [0.5, 0.5, 0.5, 0.5, 2]),
                 ("swing", [1.33, 0.67, 1.33, 0.67, 1]), ("slow", [2, 2, 2, 2, 2])]
 METERS = [4, 4, 3, 5, 6, 7]
-# tempo ranges (SETUP page 3): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
+# tempo ranges (SETUP OUTPUT): name, lowest and highest piece tempo in BPM. Above HALFTIME the slow layers
 # (pad breathing, bells, the drone's bar swell) feel the beat at half speed and the arpeggio counts in 8ths.
 TEMPOS = [("ambient", 40, 72), ("slow", 24, 48), ("wide", 30, 110), ("pulse", 60, 100), ("fast", 90, 140)]
 HALFTIME = 84
@@ -195,7 +195,7 @@ SCENE_DATA = [
 SCENE_ROLE = [[2, 0, 2], [0, 4, 0], [1, 4, 0], [3, 1, 3], [3, 0, 4], [1, 2, 1], [0, 4, 0], [2, 3, 2]]
 # preferences: the electronic and bell-like sounds come up more often
 FLAVOUR_WEIGHTS = [1.6, 0.5, 0.5, 1.3, 0.6, 1.0, 1.3, 1.3, 1.2, 1.1, 1.8, 1.3, 1.3]
-# the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP page 9 for each:
+# the engines that play the bells (the motif) and the motion (the arpeggio), selectable in SETUP VOICES for each:
 # bars = the struck 3-partial bars (the bells' own), fm = the FM pings (the motion's own), blip = a filtered analog
 # blip, wood = a wooden bar (marimba / woodblock), wave = a glassy wavetable, metal = a vibraphone-like metallophone
 STRIKES = ["bars", "fm", "blip", "wood", "wave", "metal", "kalimba", "steel", "pluck", "bowl", "plate", "crystal", "lpg", "gong", "chip"]

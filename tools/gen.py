@@ -64,10 +64,10 @@ def build(out=OUT):
     if not os.path.exists(seedf):
         open(seedf, "w").write("0;\n")
     open(os.path.join(out, "factory.txt"), "w").write(SV.factory_rows())
-    # logs/: the performance log and the profile (SETUP 4), written on the Organelle, to copy off and upload
+    # logs/: the performance log and the profile (SETUP CPU), written on the Organelle, to copy off and upload
     os.makedirs(os.path.join(out, "logs"), exist_ok=True)
     open(os.path.join(out, "logs", "README.txt"), "w").write(
-        "Amble's performance logs (SETUP 4: CPU guard ... log) and profiles (SETUP 4: knob 3 fully up) land here.\n"
+        "Amble's performance logs (SETUP CPU: CPU guard ... log) and profiles (SETUP CPU: knob 1 fully up) land here.\n"
         "perf-BBBBPP.txt: a line every 5 s (start-up BBBB, part PP); profile-BBBB.txt: each part's load alone.\n"
         "Read them with tools/perf_report.py, or send them along with what you were doing.\n")
     sv = os.path.join(out, "saves.txt")       # (the release zip leaves it out, so an update keeps your saves)

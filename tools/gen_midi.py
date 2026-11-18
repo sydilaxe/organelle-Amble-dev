@@ -1,4 +1,4 @@
-"""MIDI out (clock, notes) and MIDI clock in (SETUP page 1 MIDI out / Sync; page 4 what goes out)."""
+"""MIDI out (clock, notes) and MIDI clock in (SETUP GENERAL MIDI out / Sync; NOTES OUT what goes out)."""
 from pdlib import Canvas, proc, V, T, Send, Call, SendL, If, Loop, run_steps, Toast
 
 

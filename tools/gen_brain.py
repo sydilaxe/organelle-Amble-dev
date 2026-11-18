@@ -93,8 +93,9 @@ DATA_TABLES = dict(
     actlo=[lo for _, lo, _ in TEMPOS], acthi=[hi for _, _, hi in TEMPOS],
 )
 DATA_TABLES.update(_P.DATA_TABLES)
+DATA_TABLES.update(_S.DATA_TABLES)                 # (SETUP's groups: each page's group, place, count)
 
-# the layers a custom section sets (SETUP page 12), in the order of the layer keys
+# the layers a custom section sets (SETUP SECTION MIX), in the order of the layer keys
 SEC_LAYERS = ["drone", "sub", "pad", "bell", "motion", "tex", "atm", "cloud"]
 ROLE_ENERGY = [0.15, 0.4, 0.55, 0.75, 1.0, 0.3, 0.5, 0.2]     # a custom section's energy, by role
 SEC_LENS = [0.6, 1.0, 1.5]                                     # short, normal, long
@@ -302,7 +303,7 @@ def piece():
     proc(c, "ac-newkey", [Call("ac-memclearall"),
                           If("acstopped", [V("acready", "1"), Call("ac-reseed"), Toast("new piece - A# start")],
                              [Call("ac-reseed"), Toast("new piece")])])
-    # COMPOSE / DRIFT (aux + A#, SETUP page 1): while stopped, the piece is prepared again in that mode, ready;
+    # COMPOSE / DRIFT (aux + A#, SETUP GENERAL): while stopped, the piece is prepared again in that mode, ready;
     # while playing, it switches at once
     proc(c, "ac-modetoggle", [
         V("acmode", "1-acmode"), V("acmodesel", "1-acmode"), Send("ac-dirty"),
@@ -680,7 +681,7 @@ def layers():
         ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th('if(acwrite, 0.25, 0.45)')}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
         ("motion", f"(acemotion>0)*(1-acended)*max(acfmotion*{th(0.3)}*min(1, acrhythm*2.5), acemotion==2)"),
     ]
-    # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP page 12)
+    # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP SECTION MIX)
     steps = [V(f"ace{n}", f"if(acm{n} != 1, acm{n}, if(acsx{n} == 1, 0, if(acsx{n} == 2, 2, 1)))") for n in SEC_LAYERS]
     # the MIX knobs as gains (data.level: even dB steps; 50 % = x1)
     # (asleep - stopped, after the fade - every layer is off, so its subpatch stops computing)
@@ -695,7 +696,7 @@ def layers():
             # the sub: auto follows the drone; on plays it alone too
             steps += [V("acgsub", "(acesub>0)*(1-acended)*if(acesub==2, 1, acgdrone)"),
                       SendL("ac-g-sub", ["acmgs*acslsub*acgsub", "acfade"])]
-        elif name == "bell":    # the engine chosen in SETUP page 9, or the piece's (auto)
+        elif name == "bell":    # the engine chosen in SETUP VOICES, or the piece's (auto)
             steps += [SendL(f"ac-g-bel{i}", [f"acmgb*acslbell*acgbell*(if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela)) == {i})", "acfade"])
                       for i in range(len(STRIKES))]
         elif name == "motion":  # the echoes, and the engine through them

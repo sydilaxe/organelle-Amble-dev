@@ -7,7 +7,7 @@ Where things are:
   settings.txt                   SETTINGS (the order on the line) and settings() (load and save)
   a saved piece's fields         SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA (saves and loads: gen_saves)
   CC MAP targets                 TARGETS (what a CC can do; gen_live.cc_map acts on them)
-Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
+Also the CPU guard (cpu_guard()), whose setting and readout are on the CPU page."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
 from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS, TEX_PARAMS, ATMOS_PARAMS, CLOUD_PARAMS
@@ -21,6 +21,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
                acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0,
+               acauxlong=0, acscrk=0,
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
@@ -52,14 +53,26 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
 PARTS = ["all", "harmony", "arp only"]
-# SETUP page 4, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
+# SETUP CPU, CPU guard: on or off, and with the performance log (logs/, see gen_log) or without
 SGUARD = ["off", "on", "off + log", "on + log"]
 OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everything else right (mono stems)
-SETUP_NAMES = ["GENERAL", "PLAYING", "OUTPUT", "NOTES OUT", "SOUNDS", "MUSIC", "MIDI IN", "CC MAP", "VOICES", "FORM",
-               "SECTIONS", "SECTION MIX", "SAVES", "LIVE", "RECALL", "GROOVE", "MACRO A", "MACRO B", "JOURNEY",
-               "COLOUR", "CC OUT", "MEMORY", "DISPLAY", "LINES", "HARMONY", "PHRASE", "DIALOGUE", "WRITING", "ARC"]
+# the SETUP pages in seven groups (aux + a white low key: the group's first page - C D E F G A B; aux held and knob
+# 1 turned: any page, back and forth; an aux tap: the next page). The header: the group, the page, its place in it
+SETUP_GROUPS = [("PIECE", ["GENERAL", "MUSIC", "FORM", "SECTIONS", "SECTION MIX"]),
+                ("WRITING", ["WRITING", "LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
+                ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "JOURNEY"]),
+                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MACRO A", "MACRO B"]),
+                ("SAVES", ["SAVES", "RECALL", "MEMORY"]),
+                ("MIDI", ["MIDI IN", "CC MAP", "NOTES OUT", "CC OUT"]),
+                ("SYSTEM", ["OUTPUT", "DISPLAY", "CPU"])]
+SETUP_NAMES = [p for _, ps in SETUP_GROUPS for p in ps]
+GROUP_KEYS = [0, 2, 4, 5, 7, 9, 11]           # (the white low keys, a group each)
+GROUP_START = [SETUP_NAMES.index(ps[0]) for _, ps in SETUP_GROUPS]
+DATA_TABLES = dict(acsgrp=[g for g, (_, ps) in enumerate(SETUP_GROUPS) for _ in ps],
+                   acspos=[i + 1 for _, ps in SETUP_GROUPS for i in range(len(ps))],
+                   acscnt=[len(ps) for _, ps in SETUP_GROUPS for _ in ps])
 NSET = len(SETUP_NAMES)                    # SETUP pages
-# SETUP page 23, DISPLAY: hints (a held key's toast, 0.25 s in, says what holding it does), the scope (the play
+# SETUP DISPLAY: hints (a held key's toast, 0.25 s in, says what holding it does), the scope (the play
 # view's middle shows the output, left against right) and its gain, the LED (the piece's state, or pulsing with the
 # drone's beating). Settings, not saved with a piece.
 # SETUP pages 24-28, LINES, HARMONY, PHRASE, DIALOGUE, WRITING: how the piece writes - one motif carried between
@@ -110,7 +123,7 @@ SWRITE = ["still", "moving"]
 SPADM = ["chords", "motif"]
 SDRSUB = ["full", "subtle"]
 SENDP = ["fade", "by phrase"]
-# ARC (page 29): the rhythm shared (the motion's hits on the bells' motif rhythm, twice as fast - your rhythm keys
+# ARC: the rhythm shared (the motion's hits on the bells' motif rhythm, twice as fast - your rhythm keys
 # still win); the phrase's arc (dynamics: the bells and motion louder towards its V, softer at the cadence;
 # tension: brighter and more adventurous towards its V, relaxing on the I); the bass (pedal: before a return the
 # drone and sub hold its dominant, resolving home with it; ground: the sub a 4-note line from the motif, bar by bar,
@@ -121,7 +134,7 @@ SBASSM = ["off", "pedal", "ground", "both"]
 SCTR = ["off", "song"]
 SSCOPEG = [("x1", 1), ("x2", 2), ("x4", 4), ("x8", 8), ("x16", 16)]
 SLEDM = ["state", "beat"]
-# SETUP page 22, MEMORY: with Memory on, the knobs you turn in a section are kept for it (acsnapt / acsnapv, a
+# SETUP MEMORY: with Memory on, the knobs you turn in a section are kept for it (acsnapt / acsnapv, a
 # value per section and knob); when that section comes again they glide back over Glide. Saved with the piece.
 SMEMG = [("cut", 0), ("2 s", 2000), ("5 s", 5000), ("10 s", 10000), ("20 s", 20000)]
 NSNAP = 12                                  # sections remembered (a DRIFT piece's sections take them in turn)
@@ -175,22 +188,22 @@ NAME_WORDS = ["auto", "Dawn", "Ember", "Tide", "Glass", "Frost", "Drift", "Hollo
               "Echo", "Still", "Aurora", "Rain", "Slate", "Thaw", "Lumen", "Ochre"]
 # GLINT (SETUP COLOUR): sparse FM sparkles high over the chord tones while the drone or pads sound
 SSPARKO = ["+1 oct", "+2 oct", "+3 oct"]
-# SETUP page 5, SOUNDS: auto = the piece chooses; otherwise your choice, at once (to audition) and for every section
+# SETUP SOUNDS: auto = the piece chooses; otherwise your choice, at once (to audition) and for every section
 SPADS = ["auto", "raw"] + FLAVOURS
 SDRONES = ["auto"] + DRONES
 STEXS = ["auto"] + TEXTURES
 SCHARS = ["auto"] + CHARACTERS
-# SETUP page 6, MUSIC: a fixed key or scale stays (no modulation); the pulse is the drone and sub swell on the bar
+# SETUP MUSIC: a fixed key or scale stays (no modulation); the pulse is the drone and sub swell on the bar
 SKEYS = ["auto"] + NOTE_NAMES
 SSCALES = ["auto"] + [n for n, _ in SCALES]
 SCHORDS = ["auto"] + [n for n, _, _ in FAMILIES]
 PULSES = ["off", "gentle", "normal", "strong"]
 PULSE_X = "if(acpulc == 0, 0, if(acpulc == 1, 0.45, if(acpulc == 2, 1, 1.6)))"
-# SETUP page 7, MIDI IN: notes (MIDI in and the Organelle keys) play the live voice, or set the chord, the drone,
+# SETUP MIDI IN: notes (MIDI in and the Organelle keys) play the live voice, or set the chord, the drone,
 # strike the bells, or tune the cloud; breath shapes the live voice and the density, or one thing of the piece
 ROUTES = ["voice", "chords", "drone", "bells", "cloud"]
 BRTOS = ["voice+piece", "voice", "density", "brightness", "reverb", "swell"]
-# SETUP page 8, CC MAP: what each CC (and channel / poly pressure, on page 7) does. breath = the breath path (Breath
+# SETUP CC MAP: what each CC (and channel / poly pressure, on MIDI IN) does. breath = the breath path (Breath
 # to); the voice targets act per note on the CC's channel (MPE; channel 1 = every voice); the piece targets move
 # the knob of that name
 CCS = [1, 2, 7, 11, 64, 71, 74]
@@ -204,15 +217,15 @@ TARGET_KNOB = {7: "acdens", 8: "accolor", 9: "acrvmix", 11: "acmotion",       # 
 CCSEL = "if(acccsel == 0, 1, " + ", ".join(f"if(acccsel == {j}, {n}" for j, n in enumerate(CCS) if j) + ", 0" + ")" * 7
 MAPSEL = "if(acccsel == 0, acmap0, " + ", ".join(f"if(acccsel == {j}, acmap{j}" for j in range(1, 7)) + ", 0" + ")" * 7
 BENDS = [12, 24, 48, 96]
-# SETUP page 9, VOICES: the engine of the bells and of the motion (auto = the piece's)
+# SETUP VOICES: the engine of the bells and of the motion (auto = the piece's)
 SBELLS = ["auto"] + STRIKES
 SMOTS = ["auto"] + STRIKES
 # how the pad voices move to a new chord: off = they jump; slow = the full glide (25-75 % of the time between
 # changes, at least 1.5 s); the steps between scale that glide
 GLIDES = ["off", "fast", "short", "medium", "long", "slow"]
-# the sub (page 9 row 4): auto = the piece's mode
+# the sub (VOICES row 4): auto = the piece's mode
 SSUBS = ["auto"] + SUBMODES
-# SETUP page 10, FORM: the form's shape (custom = your sections, page 11), a fixed tempo, the meter, the atmosphere
+# SETUP FORM: the form's shape (custom = your sections, SECTIONS), a fixed tempo, the meter, the atmosphere
 SFORMS = ["auto"] + ARCHETYPES + ["custom"]
 STEMPOS = ["auto"] + [f"{t} bpm" for t in (40, 48, 56, 64, 72, 80, 90, 100, 110, 120, 140)]
 SMETERS = ["auto"] + [f"{m} beats" for m in (3, 4, 5, 6, 7)]
@@ -223,7 +236,7 @@ SROLES = ROLES + ["end"]
 SLENS = ["short", "normal", "long"]
 SEC_LAYER_NAMES = ["drone", "sub", "pads", "bells", "motion", "textures", "atmos", "cloud"]
 SPLAY = ["auto", "off", "on", "in 1/4", "in 1/2", "in 3/4", "out 1/4", "out 1/2", "out 3/4"]
-# SETUP page 14, LIVE: a bank of 16 CCs (8 layer levels, then 8 layer in/out buttons), program change loads a
+# SETUP LIVE: a bank of 16 CCs (8 layer levels, then 8 layer in/out buttons), program change loads a
 # save slot, the fade of a layer key (or button), the swell of a layer coming in or going out within a section
 SMIXCC = ["off", "CC 20-35", "CC 102-117"]
 MIXCC_BASE = "if(acmixcc == 1, 20, 102)"
@@ -246,7 +259,7 @@ def msel(f):
     """the selected macro's field (SETUP MACRO pages): acmc<m><f>"""
     return "if(acmcsel == 0, acmc0" + f + ", if(acmcsel == 1, acmc1" + f + ", if(acmcsel == 2, acmc2" + f + ", acmc3" + f + ")))"
 SFADE = _pick("acsfd", SSFADE)
-# SETUP page 13, SAVES: 16 slots in saves.txt, each the seed and everything that shapes the piece
+# SETUP SAVES: 16 slots in saves.txt, each the seed and everything that shapes the piece
 NSLOTS = 16
 SAVE_SCALARS = ["acseed", "acmodesel"] + [n for p in PAGES[:7] for _, n, _ in p if n != "acinput"] + \
     ["acspad", "acsdrone", "acstex", "acschar", "ackeyc", "acsclc", "acchdc", "acpulc", "acsbell", "acsmot", "acglide",
@@ -288,13 +301,13 @@ SLOT_LABEL = (f"if(acslotfull == 0, if(acslot < {len(FACTORY)}, 2 + acslot, 0), 
               f"if(acslkey >= 0, {1 + len(FACTORY) + len(NAME_WORDS)} + acslkey*{_NSC} + acslsc, 1)))")
 
 
-# SETUP page 15, RECALL: how a load comes in (the knobs glide over Morph; the choices switch at once), what it
+# SETUP RECALL: how a load comes in (the knobs glide over Morph; the choices switch at once), what it
 # brings, how ANCHOR glides back, and COMPARE (the slot as saved, while the knob is up)
 SMORPH = [("cut", 0), ("1 s", 1000), ("2 s", 2000), ("4 s", 4000), ("8 s", 8000), ("15 s", 15000), ("30 s", 30000),
           ("1 min", 60000), ("2 min", 120000)]
 SRECALL = ["piece", "sound only"]
 SANCG = [("2 s", 2000), ("4 s", 4000), ("8 s", 8000), ("15 s", 15000), ("30 s", 30000)]
-# SETUP page 16, GROOVE: PUMP ducks the bed (drone, sub, pads, atmosphere) on a grid; DUCK dips the piece while
+# SETUP GROOVE: PUMP ducks the bed (drone, sub, pads, atmosphere) on a grid; DUCK dips the piece while
 # you play (notes held or breath), coming back over its release
 SPUMP = ["off", "4 bars", "2 bars", "1 bar", "1/2 bar", "beat"]
 PUMP_BEATS = "if(acpump == 1, 4*acmeter, if(acpump == 2, 2*acmeter, if(acpump == 3, acmeter, if(acpump == 4, max(1, int(acmeter/2)), 1))))"
@@ -307,7 +320,7 @@ _SHORT = {"acrvmix": "Rv mix", "acrvtime": "Rv time", "acrvtone": "Rv tone"}
 MTARGETS = ["off"] + [_SHORT.get(KNOBS[i], [l for p in PAGES for l, _, _ in p][i] +
                       (" snd" if 12 <= i < 20 else " lvl" if 20 <= i < 28 else "")) for i in MT_KNOBS]
 SMMODE = ["offset", "latch"]
-# SETUP page 19, JOURNEY: the layers travel through their engines, each step slowly crossfaded - the pad voices
+# SETUP JOURNEY: the layers travel through their engines, each step slowly crossfaded - the pad voices
 # (each on its own schedule) through a set of pad types, the drone through its designs, the bells and the motion
 # through the struck engines. Speed sets the time between steps; a CC (journey step) steps them by hand.
 SJOUR = [("held", 0), ("very slow", 180000), ("slow", 90000), ("medium", 40000), ("fast", 15000)]
@@ -316,16 +329,17 @@ JPAD_SETS = [("off", []), ("soft", ["sine", "glass", "part", "beat", "vox", "bow
              ("all", ["sine", "glass", "beat", "vox", "saws", "pwm", "part", "bow", "tine", "fm", "sync", "fold"])]
 SJDRONE = ["off", "on"]
 SJSTRIKE = ["off", "bells", "motion", "both"]
-# SETUP page 20, COLOUR: a pre-delay before every reverb, the era of its converters (70s: narrow band, few
+# SETUP COLOUR: a pre-delay before every reverb, the era of its converters (70s: narrow band, few
 # bits .. now: full band)
 SPRE = [0, 10, 25, 50, 80, 120, 200]
 SERA = ["70s", "80s", "90s", "now"]
-# SETUP page 21, CC OUT: what moves inside, out as 16 CCs from a base (the layers' levels, energy, density,
+# SETUP CC OUT: what moves inside, out as 16 CCs from a base (the layers' levels, energy, density,
 # brightness, the way to the next chord and section, the reverb, the pads' motion, the swell), on change
 SCCBASE = [20, 40, 70, 102]
 SCCRATE = [("2 Hz", 500), ("5 Hz", 200), ("10 Hz", 100)]
 CC_OUT = ["drone", "sub", "pads", "bells", "motion", "textures", "atmos", "cloud", "energy", "density",
           "brightness", "to chord", "section", "reverb", "pad drift", "swell"]
+ARRAYS.update({n: len(v) for n, v in DATA_TABLES.items()})
 ARRAYS["acsavebuf"] = SAVE_LEN
 ARRAYS.update({n: k for n, k in SAVE_TAIL})
 ARRAYS["acsetbuf"] = len(SETTINGS) - 12
@@ -383,6 +397,13 @@ def settings():
 
 
 def setup_pages():
+    """SETUP's pages in their order (SETUP_GROUPS)"""
+    pages = dict(_setup_pages())
+    assert set(pages) == set(SETUP_NAMES), set(pages) ^ set(SETUP_NAMES)
+    return [(n, pages[n]) for n in SETUP_NAMES]
+
+
+def _setup_pages():
     """SETUP, page by page: (name, [row 1, row 2, row 3, row 4]), each row (text with $n, parts) - the parts as
     Line takes them, or None for a fixed text. Knob k of a page sets its row k (setup(): the handler, by at()). Also
     read by tools/manual.py, so the manual lists exactly these rows."""
@@ -408,8 +429,16 @@ def setup_pages():
         ("NOTES OUT", [
             ("list 1 MIDI notes $1", [("s", "acmparts", PARTS)]),
             ("list 2 Arp octave C$1", [("f", "acarpoct/12 - 1")]),
-            ("list 3 CPU $1% lite $2", [("f", "int(acload*100)"), ("f", "acshed")]),
-            ("list 4 CPU guard $1", [("s", "acguard", SGUARD)]),
+            ("list 3 -", None),
+            ("list 4 -", None),
+        ]),
+        # CPU: the load (and the lite step the guard took), knob 1 fully up runs the profile (gen_log); the guard,
+        # with or without the performance log
+        ("CPU", [
+            ("list 1 CPU $1% lite $2", [("f", "int(acload*100)"), ("f", "acshed")]),
+            ("list 2 CPU guard $1", [("s", "acguard", SGUARD)]),
+            ("list 3 -", None),
+            ("list 4 -", None),
         ]),
         ("SOUNDS", [
             ("list 1 Pads $1", [("s", "acspad", SPADS)]),
@@ -684,10 +713,10 @@ def setup():
     d = c.obj("delay 1000")
     c.c(c.to((c.ch(c.recv("aux"), "sel 0"), 1), "t b"), 0, d, 0)
     c.c(c.m(c.ch(c.recv("aux"), "sel 0"), "stop"), 0, d, 0)
-    run_steps(c, (d, 0), [If("acauxheld && acauxused == 0", [
-        V("acauxused", "1"), V("acsetup", "1 - acsetup"), V("acsetpg", "0"),
-        If("acsetup", [Call("ac-oledsetup")], [Send("ac-save"), Call("ac-oledall"), Toast("settings saved")]),
-    ])])
+    # (in SETUP the hold only marks itself: SETUP closes when aux is let go - unless knob 1 turned meanwhile, scrolling
+    # the pages)
+    run_steps(c, (d, 0), [If("acauxheld && acauxused == 0", [If("acsetup", [V("acauxlong", "1")], [
+        V("acauxused", "1"), V("acsetup", "1"), V("acsetpg", "0"), Call("ac-oledsetup")])])])
     c.col()
     # knob values in SETUP arrive here as "knob value"
     up = c.to(c.recv("ac-setknob"), "unpack f f")
@@ -718,8 +747,8 @@ def setup():
         If(at("NOTES OUT", 1), [V("acmparts", f"int(acsv*{len(PARTS) - 0.01})"), Call("ac-notesoff"), Call("ac-outchord")]),
         If(at("NOTES OUT", 2), [V("acarpoct", "24 + 12*int(acsv*4.99)"), Call("ac-notesoff"), Call("ac-outchord")]),
         # knob 3 turned fully up (re-armed below 90 %): the profile run (gen_log)
-        If(at("NOTES OUT", 3), [If("acsv > 0.9 && acsvpp <= 0.9", [Call("ac-profile")]), V("acsvpp", "acsv")]),
-        If(at("NOTES OUT", 4), [V("acguard", f"int(acsv*{len(SGUARD) - 0.01})"), Call("ac-logupd"),
+        If(at("CPU", 1), [If("acsv > 0.9 && acsvpp <= 0.9", [Call("ac-profile")]), V("acsvpp", "acsv")]),
+        If(at("CPU", 2), [V("acguard", f"int(acsv*{len(SGUARD) - 0.01})"), Call("ac-logupd"),
                              If("acguard % 2 == 0 && acshed > 0", [V("acshed", "0"), Call("ac-layers"), Call("ac-inputupd")])]),
     ] + [
         # SOUNDS: act only when the choice changes, so turning the knob within one choice does not re-pick
@@ -877,7 +906,9 @@ def setup():
         If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [
             If(f"acsetpg >= {MIRROR0}", [Send("ac-setl0m")], [If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
                 If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])])
-    Line("ac-setl0s", "list SETUP $1 $2", [("f", "acsetpg + 1"), ("s", "acsetpg", SETUP_NAMES)], "ac-sett0")(c)
+    Line("ac-setl0s", "list $1 $2 $3/$4", [("s", "acsgrp[int(acsetpg)]", [g for g, _ in SETUP_GROUPS]),
+                                            ("s", "acsetpg", SETUP_NAMES), ("f", "acspos[int(acsetpg)]"),
+                                            ("f", "acscnt[int(acsetpg)]")], "ac-sett0")(c)
     Line("ac-setl0c", "list CHORD  key $1 $2", [("s", "int(actonic) % 12", NOTE_NAMES),
                                                 ("s", "acsci", [n for n, _ in SCALES])], "ac-sett0")(c)
     Line("ac-setl0q", "list $1  aux: back", [("s", f"acsetpg - {LAYER_PAGE0}", QUICK_NAMES[1:INPUT_PAGE - NSET + 1])],
@@ -906,7 +937,7 @@ def cpu_guard():
     c = Canvas("cpu-guard", w=1800)
     c.comment("CPU guard: Pd's load = CPU time / logical time, each second. Above 78 % the piece gets lighter "
               "(1: cloud and atmosphere off, 2: textures and pad character off, 3: auto-vocoder off); below 50 % "
-              "for 20 s it steps back. SETUP page 4 can turn the guard off. In a batch (offline) run the load reads near 0. acloadtest overrides "
+              "for 20 s it steps back. SETUP CPU can turn the guard off. In a batch (offline) run the load reads near 0. acloadtest overrides "
               "it for tests.")
     met = c.obj("metro 1000")
     c.c(c.to(c.recv("ac-init"), "delay 3000"), 0, met, 0)
@@ -932,7 +963,7 @@ def cpu_guard():
         If("acload < 0.5 && acshed > 0 && acnow - acshedt > 20000", [
             X("acshed - 1; acnow", "v acshed", "v acshedt"), Call("ac-layers"), Call("ac-inputupd"),
         ]),
-        If("acsetup && acsetpg == 3", [Call("ac-oledsetup")]),
+        If(f"acsetup && acsetpg == {SETUP_NAMES.index('CPU')}", [Call("ac-oledsetup")]),
     ])
     return c
 

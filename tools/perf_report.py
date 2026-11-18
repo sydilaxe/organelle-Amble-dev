@@ -270,7 +270,7 @@ def main(args):
         print("  worth optimising first (dearest alone):", ", ".join(dear))
         print("  cheap enough to make richer (under 1.5 %):", ", ".join(cheap) or "none")
     if rows and not pr:
-        print("== So\n  (run a profile too, SETUP 4 knob 3 fully up, for each part's cost alone)")
+        print("== So\n  (run a profile too, SETUP CPU knob 1 fully up, for each part's cost alone)")
     return 0
 
 

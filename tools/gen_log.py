@@ -1,4 +1,4 @@
-"""The performance log (SETUP 4, CPU guard "... log"): what Amble did and what it cost, every 5 s, into
+"""The performance log (SETUP CPU, CPU guard "... log"): what Amble did and what it cost, every 5 s, into
 logs/perf-BBBBPP.txt in the patch folder (BBBB the start-up count, PP the part), to copy off the card and read with
 tools/perf_report.py.
 
@@ -35,7 +35,7 @@ FIELDS = [
     ("dc", "int(1000*abs(aclgdcs)/max(1, aclgmn*8820))"), ("clip", "aclgclip"), ("quiet", "aclgq"),
     ("late", "int(aclglate)"),
 ]
-# the profile run (SETUP 4, knob 3 turned fully up): every part alone for a few seconds, its load measured
+# the profile run (SETUP CPU, knob 1 turned fully up): every part alone for a few seconds, its load measured
 def _parts():
     from data import FLAVOURS, DRONES, STRIKES, TEXTURES, ATMOS_NAMES, CHARACTERS
     on = lambda g: SendL(g, ["1"], "$1 30")
@@ -88,7 +88,7 @@ GLOBALS.update({n: 0 for n in ("aclgpk aclgdcs aclgmn aclgclip aclgq aclglate ac
 
 def perflog():
     c = Canvas("perf-log", w=2400)
-    c.comment("Performance log (SETUP 4 CPU guard ... log): a line every 5 s into logs/perf-BBBBPP.txt")
+    c.comment("Performance log (SETUP CPU, CPU guard ... log): a line every 5 s into logs/perf-BBBBPP.txt")
     td = c.obj("text define aclog")
     # every 100 ms while logging: the load of that window (CPU time / logical time)
     met = c.obj("metro 100")
@@ -201,7 +201,7 @@ def perflog():
     # (its timers listened for ac-profstop, but nothing sent it: a started profile could not be cancelled)
     proc(c, "ac-profabort", [If("acprof", [Send("ac-profstop"), Call("ac-profend"), Toast("profile stopped")])])
     c.col()
-    # on, off (SETUP 4); when the piece stops, the part so far is written
+    # on, off (SETUP CPU); when the piece stops, the part so far is written
     proc(c, "ac-logupd", [If("acguard >= 2", [If("aclogon == 0", [V("aclogon", "1"), Call("ac-lognew"),
                                                                   Send("ac-logrun", "1")])],
                              [If("aclogon", [V("aclogon", "0"), Send("ac-logrun", "0"), Send("ac-logwrite")])])])
