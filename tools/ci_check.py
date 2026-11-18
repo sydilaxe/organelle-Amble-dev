@@ -1093,7 +1093,7 @@ for name, ev in (("open", []), ("dark", held + [(1800, "knob2 0.1")]), ("thin", 
     log, a = run(base + ev, 6, prints=("ac-sett0", "ac-sett4"))
     x = a[3 * SR:]
     sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log,
-                np.abs(np.fft.rfft((x[:, 0] + x[:, 1]) * np.hanning(len(x)))), log)
+                np.abs(np.fft.rfft((x[:2 * SR, 0] + x[:2 * SR, 1]) * np.hanning(2 * SR))), log)   # (a fixed length: the bins line up)
 # (knob 4: the pads' second sound parameter - Movement while the voices play mixed types)
 kd = np.abs(20 * np.log10((sh["knob4"][3] + 1e-6) / (sh["open"][3] + 1e-6)))[:20000].mean()
 check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150 and sh["open"][1] < 0.95
