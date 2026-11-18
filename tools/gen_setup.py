@@ -8,7 +8,7 @@ Where things are:
   a saved piece's fields         SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA (saves and loads: gen_saves)
   CC MAP targets                 TARGETS (what a CC can do; gen_live.cc_map acts on them)
 Also the CPU guard (cpu_guard()), whose setting and readout are on the CPU page."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Chunks, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
 from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS, TEX_PARAMS, ATMOS_PARAMS, CLOUD_PARAMS
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
@@ -728,7 +728,7 @@ def setup():
     def at(page, row):
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
         return f"{item} == {SETUP_NAMES.index(page) * 4 + row - 1}"
-    run_steps(c, (tb, 0), [
+    run_steps(c, (tb, 0), Chunks("setup-knob", [
         If("acsetpg != acsetpgl", [X("1; 1; 1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsvpm3", "v acsvpm4", "v acsetpgl")]),
         If(at("GENERAL", 1), [V("acmout", "int(acsv*3.99)"), If("acmout == 0 || acmout == 3", [Call("ac-clockstop")],
                                                                [Call("ac-clockstart")]),
@@ -894,7 +894,7 @@ def setup():
         If(at("CC OUT", 4), [V("acccrate", f"int(acsv*{len(SCCRATE) - 0.01})")]),
     ] + quick_knobs(item) + [
         Call("ac-oledsetup"), Send("ac-dirty"),
-    ])
+    ]))
     c.col()
     proc(c, "ac-oledsetup", [
         Fill(0, 0, 128, 64, 0),
@@ -918,15 +918,21 @@ def setup():
     Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()
-    for k, *rows in setup_rows():
+    for k, *rows in setup_rows():     # a subpatch per row, and per 8 pages (Pd connects a small window faster)
         rows = rows + [qr[k - 1] for _, qr in quick]
-        s = c.ch(c.recv(f"ac-setl{k}"), "expr acsetpg", "sel " + " ".join(str(j) for j in range(NALL)))
-        for j, (ln, parts) in enumerate(rows):
-            c.c(c.to((s, j), "t b"), 0, c.obj(f"s ac-setl{k}p{j}"), 0)
-            if parts:
-                Line(f"ac-setl{k}p{j}", ln, parts, f"ac-sett{k}")(c)
-            else:
-                c.c(c.m(c.recv(f"ac-setl{k}p{j}"), ln), 0, c.obj(f"s ac-sett{k}"), 0)
+        rc = Canvas(f"setup-row{k}", w=2600)
+        c.sub(rc)
+        s = rc.ch(rc.recv(f"ac-setl{k}"), "expr acsetpg", "sel " + " ".join(str(j) for j in range(NALL)))
+        for j in range(len(rows)):
+            rc.c(rc.to((s, j), "t b"), 0, rc.obj(f"s ac-setl{k}p{j}"), 0)
+        for j0 in range(0, len(rows), 8):
+            pc = Canvas(f"setup-row{k}-{j0 // 8 + 1}", w=2600)
+            rc.sub(pc)
+            for j, (ln, parts) in list(enumerate(rows))[j0:j0 + 8]:
+                if parts:
+                    Line(f"ac-setl{k}p{j}", ln, parts, f"ac-sett{k}")(pc)
+                else:
+                    pc.c(pc.m(pc.recv(f"ac-setl{k}p{j}"), ln), 0, pc.obj(f"s ac-sett{k}"), 0)
     for k in range(5):
         gated_text(c, f"ac-sett{k}", "acsetup", 0, 2 + k * 12)
     # aux tap in SETUP: the other page

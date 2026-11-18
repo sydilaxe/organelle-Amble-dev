@@ -1918,5 +1918,19 @@ check(len(want) == 3 and "settings saved" not in a_, f"aux + knob 1: the pages b
 check("settings saved" in b_, "aux held long, no knob: SETUP closes when it is let go")
 check(not any(l.startswith("ac-sett0") for l in c_.splitlines()), "aux + a black low key: nothing (free)")
 
+# 87. load time: Pd checks each new connection against every one already in its window, so a window's load cost grows
+#     with the square of its connections. No window may hold more than 2000 (the setup window held 7000: a long load)
+import os
+win, stack = [], []
+for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "main.pd")).read().split(";\n"):
+    if l.startswith("#N canvas"):
+        stack.append([l.split()[-2], 0])
+    elif l.startswith("#X connect"):
+        stack[-1][1] += 1
+    elif l.startswith("#X restore"):
+        win.append(stack.pop())
+win = sorted(win + stack, key=lambda w: -w[1])
+check(win[0][1] <= 2000, f"no window over 2000 connections (largest: {win[0][0]} {win[0][1]})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
