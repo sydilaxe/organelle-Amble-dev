@@ -670,7 +670,7 @@ log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (5
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
 #  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC and the engines' SHAPE parameters joined)
-check(len(vals) == len(GS.SETTINGS) == 151 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+check(len(vals) == len(GS.SETTINGS) == 163 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1089,14 +1089,17 @@ base = [(5, "acwrite 0"), (50, "ac-setseed 7"), (305, "ac-secstop bang"), (306, 
 held = [(1000, "notesRaw 74 100"), (1700, "notesRaw 74 0")]
 sh = {}
 for name, ev in (("open", []), ("dark", held + [(1800, "knob2 0.1")]), ("thin", held + [(1800, "knob2 0.9")]),
-                 ("mono", held + [(1800, "knob4 0")])):
-    log, a = run(base + ev, 6, prints=("ac-sett0",))
+                 ("knob4", held + [(1800, "knob4 0.95")])):
+    log, a = run(base + ev, 6, prints=("ac-sett0", "ac-sett4"))
     x = a[3 * SR:]
-    sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log)
+    sh[name] = (centroid(x[:, 0] + x[:, 1]), np.corrcoef(x[:, 0], x[:, 1])[0, 1], "ac-sett0: list PADS shape" in log,
+                np.abs(np.fft.rfft((x[:, 0] + x[:, 1]) * np.hanning(len(x)))), log)
+# (knob 4: the pads' second sound parameter - Movement while the voices play mixed types)
+kd = np.abs(20 * np.log10((sh["knob4"][3] + 1e-6) / (sh["open"][3] + 1e-6)))[:20000].mean()
 check(sh["dark"][0] < sh["open"][0] - 20 and sh["thin"][0] > sh["open"][0] + 150 and sh["open"][1] < 0.95
-      and sh["mono"][1] > 0.99 and all(v[2] for k, v in sh.items() if k != "open"),
+      and kd > 1 and "4 Movement 95%" in sh["knob4"][4] and all(v[2] for k, v in sh.items() if k != "open"),
       f"pads key held: the PADS SHAPE page; tone {sh['dark'][0]:.0f} < {sh['open'][0]:.0f} < {sh['thin'][0]:.0f} Hz, "
-      f"width 0 mono (L/R {sh['mono'][1]:.2f}, as designed {sh['open'][1]:.2f})")
+      f"knob 4 Movement changes the sound ({kd:.1f} dB)")
 
 # top G#: a tap steps the input mode (on its release); held, the INPUT page - knob 1 the mode, 3 Follow you
 log, _ = run([(50, "ac-setseed 7"), (1000, "notesRaw 80 100"), (1050, "notesRaw 80 0"), (2000, "notesRaw 80 100"),
@@ -1803,6 +1806,34 @@ for layer, kind in (("bell", "bars"), ("bell", "bowl"), ("motion", "fm"), ("moti
     check(not (e0 or e1) and c1 > c0 * 1.3 + 0.1 and tail(d1) > tail(d0) + 3,
           f"{layer} {kind}: character brightens (overtones {c0:.1f} -> {c1:.1f} % of the power), decay lengthens "
           f"(tail {tail(d0):.0f} -> {tail(d1):.0f} dB)")
+
+# 83. the pads' two SHAPE parameters (knobs 3 and 4; data.PAD_PARAMS): each changes the sound of every pad type
+from data import FLAVOURS, PAD_PARAMS
+ev = [(50, "ac-setseed 77"), (300, "ac-chgstop bang"), (300, "ac-secstop bang"), (310, "acmdrone 0"), (310, "acmsub 0"),
+      (310, "acmtex 0"), (310, "acmcloud 0"), (310, "acmbell 0"), (310, "acmmotion 0"), (310, "acmatm 0"), (310, "acfpad 1"),
+      (310, "acdens 1"), (320, "ac-layers bang"), (330, "ac-rwet 0 10"), (330, "ac-motion 0")] + \
+     [(340, f"ac-v{k}-flav -1") for k in (1, 2, 3)]
+T = 1000
+for fl in range(len(FLAVOURS)):
+    ev += [(T, f"ac-v0-flav {fl}"), (T, "ac-v0-pitch 57 0 0"), (T, "acshpp 0.5"), (T, "acshpq 0.5"), (T + 1, "ac-shpupd bang"),
+           (T + 4500, "acshpp 0.95"), (T + 4501, "ac-shpupd bang"), (T + 7500, "acshpp 0.5"), (T + 7500, "acshpq 0.95"),
+           (T + 7501, "ac-shpupd bang")]
+    T += 10500
+log, a = run(ev, T / 1000 + 1)
+def spec(x):
+    S = np.abs(np.fft.rfft(x * np.hanning(len(x)))) + 1e-9
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    bands = [S[(fr >= lo) & (fr < lo * 1.26)].mean() for lo in [100 * 1.26 ** k for k in range(28)]]
+    return 20 * np.log10(np.array(bands))
+T, same = 1000, []
+for fl, name in enumerate(FLAVOURS):
+    seg = lambda t0, t1: a[int((T + t0) * SR / 1000):int((T + t1) * SR / 1000)].mean(1)
+    base, sp, sq = spec(seg(2500, 4400)), spec(seg(5500, 7400)), spec(seg(8500, 10400))
+    dp, dq = np.abs(sp - base).mean(), np.abs(sq - base).mean()
+    if dp < 1.0 or dq < 1.0:
+        same.append(f"{name} {PAD_PARAMS[name][0]} {dp:.1f} / {PAD_PARAMS[name][1]} {dq:.1f} dB")
+    T += 10500
+check(not errors(log) and not same, f"pad parameters: each changes every type's sound (by 1 dB or more; unchanged: {same})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

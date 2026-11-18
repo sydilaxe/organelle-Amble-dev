@@ -1,7 +1,7 @@
 """More sounds: electric / synthetic pad types, drone designs, the sub, electric textures, per-piece character
 (chorus, tape, ring, crush) on the pads, and the vocoder (input speaks through a synth choir or the pads)."""
 from pdlib import Canvas
-from gen_dsp import switched, mul, add, ctl, throws, throws_to, _flav_inlets, _out
+from gen_dsp import switched, mul, add, ctl, throws, throws_to, _flav_inlets, _out, prm, prmc
 from data import TEXG
 
 
@@ -11,8 +11,9 @@ def flav_saws():
     s.comment("Saws: three detuned saws (an analog ensemble), low one left, high one right, each side through "
               "its own resonant low-pass that tracks the note")
     f, b = _flav_inlets(s, 2)
-    saws = [s.ch(s.to(f, f"*~ {d}"), "phasor~", "-~ 0.5") for d in (0.994, 1.0, 1.0065)]
-    cf = s.to(mul(s, f, s.ch(b, "*~ 9", "+~ 1.5")), "clip~ 40 5500")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    saws = [s.ch(mul(s, f, s.ch(P, f"*~ {2 * (d - 1):.4f}", "+~ 1")), "phasor~", "-~ 0.5") for d in (0.994, 1.0, 1.0065)]
+    cf = s.to(mul(s, mul(s, f, s.ch(b, "*~ 9", "+~ 1.5")), s.to(Q, "+~ 0.5")), "clip~ 40 5500")
     outs = []
     for side in ((1, 0.7, 0.25), (0.25, 0.7, 1)):
         sm = s.obj("*~ 0.4")
@@ -32,8 +33,9 @@ def flav_pwm():
               "the right side's width moves the other way")
     f, b = _flav_inlets(s, 2)
     ph = s.to(f, "phasor~")
-    lfo = s.ch(s.recv("$0-la"), "* 1.7", "osc~", "*~ 0.35")
-    sweep = s.ch(s.recv("$0-lb"), "osc~", "*~ 0.5", "+~ 0.5")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    lfo = mul(s, s.ch(s.recv("$0-la"), "* 1.7", "osc~", "*~ 0.35"), s.to(P, "*~ 2"))
+    sweep = mul(s, s.ch(s.recv("$0-lb"), "osc~", "*~ 0.5", "+~ 0.5"), s.to(Q, "*~ 2"))
     cf = s.to(mul(s, f, add(s, s.to(sweep, "*~ 4"), s.ch(b, "*~ 5", "+~ 1.2"))), "clip~ 40 5000")
     outs = []
     for sign in (1, -1):
@@ -55,12 +57,13 @@ def flav_digi():
     s.comment("Digi: a sine ring-modulated at an inharmonic ratio, then bit-crushed and sample-rate reduced; "
               "the right side rings a hair higher and holds at a slower clock")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     car = s.to(f, "osc~")
     outs = []
     for k, (rm, clk) in enumerate(((1.0, 1.0), (1.012, 0.83))):
         rr = s.to(f, f"*~ {1.4142 * rm}")
         s.c(s.to(s.recv("ac-fmr"), f"* {rm}"), 0, rr, 1)
-        ring = mul(s, car, s.to(rr, "osc~"))
+        ring = mul(s, car, s.to(mul(s, rr, s.to(P, "+~ 0.5")), "osc~"))
         x = add(s, s.to(car, "*~ 0.6"), s.to(ring, "*~ 0.5"))
         lv = s.obj("*~ 16")
         s.c(x, 0, lv, 0)
@@ -73,7 +76,7 @@ def flav_digi():
         ctl(s, inv, "ac-weird", "40 - 34*$f1")
         hold = s.obj("samphold~")
         s.c(inv, 0, hold, 0)
-        s.c(s.to(s.ch(b, f"*~ {8000 * clk}", f"+~ {3000 * clk}"), "phasor~"), 0, hold, 1)
+        s.c(s.to(mul(s, s.ch(b, f"*~ {8000 * clk}", f"+~ {3000 * clk}"), s.ch(Q, "*~ -1", "+~ 1.5")), "phasor~"), 0, hold, 1)
         outs.append(s.ch(hold, "lop~ 7000", "hip~ 20", "*~ 0.5"))
     _out(s, outs[0], ln, outs[1])
     return s
@@ -85,7 +88,9 @@ def flav_sync():
               "the right side's slave runs a little ahead")
     f, b = _flav_inlets(s, 2)
     ph = s.to(f, "phasor~")
-    ratio = add(s, s.ch(b, "*~ 3", "+~ 1.3"), s.ch(s.recv("$0-lb"), "* 1.3", "osc~", "*~ 0.6"))
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    ratio = mul(s, add(s, s.ch(b, "*~ 3", "+~ 1.3"), mul(s, s.ch(s.recv("$0-lb"), "* 1.3", "osc~", "*~ 0.6"),
+                                                             s.to(Q, "*~ 2"))), s.to(P, "+~ 0.5"))
     win = s.ch(ph, "*~ -1", "+~ 1")
     outs = []
     for off in (0, 0.11):
@@ -101,7 +106,8 @@ def flav_tine():
     s.comment("Tine: an electric-piano bell that strikes itself every few seconds - a soft FM body and a "
               "bright tine partial that rings out; the tines sit left and right, a hair apart")
     f, b = _flav_inlets(s, 2)
-    st = s.to(s.ch(s.recv("$0-lb"), "* 0.6", "+ 0.12"), "phasor~")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    st = s.to(mul(s, s.ch(s.recv("$0-lb"), "* 0.6", "+ 0.12", "sig~"), s.to(Q, "+~ 0.5")), "phasor~")
     dec = s.ch(st, "*~ -1", "+~ 1")
     e2 = mul(s, dec, dec)
     e3 = mul(s, e2, dec)
@@ -112,7 +118,8 @@ def flav_tine():
     for d, r, pt in ((1.0, 7, 1.0), (1.0023, 7.03, 0.55)):
         fd = s.to(f, f"*~ {d}")
         body = s.ch(add(s, fd, mul(s, mul(s, s.to(fd, "osc~"), idx), fd)), "osc~")
-        tine = mul(s, s.ch(s.to(f, f"*~ {r}"), "osc~"), s.to(mul(s, e6, s.ch(b, "*~ 0.6", "+~ 0.25")), f"*~ {0.5 * pt}"))
+        tine = mul(s, mul(s, s.ch(s.to(f, f"*~ {r}"), "osc~"), s.to(mul(s, e6, s.ch(b, "*~ 0.6", "+~ 0.25")), f"*~ {0.5 * pt}")),
+                   s.to(P, "*~ 2"))
         outs.append(s.to(add(s, s.to(mul(s, body, amp), "*~ 0.45"), tine), "*~ 0.8"))
     # mono-safe: the right side keeps part of the left, so a mono sum never cancels
     _out(s, outs[0], ln, add(s, s.to(outs[0], "*~ 0.5"), s.to(outs[1], "*~ 0.65")))
@@ -124,15 +131,18 @@ def flav_sine():
     s.comment("Sine: a harmonic sine pad - the fundamental and harmonics 2-6 at 1/n, brightness tilting the upper "
               "ones in; the right side a hair sharp, its odd and even harmonics balanced the other way")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     tilt = [None, b]
     for _ in range(4):
         tilt.append(mul(s, tilt[-1], b))
+    P2 = s.to(P, "*~ 2")
     outs = []
     for d, oddeven in ((1.0, (1.0, 0.75)), (1.0009, (0.75, 1.0))):
         sm = s.obj("*~ 0.42")
+        fd = mul(s, f, s.ch(Q, f"*~ {2 * (d - 1):.4f}", "+~ 1")) if d != 1.0 else f
         for n in range(1, 7):
-            o = s.ch(s.to(f, f"*~ {n * d}"), "osc~", f"*~ {1 / n * (oddeven[0] if n % 2 else oddeven[1]):.4f}")
-            s.c(mul(s, o, tilt[n - 1]) if tilt[n - 1] is not None else o, 0, sm, 0)
+            o = s.ch(s.to(fd, f"*~ {n}"), "osc~", f"*~ {1 / n * (oddeven[0] if n % 2 else oddeven[1]):.4f}")
+            s.c(mul(s, mul(s, o, tilt[n - 1]), P2) if tilt[n - 1] is not None else o, 0, sm, 0)
         outs.append(sm)
     # mono-safe: the right side keeps part of the left
     _out(s, outs[0], ln, add(s, s.to(outs[0], "*~ 0.5"), s.to(outs[1], "*~ 0.65")))
@@ -145,19 +155,20 @@ def flav_glass():
               "drift morphing between them; the right side a hair sharp, drifting the other way; a faint octave of "
               "the bright table on top")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     outs = []
     for d, rate, ph in ((1.0, 0.083, 0), (1.0011, 0.071, 0.5)):
         fr = s.to(f, f"*~ {d}")
         ta, tb = s.to(fr, "tabosc4~ acwtA"), s.to(fr, "tabosc4~ acwtB")
         lfo = s.obj(f"osc~ {rate}")
         s.c(s.m(s.obj("loadbang"), str(ph)), 0, lfo, 1)
-        m = s.to(add(s, s.to(b, "*~ 0.75"), s.ch(lfo, "*~ 0.2", "+~ 0.1")), "clip~ 0 1")
+        m = s.to(mul(s, add(s, s.to(b, "*~ 0.75"), s.ch(lfo, "*~ 0.2", "+~ 0.1")), s.to(P, "*~ 2")), "clip~ 0 1")
         dif = s.obj("-~")
         s.c(tb, 0, dif, 0)
         s.c(ta, 0, dif, 1)
         sm = s.obj("*~ 0.4")
         s.c(add(s, ta, mul(s, dif, m)), 0, sm, 0)
-        s.c(s.ch(s.to(fr, "*~ 2"), "tabosc4~ acwtB", "*~ 0.12"), 0, sm, 0)
+        s.c(mul(s, s.ch(s.to(fr, "*~ 2"), "tabosc4~ acwtB", "*~ 0.12"), s.to(Q, "*~ 2")), 0, sm, 0)
         outs.append(sm)
     _out(s, outs[0], ln, add(s, s.to(outs[0], "*~ 0.5"), s.to(outs[1], "*~ 0.65")))   # mono-safe
     return s
@@ -170,13 +181,14 @@ def flav_beat():
               "stays; odd partials to the left, even to the right")
     f, b = _flav_inlets(s, 2)
     # the formant's place (harmonic 1.5 .. 5): a slow sweep, lifted by brightness
-    pk = add(s, s.ch(s.obj("osc~ 0.043"), "*~ 1.2", "+~ 2.6"), s.to(b, "*~ 1.4"))
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    pk = add(s, add(s, s.ch(s.obj("osc~ 0.043"), "*~ 1.2", "+~ 2.6"), s.to(b, "*~ 1.4")), s.ch(P, "-~ 0.5", "*~ 3"))
     L, R = s.obj("*~ 0.5"), s.obj("*~ 0.5")
     for n, rate, (gl, gr) in ((1, 0.31, (1, 1)), (2, 0.53, (0.3, 1.3)), (3, 0.79, (1.3, 0.3)), (4, 1.13, (0.35, 1.25)),
                               (5, 1.61, (1.25, 0.35))):
         st = n * (1 + 0.0035 * n * (n - 1))                 # a touch stretched
         o = s.ch(s.to(f, f"*~ {st:.4f}"), "osc~")
-        beat = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.4", "+~ 0.6")
+        beat = s.to(mul(s, s.ch(s.obj(f"osc~ {rate}"), "-~ 1"), s.to(Q, "*~ 0.8")), "+~ 1")
         d = s.ch(s.to(pk, f"-~ {n}"), "abs~")
         near = s.obj("/~")                                  # 1 / (1 + 0.8 d^2): the formant's lift
         s.c(s.obj("sig~ 1"), 0, near, 0)
@@ -194,10 +206,11 @@ def flav_reed():
     s.comment("Reed: a clarinet-like tone - a sine driven into soft clipping (odd harmonics, more with brightness), "
               "a slow breathy vibrato, a gentle low-pass; the right side a hair sharp")
     f, b = _flav_inlets(s, 2)
-    drive = s.ch(b, "*~ 5", "+~ 1.5")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    drive = mul(s, s.ch(b, "*~ 5", "+~ 1.5"), s.to(P, "*~ 2"))
     outs = []
     for d, rate in ((1.0, 4.3), (1.0012, 4.7)):
-        vib = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.003", f"+~ {d}")
+        vib = s.to(mul(s, s.ch(s.obj(f"osc~ {rate}"), "*~ 0.003"), s.to(Q, "*~ 2")), f"+~ {d}")
         x = mul(s, s.ch(mul(s, f, vib), "osc~"), drive)
         clip = s.obj("/~")                       # x / (1 + |x|): odd harmonics
         s.c(x, 0, clip, 0)
@@ -212,11 +225,13 @@ def flav_organ():
     s.comment("Organ: drawbars 16' 8' 5 1/3' 4' 2' (harmonics 1 2 3 4 8, the upper ones drawn out with brightness) "
               "and a slow rotary swell, opposite on the two sides")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     sm = s.obj("*~ 0.3")
     for h, a, br in ((1, 0.5, 0), (2, 0.45, 0), (3, 0.3, 0.5), (4, 0.25, 0.8), (8, 0.12, 1)):
         o = s.ch(s.to(f, f"*~ {h}"), "osc~", f"*~ {a}")
+        o = mul(s, o, s.to(P, "*~ 2")) if h >= 3 else o
         s.c(mul(s, o, s.ch(b, f"*~ {br}", f"+~ {1 - br * 0.7:.2f}")) if br else o, 0, sm, 0)
-    rot = s.ch(s.obj("osc~ 0.7"), "*~ 0.25")
+    rot = mul(s, s.ch(s.obj("osc~ 0.7"), "*~ 0.25"), s.to(Q, "*~ 2"))
     _out(s, mul(s, sm, s.to(rot, "+~ 0.75")), ln, mul(s, sm, s.ch(rot, "*~ -1", "+~ 0.75")))
     return s
 
@@ -226,7 +241,8 @@ def flav_air():
     s.comment("Air: a flute - a pure tone with breath around it (noise through a narrow band on the note, more "
               "with brightness) and a slow vibrato that grows in; each side its own breath")
     f, b = _flav_inlets(s, 2)
-    vib = s.ch(s.obj("osc~ 5.1"), "*~ 0.004", "+~ 1")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    vib = s.to(mul(s, s.ch(s.obj("osc~ 5.1"), "*~ 0.004"), s.to(Q, "*~ 2")), "+~ 1")
     fv = mul(s, f, vib)
     tone = s.ch(fv, "osc~", "*~ 0.35")
     outs = []
@@ -234,7 +250,7 @@ def flav_air():
         v = s.obj("vcf~ 9")
         s.c(s.obj("noise~"), 0, v, 0)
         s.c(fv, 0, v, 1)
-        br = mul(s, v, s.ch(b, "*~ 0.6", "+~ 0.25"))
+        br = mul(s, mul(s, v, s.ch(b, "*~ 0.6", "+~ 0.25")), s.to(P, "*~ 2"))
         outs.append(add(s, tone, s.to(br, "*~ 0.9")))
     _out(s, outs[0], ln, outs[1])
     return s
@@ -248,12 +264,13 @@ def flav_cz():
     f, b = _flav_inlets(s, 2)
     ph = s.to(f, "phasor~")
     sweep = s.ch(s.recv("$0-lb"), "osc~", "*~ 0.5", "+~ 0.5")
-    amt = s.to(add(s, s.to(b, "*~ 0.75"), s.to(sweep, "*~ 0.3")), "clip~ 0 1")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    amt = s.to(mul(s, add(s, s.to(b, "*~ 0.75"), s.to(sweep, "*~ 0.3")), s.to(P, "*~ 2")), "clip~ 0 1")
     d = s.ch(amt, "*~ -0.44", "+~ 0.5")                     # the bend's knee: 0.5 (a sine) .. 0.06 (near a saw)
     bend = s.obj("expr~ cos(6.28319*if($v1 < $v2, $v1*0.5/$v2, 0.5 + ($v1 - $v2)*0.5/(1 - $v2)))")
     s.c(ph, 0, bend, 0)
     s.c(d, 0, bend, 1)
-    r = s.ch(amt, "*~ 5", "+~ 1")                           # resonance ratio 1 .. 6
+    r = s.to(mul(s, s.to(amt, "*~ 5"), s.to(Q, "*~ 2")), "+~ 1")      # resonance ratio 1 .. 6 (x2 by Resonance)
     res = s.obj("expr~ cos(6.28319*$v1*$v2)*(1 - $v1)")
     s.c(ph, 0, res, 0)
     s.c(r, 0, res, 1)
@@ -278,7 +295,8 @@ def flav_choir():
         s.obj(f"array define {name} {len(VOWELS) + 3}")
         vals = [VOWELS[-1][j]] + [v[j] for v in VOWELS] + [VOWELS[0][j], VOWELS[1][j]]
         s.c(s.m(lb, " ".join(str(x) for x in vals)), 0, s.obj(f"array set {name}"), 0)
-    expo = s.ch(b, "*~ -8", "+~ 12")                        # pulse narrowness: 12 (dark) .. 4 (bright)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    expo = mul(s, s.ch(b, "*~ -8", "+~ 12"), s.ch(Q, "*~ -1", "+~ 1.5"))   # pulse narrowness: 12 (dark) .. 4 (bright)
     outs = []
     for side, (d, r1, r2) in enumerate(((1.0, 0.031, 0.047), (1.0025, 0.037, 0.043))):
         vib = s.ch(s.obj(f"osc~ {5.1 + 0.4 * side}"), "*~ 0.004", f"+~ {d}")
@@ -287,7 +305,8 @@ def flav_choir():
         s.c(ph, 0, src, 0)
         s.c(expo, 0, src, 1)
         drift = add(s, s.obj(f"osc~ {r1}"), s.ch(s.obj(f"osc~ {r2}"), "*~ 0.7"))
-        idx = s.ch(drift, "*~ 0.294", "+~ 0.5", f"*~ {len(VOWELS) - 1}", "+~ 1")
+        idx = s.to(add(s, s.ch(drift, "*~ 0.294", "+~ 0.5", f"*~ {len(VOWELS) - 1}", "+~ 1"), s.ch(P, "-~ 0.5", "*~ 8")),
+                   f"clip~ 1 {len(VOWELS)}")
         sm = s.obj("*~ 1")
         for j, (q, a) in enumerate(((7, 1.0), (10, 0.55), (14, 0.25))):
             fm = s.to(idx, f"tabread4~ $0-vf{j}")
@@ -308,12 +327,14 @@ def flav_vosim():
     f, b = _flav_inlets(s, 2)
     ph = s.to(f, "phasor~")
     sweep = s.ch(s.recv("$0-la"), "osc~", "*~ 0.15", "+~ 1")
-    fmt = mul(s, s.ch(b, "*~ 1600", "+~ 500"), sweep)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    fmt = mul(s, mul(s, s.ch(b, "*~ 1600", "+~ 500"), sweep), s.to(P, "+~ 0.5"))
     outs = []
     for k in (1.0, 1.26):
         fx = s.to(fmt, f"*~ {k}")
         vs = s.obj("expr~ if($v1*$v2/max($v3, 1) < 3, pow(sin(3.14159*$v1*$v2/max($v3, 1)), 2)*"
-                   "pow(0.65, floor($v1*$v2/max($v3, 1))), 0)")
+                   "pow($v4, floor($v1*$v2/max($v3, 1))), 0)")
+        s.c(s.ch(Q, "*~ 0.7", "+~ 0.3"), 0, vs, 3)
         s.c(ph, 0, vs, 0)
         s.c(fx, 0, vs, 1)
         s.c(f, 0, vs, 2)
@@ -329,7 +350,8 @@ def flav_whistle():
               "faintly for body; one tone, each side its own breath (two tones a hair apart would beat away in mono)")
     f, b = _flav_inlets(s, 2)
     wob = s.ch(add(s, s.obj("osc~ 0.29"), s.ch(s.obj("osc~ 0.23"), "*~ 0.6")), "*~ 0.002", "+~ 1")
-    vib = mul(s, s.ch(s.obj("osc~ 5.4"), "*~ 0.006"), b)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    vib = mul(s, mul(s, s.ch(s.obj("osc~ 5.4"), "*~ 0.006"), b), s.to(Q, "*~ 2"))
     fw = mul(s, s.to(f, "*~ 4"), add(s, wob, vib))
     tone = s.ch(fw, "osc~", "*~ 0.4")
     body = s.ch(s.to(fw, "*~ 0.5"), "osc~", "*~ 0.08")
@@ -338,7 +360,7 @@ def flav_whistle():
         br = s.obj("vcf~ 25")
         s.c(s.obj("noise~"), 0, br, 0)
         s.c(fw, 0, br, 1)
-        outs.append(add(s, add(s, tone, body), s.to(br, "*~ 0.5")))
+        outs.append(add(s, add(s, tone, body), mul(s, s.to(br, "*~ 0.5"), s.to(P, "*~ 2"))))
     _out(s, outs[0], ln, outs[1])
     return s
 
@@ -349,8 +371,9 @@ def flav_lissa():
               "right drifting slowly in phase, so the stereo image turns; brightness adds each side's octave, and "
               "a little of each side crosses to the other")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     x = s.to(f, "osc~")
-    y = s.to(s.ch(f, "*~ 1.5", "+~ 0.07"), "osc~")
+    y = s.to(add(s, mul(s, f, s.to(P, "+~ 1")), s.to(Q, "*~ 0.14")), "osc~")
     bx = mul(s, s.ch(s.to(f, "*~ 2"), "osc~"), s.to(b, "*~ 0.35"))
     by = mul(s, s.ch(s.to(f, "*~ 3"), "osc~"), s.to(b, "*~ 0.3"))
     L = s.to(add(s, add(s, x, bx), s.to(y, "*~ 0.25")), "*~ 0.45")
@@ -369,13 +392,15 @@ def flav_chip():
     late = s.ch(s.obj("osc~ 0.09"), "*~ 0.5", "+~ 0.5")       # (the vibrato's depth, slowly in and out)
     fv = mul(s, f, s.to(mul(s, vib, late), "+~ 1"))
     ph = s.to(fv, "phasor~")
-    duty = s.ch(s.recv("$0-lb"), "osc~", "expr~ if($v1 < -0.33, 0.125, if($v1 < 0.33, 0.25, 0.5))")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    dst = s.ch(s.recv("$0-lb"), "osc~", "expr~ if($v1 < -0.33, 0.125, if($v1 < 0.33, 0.25, 0.5))", "-~ 0.5")
+    duty = s.to(mul(s, dst, s.ch(P, "*~ 2", "clip~ 0 1")), "+~ 0.5")
     pulse = s.obj("expr~ ($v1 < $v2)*2 - 1")
     s.c(ph, 0, pulse, 0)
     s.c(duty, 0, pulse, 1)
     tri = s.to(ph, "expr~ floor((1 - abs($v1*4 - 2))*7.99)/7.5 - 1")
     # the sample rate held down: a new value every 4 samples (about 11 kHz)
-    hold = s.obj("phasor~ 11025")
+    hold = s.to(s.to(Q, "expr~ 22050*pow(0.25, $v1)"), "phasor~")
     outs = []
     for sig, other in ((pulse, None), (tri, pulse)):
         x = sig if other is None else add(s, sig, mul(s, s.to(other, "*~ 0.6"), b))

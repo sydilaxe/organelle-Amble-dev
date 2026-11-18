@@ -805,7 +805,10 @@ def verb():
     proc(c, "ac-shpupd", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
                                                 f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
                                                 f"acsh{x}d", f"2*acsh{x}w"]) for x in SHAPE_LAYERS]
-         + [SendL("ac-subt", ["acsubt"])])         # (and the sub's sound: its SHAPE page)
+         + [SendL("ac-subt", ["acsubt"])]          # (and the sub's sound: its SHAPE page)
+         # (each layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
+         + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for x in "dsptac" for j in "pq"]
+         + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for x in "dsptac" for j in "pq"])
     # (after the defaults: ac-init's other receivers set them, in no set order)
     c.c(c.to(c.recv("ac-init"), "delay 20"), 0, c.obj("s ac-shpupd"), 0)
     proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])

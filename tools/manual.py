@@ -133,7 +133,9 @@ for _var, _name, _g in U.LAYER_KEYS:
         "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider) - for the "
         "bells and the motion, knobs 3 and 4 are their engine's own two parameters instead, named on the page (50 % "
         "as designed): " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
-        "is the raw console square, its Arp off below 50 %; "
+        "is the raw console square, its Arp off below 50 %. The pads too have their type's own two (while the voices "
+        "play different types, Character and Movement, each type answering in its way): " +
+        "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.PAD_PARAMS.items()) + "; "
         "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (

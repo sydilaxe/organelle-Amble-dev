@@ -69,6 +69,17 @@ def ctl(c, dest, recv, expr=None, inlet=1, first=False):
 SHAPE_LAYERS = "dspbmtac"          # drone, sub, pads, bells, motion, textures, atmosphere, cloud
 
 
+def prm(s, x, j):
+    """a layer's SHAPE parameter (j 0: knob 3, 1: knob 4) as a signal, 0..1 - 0.5 the sound as designed (the bells'
+    and the motion's engines read theirs at each note instead)"""
+    return s.ch(s.recv(f"ac-prm-{x}{'pq'[j]}"), "line~")
+
+
+def prmc(s, x, j):
+    """the same parameter as a control value (for an object's control inlet: a filter's Q, a rate)"""
+    return s.recv(f"ac-prmc-{x}{'pq'[j]}")
+
+
 def LAYER_OF(gain):
     for pre, x in (("ac-g-drone", "d"), ("ac-g-sub", "s"), ("ac-g-bel", "b"), ("ac-g-mot", "m"), ("ac-g-tex", "t"),
                    ("ac-g-atm", "a"), ("ac-g-cloud", "c")):
@@ -209,13 +220,14 @@ def flav_fm():
     s.comment("FM: a modulator at a per-piece ratio; index follows brightness and Weird. Right: a slightly "
               "detuned carrier with a softer index")
     f, b = _flav_inlets(s, 2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     rat = s.to(f, "*~ 1")
     s.c(s.recv("ac-fmr"), 0, rat, 1)
-    mo = s.to(rat, "osc~")
+    mo = s.to(mul(s, rat, s.to(Q, "+~ 0.5")), "osc~")
     ix = s.ch(b, "*~ 2.2", "+~ 0.15")
     w = s.to(ix, "*~ 1")
     ctl(s, w, "ac-weird", "0.5 + 1.5*$f1")
-    dev = mul(s, mul(s, mo, w), f)
+    dev = mul(s, mul(s, mul(s, mo, w), f), s.to(P, "*~ 2"))
     car = s.ch(add(s, f, dev), "osc~", "*~ 0.42")
     carR = s.ch(add(s, s.to(f, "*~ 1.0021"), s.to(dev, "*~ 0.8")), "osc~", "*~ 0.42")
     _out(s, car, ln, add(s, s.to(car, "*~ 0.5"), s.to(carR, "*~ 0.65")))   # mono-safe (no full cancellation)
@@ -232,14 +244,19 @@ def flav_vox():
     bm = s.ch(b, "*~ 0.8", "+~ 0.35")
     # (shared by both sides: the low body, and the formant centres - the right side's is the mirror image)
     body = s.ch(saw, "lop~ 600", "*~ 0.2")
-    c1 = s.ch(l1, "*~ 450", "+~ 505")              # 280 + 450*(0.5 + l1)
-    c2 = s.ch(l2, "*~ 1000", "+~ 1400")            # 900 + 1000*(0.5 + l2)
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    vw = s.ch(P, "*~ 0.8", "+~ 0.6")
+    c1 = mul(s, s.ch(l1, "*~ 450", "+~ 505"), vw)              # 280 + 450*(0.5 + l1)
+    c2 = mul(s, s.ch(l2, "*~ 1000", "+~ 1400"), vw)            # 900 + 1000*(0.5 + l2)
+    rq = s.to(prmc(s, "p", 1), "expr 0.3 + 1.4*$f1; 7*(0.3 + 1.4*$f1); 10*(0.3 + 1.4*$f1)")
     outs = []
     for sign in (1, -1):
         cf1 = c1 if sign == 1 else s.ch(c1, "*~ -1", "+~ 1010")
         cf2 = c2 if sign == 1 else s.ch(c2, "*~ -1", "+~ 2800")
         v1 = s.obj("vcf~ 7")
         v2 = s.obj("vcf~ 10")
+        s.c(rq, 1, v1, 2)
+        s.c(rq, 2, v2, 2)
         for v, cf in ((v1, cf1), (v2, cf2)):
             s.c(saw, 0, v, 0)
             s.c(cf, 0, v, 1)
@@ -256,7 +273,8 @@ def flav_bow():
     s, ln = switched("bow", "$0-fw2", block=16)
     s.comment("Bow: a string kept ringing by filtered noise (block 16 for short delays)")
     f, b, dl = _flav_inlets(s, 3)
-    exc = mul(s, s.ch(s.obj("noise~"), "lop~ 2500"), s.ch(b, "*~ 0.03", "+~ 0.006"))
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    exc = mul(s, mul(s, s.ch(s.obj("noise~"), "lop~ 2500"), s.ch(b, "*~ 0.03", "+~ 0.006")), s.to(P, "*~ 2"))
     a = s.obj("+~")
     s.c(exc, 0, a, 0)
     s.to(a, "delwrite~ $0-bw 60")
@@ -264,7 +282,7 @@ def flav_bow():
     s.c(dl, 0, vd, 0)
     damp = s.to(vd, "lop~ 3000")
     ctl(s, damp, "ac-bright", "1500 + 5500*$f1", first=True)
-    s.c(s.to(damp, "*~ 0.993"), 0, a, 1)
+    s.c(mul(s, damp, s.ch(Q, "*~ 0.012", "+~ 0.987")), 0, a, 1)
     _out(s, s.ch(vd, "hip~ 40", "*~ 9"), ln, outlets=True)
     return s
 
@@ -275,6 +293,7 @@ def flav_part():
               "the fundamental in the middle, the upper partials alternating left and right")
     f, b = _flav_inlets(s, 2)
     up = s.to(s.recv("ac-partials"), "unpack f f f")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     lt = s.to(s.recv("$0-lb"), "t f f f f")
     b2 = mul(s, b, b)
     b3 = mul(s, b2, b)
@@ -287,10 +306,10 @@ def flav_part():
             r = s.to(f, f"*~ {k + 1}")
             s.c(up, k - 1, r, 1)
             o = s.to(r, "osc~")
-        amp = s.ch((lt, k), f"* {[1, 1.37, 1.71, 2.13][k]}", "osc~", "*~ 0.35", "+~ 0.65")
+        amp = s.to(mul(s, s.ch((lt, k), f"* {[1, 1.37, 1.71, 2.13][k]}", "osc~", "-~ 1"), s.to(Q, "*~ 0.7")), "+~ 1")
         p = mul(s, o, amp)
         if tilt[k] is not None:
-            p = mul(s, p, tilt[k])
+            p = mul(s, mul(s, p, tilt[k]), s.to(P, "*~ 2"))
         gl, gr = [(1, 1), (1.45, 0.15), (0.15, 1.45), (1.3, 0.35)][k]
         s.c(s.to(p, f"*~ {gl}"), 0, L, 0)
         s.c(s.to(p, f"*~ {gr}"), 0, R, 0)
@@ -303,9 +322,11 @@ def flav_fold():
     s.comment("Fold: a sine wavefolded (sin of a driven sine), ring-modulated by its sub-octave; the right "
               "side folds a little less")
     f, b = _flav_inlets(s, 2)
-    dr = s.ch(b, "*~ 4", "+~ 0.5", "*~ 1")
-    ctl(s, dr, "ac-weird", "0.3 + 1.2*$f1")
-    sub = s.ch(f, "*~ 0.5", "osc~", "*~ 0.22", "+~ 0.78")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    dr0 = s.ch(b, "*~ 4", "+~ 0.5", "*~ 1")
+    ctl(s, dr0, "ac-weird", "0.3 + 1.2*$f1")
+    dr = mul(s, dr0, s.to(P, "*~ 2"))
+    sub = s.to(mul(s, s.ch(f, "*~ 0.5", "osc~", "-~ 1"), s.to(Q, "*~ 0.44")), "+~ 1")
     outs = []
     for k, d in ((1, 1.0), (0.7, 1.0017)):
         x = s.ch(s.to(f, f"*~ {d}"), "osc~")
@@ -323,7 +344,8 @@ def flav_pulsar():
               "side's formant sits higher")
     f, b = _flav_inlets(s, 2)
     form = s.ch(s.recv("$0-la"), "* 0.7", "osc~", "*~ 0.5", "+~ 0.5")
-    fsig = s.to(add(s, s.to(form, "*~ 900"), s.to(b, "*~ 1400")), "+~ 450")
+    P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
+    fsig = mul(s, s.to(add(s, s.to(form, "*~ 900"), s.to(b, "*~ 1400")), "+~ 450"), s.to(P, "+~ 0.5"))
     ph = s.to(f, "phasor~")
     outs = []
     for m in (1, 1.18):
@@ -332,7 +354,7 @@ def flav_pulsar():
         s.c(f, 0, k, 1)
         u = s.ch(mul(s, ph, s.to(k, "max~ 1")), "clip~ 0 1")
         win = s.ch(u, "cos~", "*~ -0.5", "+~ 0.5")
-        car = s.ch(u, "*~ 3", "cos~")
+        car = s.to(mul(s, u, s.to(Q, "*~ 6")), "cos~")
         outs.append(s.ch(mul(s, win, car), "hip~ 30", "*~ 0.75"))
     _out(s, outs[0], ln, outs[1])
     return s

@@ -222,6 +222,17 @@ ENGINE_PARAMS = dict(bars=("Bright", "Decay"), fm=("Index", "Decay"), blip=("Cut
                      kalimba=("Tine", "Decay"), steel=("Bright", "Decay"), pluck=("Bright", "Decay"),
                      bowl=("Hardness", "Ring"), plate=("Hardness", "Ring"), crystal=("Hardness", "Ring"),
                      lpg=("Fold", "Gate"), gong=("Bloom", "Ring"), chip=("Duty", "Arp"))
+# the pads' two SHAPE parameters by type (50 % = as designed); while the four voices play different types, the page
+# names them in general (each type answers in its own way)
+PAD_PARAMS = dict(fm=("Index", "Ratio"), vox=("Vowel", "Resonance"), bow=("Pressure", "Sustain"),
+                  part=("Spread", "Swell"), fold=("Fold", "Sub"), pulsr=("Formant", "Cycles"),
+                  saws=("Detune", "Filter"), pwm=("Width", "Sweep"), digi=("Ring", "Crush"), sync=("Sync", "Sweep"),
+                  tine=("Tine", "Strike"), sine=("Bright", "Chorus"), glass=("Morph", "Shimmer"),
+                  beat=("Formant", "Pulse"), reed=("Drive", "Vibrato"), organ=("Drawbars", "Rotary"),
+                  air=("Breath", "Vibrato"), cz=("Bend", "Resonance"), choir=("Vowel", "Breath"),
+                  vosim=("Formant", "Decay"), whistle=("Breath", "Vibrato"), lissa=("Ratio", "Turn"),
+                  chip=("Duty", "Crush"))
+MIXED_PARAMS = ("Character", "Movement")
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
 # with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
