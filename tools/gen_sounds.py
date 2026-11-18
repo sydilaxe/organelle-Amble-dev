@@ -682,11 +682,12 @@ def tex_radio():
     gate = s.ch(s.obj("noise~"), "lop~ 0.3", "*~ 200", "-~ 0.1", "clip~ 0 1", "lop~ 1", "lop~ 1")
     g2 = s.ch(gate, "*~ 0.65", "+~ 0.35")
     # each side its own static (a diffuse band, not a centred hiss)
-    stat, statR = [s.to(mul(s, s.ch(s.obj("noise~"), "hip~ 900", "lop~ 2200", "lop~ 2600"), g2), "*~ 0.6")
-                   for _ in range(2)]
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
+    stat, statR = [mul(s, s.to(mul(s, s.ch(s.obj("noise~"), "hip~ 900", "lop~ 2200", "lop~ 2600"), g2), "*~ 0.6"),
+                       s.to(P, "*~ 2")) for _ in range(2)]
     wf = s.ch(s.recv("ac-radio"), "line~")
     drift = s.ch(s.obj("osc~ 0.13"), "*~ 0.004", "+~ 1")
-    wh = s.ch(mul(s, wf, drift), "osc~", "*~ 0.06")
+    wh = mul(s, s.ch(mul(s, wf, drift), "osc~", "*~ 0.06"), s.to(Q, "*~ 2"))
     swell = s.ch(s.obj("osc~ 0.05"), "*~ 0.5", "+~ 0.5")
     L = mul(s, add(s, s.to(stat, "*~ 0.5"), mul(s, wh, swell)), ln)
     R = mul(s, add(s, s.to(statR, "*~ 0.35"), s.to(mul(s, wh, swell), "*~ 0.7")), ln)
@@ -697,14 +698,15 @@ def tex_radio():
 def tex_data():
     s, ln = switched("data", "ac-g-tex5")
     s.comment("Data: bursts of tiny square-wave blips on chord tones, crushed - a machine thinking")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     up = s.to(s.recv("ac-data"), "unpack f f")
     env = s.ch(s.m(s.to((up, 1), "t f"), "0.5, 0 $1"), "vline~")
-    hz = s.ch((up, 0), "mtof")
+    hz = s.ch((up, 0), "mtof", "expr $f1*(0.5 + acshtq)")
     sq = s.ch(s.to(hz, "phasor~"), "-~ 0.5", "*~ 1000", "clip~ -0.2 0.2")
     sig = mul(s, sq, env)
     hold = s.obj("samphold~")
     s.c(sig, 0, hold, 0)
-    s.c(s.obj("phasor~ 6000"), 0, hold, 1)
+    s.c(s.to(s.to(P, "expr~ 12000*pow(0.25, $v1)"), "phasor~"), 0, hold, 1)
     o = mul(s, s.to(hold, "*~ 3.5"), ln)
     pn = s.ch(s.obj("osc~ 0.3"), "*~ 0.4", "+~ 0.5")
     throws(s, mul(s, o, pn), mul(s, o, s.ch(pn, "*~ -1", "+~ 1")), mix=0.5, send=0.6)
@@ -715,14 +717,15 @@ def tex_buzz():
     s, ln = switched("buzz", "ac-g-tex6")
     s.comment("Buzz: an electric hum on the tonic - a narrow pulse ringing two resonances, swelling and crackling")
     f = s.ch(s.m(s.ch(s.recv("ac-dronep"), "line 0 40", "mtof"), "$1 2000"), "line~")
-    pulse = s.ch(s.to(f, "phasor~"), "-~ 0.97", "max~ 0", "*~ 30")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
+    pulse = mul(s, s.ch(s.to(f, "phasor~"), "-~ 0.97", "max~ 0", "*~ 30"), s.to(Q, "*~ 2"))
     outs = []
     for h, q in ((3, 18), (5, 25)):
         v = s.obj(f"vcf~ {q}")
         s.c(pulse, 0, v, 0)
         s.c(s.to(f, f"*~ {h}"), 0, v, 1)
         outs.append(v)
-    crack = s.ch(s.obj("noise~"), "-~ 0.998", "max~ 0", "*~ 200")
+    crack = mul(s, s.ch(s.obj("noise~"), "-~ 0.998", "max~ 0", "*~ 200"), s.to(P, "*~ 2"))
     sw = s.ch(s.obj("osc~ 0.031"), "*~ 0.45", "+~ 0.55")
     L = mul(s, mul(s, add(s, outs[0], crack), sw), ln)
     R = mul(s, mul(s, add(s, outs[1], crack), sw), ln)
@@ -749,11 +752,12 @@ def tex_murmur():
     s, ln = switched("murmur", "ac-g-tex7")
     s.comment("Murmur: two distant voices - a breathy low buzz through two drifting vowel formants, in syllables "
               "and phrases, far back (mostly reverb)")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     outs = []
     for side, (f0, ph) in enumerate(((112, 0), (147, 0.5))):
         vib = s.ch(s.obj(f"osc~ {4.1 + side}"), "*~ 0.012", "+~ 1")
-        buzz = s.ch(mul(s, s.obj(f"sig~ {f0}"), vib), "phasor~", "-~ 0.5", "lop~ 1400")
-        src = add(s, buzz, s.ch(s.obj("noise~"), "lop~ 3000", "*~ 0.25"))
+        buzz = s.ch(mul(s, mul(s, s.obj(f"sig~ {f0}"), s.to(P, "+~ 0.5")), vib), "phasor~", "-~ 0.5", "lop~ 1400")
+        src = add(s, buzz, mul(s, s.ch(s.obj("noise~"), "lop~ 3000", "*~ 0.25"), s.to(Q, "*~ 2")))
         sm = s.obj("+~")
         for q, (hz, sc, off, lo, hi) in ((6, (3, 30000, 550, 250, 900)), (8, (2.5, 80000, 1500, 800, 2500))):
             v = s.obj(f"vcf~ {q}")
@@ -788,13 +792,14 @@ def tex_echoes():
     s.c(pn, 1, dr, 1)
     s.col()
     # ping-pong: each side's echo feeds the other, through a band (lop / hip) so repeats darken
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     reads = []
     for name, ms, rate, dep in (("$0-ecL", 420, 0.13, 25), ("$0-ecR", 610, 0.09, 30)):
         vd = s.obj(f"vd~ {name}")
-        s.c(s.ch(s.obj(f"osc~ {rate}"), f"*~ {dep}", f"+~ {ms}"), 0, vd, 0)
+        s.c(s.to(mul(s, s.ch(s.obj(f"osc~ {rate}"), f"*~ {dep}"), s.to(Q, "*~ 2")), f"+~ {ms}"), 0, vd, 0)
         reads.append(s.ch(vd, "lop~ 2400", "hip~ 250"))
     for i, (name, dry) in enumerate((("$0-ecL", dl), ("$0-ecR", dr))):
-        w = add(s, dry, s.to(reads[1 - i], "*~ 0.58"))
+        w = add(s, dry, mul(s, reads[1 - i], s.ch(P, "*~ 0.7", "+~ 0.23")))      # (0.23 .. 0.93, 0.58 at 50 %)
         s.to(w, f"delwrite~ {name} 1500")
     L = mul(s, add(s, s.to(dl, "*~ 0.35"), reads[0]), ln)
     R = mul(s, add(s, s.to(dr, "*~ 0.35"), reads[1]), ln)
@@ -806,6 +811,7 @@ def tex_whisper():
     s, ln = switched("whisper", "ac-g-tex9")
     s.comment("Whisper: breath noise shaped by two moving formants into fast syllables, in phrases - one each "
               "side")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     outs = []
     for side, ph in enumerate((0, 0.35)):
         src = s.ch(s.obj("noise~"), "hip~ 1200")
@@ -813,8 +819,8 @@ def tex_whisper():
         for q, (hz, sc, off, lo, hi) in ((4, (6, 60000, 2200, 1200, 3500)), (5, (5, 90000, 5000, 3500, 8000))):
             v = s.obj(f"vcf~ {q}")
             s.c(src, 0, v, 0)
-            s.c(_lpnoise(s, hz, sc, off, lo, hi), 0, v, 1)
-            s.c(v, 0, sm, 0)
+            s.c(mul(s, _lpnoise(s, hz, sc, off, lo, hi), s.ch(P, "*~ 0.8", "+~ 0.6")), 0, v, 1)
+            s.c(mul(s, v, s.to(Q, "*~ 2")) if q == 5 else v, 0, sm, 0)
         env = _syllables(s, 8, 150, 40, 0.045 + 0.013 * side, ph)
         outs.append(mul(s, mul(s, sm, env), ln))
         s.col(260)
@@ -826,12 +832,13 @@ def tex_leaves():
     s, ln = switched("leaves", "ac-g-tex10")
     s.comment("Leaves: a rustle in the trees - high noise in a fast flutter, dry little clicks, swelling with gusts")
     gust = s.ch(add(s, s.obj("osc~ 0.051"), s.ch(s.obj("osc~ 0.083"), "*~ 0.7")), "*~ 0.45", "+~ 0.35", "max~ 0.05")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     outs = []
     for side in range(2):
         n = s.ch(s.obj("noise~"), "hip~ 2500", "lop~ 9000")
-        flutter = s.ch(s.obj("noise~"), "lop~ 60", "abs~", "*~ 25", "clip~ 0 1")
+        flutter = mul(s, s.ch(s.obj("noise~"), "lop~ 60", "abs~", "*~ 25", "clip~ 0 1"), s.to(P, "*~ 2"))
         ticks = s.ch(s.obj("noise~"), "-~ 0.997", "max~ 0", "*~ 300", "lop~ 7000")
-        o = add(s, mul(s, n, flutter), s.to(ticks, "*~ 0.3"))
+        o = add(s, mul(s, n, flutter), mul(s, s.to(ticks, "*~ 0.3"), s.to(Q, "*~ 2")))
         outs.append(mul(s, mul(s, o, s.to(gust, f"*~ {1 - 0.15 * side}")), ln))
     throws(s, s.to(outs[0], f"*~ {TEXG['LEAVES_G']}"), s.to(outs[1], f"*~ {TEXG['LEAVES_G']}"), mix=0.6, send=0.4)
     return s
@@ -841,6 +848,8 @@ def tex_brook():
     s, ln = switched("brook", "ac-g-tex11")
     s.comment("Brook: a babbling stream - brown noise ringing very narrow bands whose pitch jitters at a few "
               "hertz (the classic brook model), two layers each side")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
+    bq = s.to(prmc(s, "t", 1), "expr 30*(0.3 + 1.4*$f1)")
     outs = []
     for side in range(2):
         brown = s.ch(s.obj("noise~"), "lop~ 70", "*~ 12")
@@ -848,7 +857,8 @@ def tex_brook():
         for sc, off in ((8000, 500 + 40 * side), (16000, 1000 + 80 * side)):
             v = s.obj("vcf~ 30")
             s.c(brown, 0, v, 0)
-            s.c(_lpnoise(s, 14, sc, off, 150, 4000), 0, v, 1)
+            s.c(mul(s, _lpnoise(s, 14, sc, off, 150, 4000), s.to(P, "+~ 0.5")), 0, v, 1)
+            s.c(bq, 0, v, 2)
             s.c(v, 0, sm, 0)
         outs.append(mul(s, s.ch(sm, "hip~ 120"), ln))
     throws(s, s.to(outs[0], f"*~ {TEXG['BROOK_G']}"), s.to(outs[1], f"*~ {TEXG['BROOK_G']}"), mix=0.6, send=0.4)
@@ -866,8 +876,8 @@ def tex_bubbles():
         up = s.to((r, v), "unpack f f f f")
         # the pitch: f, then 1.9 f over the life; the level: amp, then a fast decay (squared)
         pk = s.obj("pack f f f")
-        tf = s.to((up, 0), "t f f")
-        s.c(s.to((tf, 1), "* 1.9"), 0, pk, 1)
+        tf = s.ch((up, 0), "expr $f1*(0.5 + acshtp)", "t f f")       # (knob 3, Pitch)
+        s.c(s.to((tf, 1), "expr $f1*(1 + 1.8*acshtq)"), 0, pk, 1)      # (knob 4, Rise: x1 .. x2.8, 1.9 at 50 %)
         s.c(tf, 0, pk, 0)
         s.c((up, 1), 0, pk, 2)
         fq = s.ch(s.m(pk, "$1, $2 $3"), "vline~")
@@ -895,13 +905,14 @@ def tex_crickets():
     s.comment("Crickets: three of them, each a sine (high, on a chord tone) pulsed into chirps of three or four "
               "pulses; each its own pace, drifting - one near each side, one far off in the reverb")
     hz = s.ch(s.recv("ac-cric"), "line~")              # a chord tone, 3-5.5 kHz
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     outs = []
     for k, (pulse, chirp, ratio, drift) in enumerate(((31, 1.7, 1.0, 0.07), (27, 1.25, 1.12, 0.05), (35, 2.3, 0.89, 0.09))):
         # the chirp gate: on for the first 0.22 of each chirp cycle, smoothed; its pace drifts slowly
-        rate = s.ch(s.obj(f"osc~ {drift}"), f"*~ {chirp * 0.15}", f"+~ {chirp}")
+        rate = mul(s, s.ch(s.obj(f"osc~ {drift}"), f"*~ {chirp * 0.15}", f"+~ {chirp}"), s.to(Q, "+~ 0.5"))
         gate = s.ch(s.to(rate, "phasor~"), "-~ 0.22", "*~ -100", "clip~ 0 1", "lop~ 60")
         # the pulses inside: a raised cosine of each pulse, sharpened
-        pl = s.ch(s.obj(f"phasor~ {pulse}"), "cos~", "*~ -0.5", "+~ 0.5", "pow~ 3")
+        pl = s.ch(mul(s, s.obj(f"sig~ {pulse}"), s.to(P, "+~ 0.5")), "phasor~", "cos~", "*~ -0.5", "+~ 0.5", "pow~ 3")
         car = s.ch(mul(s, hz, s.ch(pl, "*~ 0.006", f"+~ {ratio}")), "osc~")        # (a little pitch drop per pulse)
         outs.append(mul(s, car, mul(s, gate, pl)))
         s.col(240)
@@ -925,11 +936,11 @@ def tex_harp():
         air = s.obj("vcf~ 3")
         s.c(s.ch(s.obj("noise~"), "*~ 0.4"), 0, air, 0)
         s.c(s.ch(s.obj(f"osc~ {0.05 + 0.02 * k}"), "*~ 900", f"+~ {1400 + 500 * k}"), 0, air, 1)
-        exc = mul(s, air, s.ch(gust, f"pow~ {1.5 + 0.5 * k}"))
+        exc = mul(s, mul(s, air, s.ch(gust, f"pow~ {1.5 + 0.5 * k}")), s.to(prm(s, "t", 0), "*~ 2"))
         name = f"$0-harp{k}"
         rd = s.obj(f"vd~ {name}")
         s.c(per, 0, rd, 0)
-        fb = s.ch(rd, "lop~ 2500", "*~ 0.994")
+        fb = mul(s, s.to(rd, "lop~ 2500"), s.ch(prm(s, "t", 1), "*~ 0.008", "+~ 0.99"))    # (Ring: 0.99 .. 0.998)
         s.to(add(s, exc, fb), f"delwrite~ {name} 30")
         outs.append(s.ch(rd, "hip~ 80"))
         s.col(240)
@@ -955,9 +966,9 @@ def tex_song():
     s.c(ex, 1, ep, 1)
     s.c(ex, 0, ep, 0)
     env = s.ch(s.m(ep, "1 $1, 0 $1 $2"), "vline~")
-    vd = mul(s, s.ch(s.obj("osc~ 4.6"), "*~ 0.012"), env)
+    vd = mul(s, mul(s, s.ch(s.obj("osc~ 4.6"), "*~ 0.012"), env), s.to(prm(s, "t", 0), "*~ 2"))
     f2 = mul(s, fq, s.to(vd, "+~ 1"))
-    mod = mul(s, s.to(f2, "osc~"), s.ch(env, "*~ 1.6"))
+    mod = mul(s, s.to(f2, "osc~"), mul(s, s.ch(env, "*~ 1.6"), s.to(prm(s, "t", 1), "*~ 2")))
     car = s.obj("osc~")
     s.c(add(s, f2, mul(s, mod, f2)), 0, car, 0)
     voice = s.ch(mul(s, car, mul(s, env, env)), "lop~ 3000")
@@ -975,8 +986,9 @@ def tex_pulsar():
               "fading out within the first fifth of the period; the pulse rate wanders between a rhythm (4 Hz) and "
               "a low pitch (90 Hz), some pulses masked at random; the two trains on opposite sides, half a period "
               "apart")
-    rate = s.ch(add(s, s.obj("osc~ 0.011"), s.ch(s.obj("osc~ 0.029"), "*~ 0.5")), "*~ 0.66", "+~ 1", "*~ 1.5",
-                "expr~ 4*pow(22.5, max(0, min(1, $v1/3)))")
+    rate = mul(s, s.ch(add(s, s.obj("osc~ 0.011"), s.ch(s.obj("osc~ 0.029"), "*~ 0.5")), "*~ 0.66", "+~ 1", "*~ 1.5",
+                       "expr~ 4*pow(22.5, max(0, min(1, $v1/3)))"), s.to(prm(s, "t", 0), "+~ 0.5"))
+    mq = s.ch(prm(s, "t", 1), "*~ 2", "-~ 1.5")         # (Mask: the threshold, -0.5 at 50 % - up masks more)
     outs = []
     for k, off in ((0, 0.0), (2, 0.5)):
         hz = s.ch(s.recv(f"ac-voccar{k}"), "line~")
@@ -989,7 +1001,10 @@ def tex_pulsar():
         mask = s.obj("samphold~")
         s.c(s.obj("noise~"), 0, mask, 0)
         s.c(ph, 0, mask, 1)
-        outs.append(mul(s, p, s.to(mask, "expr~ $v1 > -0.5")))
+        mk = s.obj("expr~ $v1 > $v2")
+        s.c(mask, 0, mk, 0)
+        s.c(mq, 0, mk, 1)
+        outs.append(mul(s, p, mk))
     g = f"*~ {TEXG['PULSAR_G']}"
     throws(s, mul(s, s.to(outs[0], g), ln), mul(s, s.to(outs[1], g), ln), mix=0.6, send=0.5)
     return s
@@ -1238,12 +1253,15 @@ def atm_haze():
     s, ln = switched("atm-haze", "ac-g-atm0")
     s.comment("Haze: air shimmering on the chord - noise through 6 narrow bands on chord partials, each "
               "swelling on its own, spread across the field")
+    P, Q = prm(s, "a", 0), prm(s, "a", 1)        # (ATMOSPHERE SHAPE knobs 3 and 4: data.ATMOS_PARAMS)
+    hq = s.to(prmc(s, "a", 0), "expr 14*(0.3 + 1.4*$f1)")
     L, R = s.obj("*~ 3"), s.obj("*~ 3")
     for k in range(6):
         v = s.obj("vcf~ 14")
         s.c(s.obj("noise~"), 0, v, 0)
         s.c(s.ch(s.recv(f"ac-atmf{k}"), "line~"), 0, v, 1)
-        sw = s.ch(s.obj(f"osc~ {0.021 + 0.013 * k}"), "*~ 0.5", "+~ 0.5")
+        s.c(hq, 0, v, 2)
+        sw = s.to(mul(s, s.ch(s.obj(f"osc~ {0.021 + 0.013 * k}"), "-~ 1"), Q), "+~ 1")
         b = mul(s, v, sw)
         gl, gr = [(1, 0.2), (0.2, 1), (0.8, 0.5), (0.5, 0.8), (1, 0.4), (0.4, 1)][k]
         s.c(s.to(b, f"*~ {gl}"), 0, L, 0)
@@ -1256,11 +1274,12 @@ def atm_deep():
     s, ln = switched("atm-deep", "ac-g-atm1")
     s.comment("Deep: a low rumble, different on each side, swelling slowly; now and then distant thunder rolls")
     th = s.ch(s.m(s.recv("ac-thunder"), "1 2500, 0 7000 2500"), "vline~")
+    P, Q = prm(s, "a", 0), prm(s, "a", 1)        # (ATMOSPHERE SHAPE knobs 3 and 4: data.ATMOS_PARAMS)
     outs = []
     for k, rate in enumerate((0.027, 0.019)):
-        r = s.ch(s.obj("noise~"), "lop~ 90", "lop~ 180", "*~ 14")
+        r = mul(s, s.ch(s.obj("noise~"), "lop~ 90", "lop~ 180", "*~ 14"), s.to(P, "*~ 2"))
         sw = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.4", "+~ 0.6")
-        thn = mul(s, s.ch(s.obj("noise~"), "lop~ 260", "lop~ 400", "*~ 10"), s.to(th, f"*~ {[1, 0.6][k]}"))
+        thn = mul(s, mul(s, s.ch(s.obj("noise~"), "lop~ 260", "lop~ 400", "*~ 10"), s.to(th, f"*~ {[1, 0.6][k]}")), s.to(Q, "*~ 2"))
         outs.append(mul(s, add(s, mul(s, r, sw), thn), ln))
     throws_to("ac-senda")(s, outs[0], outs[1], mix=0.22, send=0.25)
     return s
@@ -1269,14 +1288,15 @@ def atm_deep():
 def atm_space():
     s, ln = switched("atm-space", "ac-g-atm2")
     s.comment("Space: air ringing in two combs tuned to the chord (root left, fifth right) - a far-away choir")
+    P, Q = prm(s, "a", 0), prm(s, "a", 1)        # (ATMOSPHERE SHAPE knobs 3 and 4: data.ATMOS_PARAMS)
     outs = []
     for k in range(2):
         a = s.obj("+~")
-        s.c(s.ch(s.obj("noise~"), "lop~ 3000", "*~ 0.03"), 0, a, 0)
+        s.c(mul(s, s.ch(s.obj("noise~"), "lop~ 3000", "*~ 0.03"), s.to(Q, "*~ 2")), 0, a, 0)
         s.to(a, f"delwrite~ $0-sp{k} 40")
         vd = s.obj(f"vd~ $0-sp{k}")
         s.c(s.ch(s.recv(f"ac-atmc{k}"), "line~"), 0, vd, 0)
-        s.c(s.ch(vd, "lop~ 2200", "*~ 0.985"), 0, a, 1)
+        s.c(mul(s, s.to(vd, "lop~ 2200"), s.ch(P, "*~ 0.02", "+~ 0.975")), 0, a, 1)     # (Ring: 0.975 .. 0.995)
         sw = s.ch(s.obj(f"osc~ {0.017 + 0.009 * k}"), "*~ 0.45", "+~ 0.55")
         outs.append(mul(s, mul(s, s.ch(vd, "hip~ 60", "*~ 5"), sw), ln))
     throws_to("ac-senda")(s, outs[0], outs[1], mix=0.8, send=0.8)
@@ -1287,16 +1307,17 @@ def atm_night():
     s, ln = switched("atm-night", "ac-g-atm3")
     s.comment("Night: distant insects - six high tones chirring at their own rates, scattered across the field, "
               "over a faint hiss")
+    P, Q = prm(s, "a", 0), prm(s, "a", 1)        # (ATMOSPHERE SHAPE knobs 3 and 4: data.ATMOS_PARAMS)
     L, R = s.obj("*~ 0.16"), s.obj("*~ 0.16")
     for k in range(6):
         tone = s.ch(s.recv(f"ac-atmn{k}"), "line~", "osc~")
-        pulse = s.ch(s.obj(f"osc~ {19 + 2.3 * k}"), "max~ 0")
+        pulse = s.ch(mul(s, s.obj(f"sig~ {19 + 2.3 * k}"), s.to(P, "+~ 0.5")), "osc~", "max~ 0")
         gate = s.ch(s.obj(f"osc~ {0.09 + 0.07 * k}"), "-~ 0.3", "max~ 0", "*~ 1.4")
         b = mul(s, mul(s, tone, mul(s, pulse, pulse)), gate)
         pos = [0.1, 0.85, 0.35, 0.65, 0.2, 0.95][k]
         s.c(s.to(b, f"*~ {(1 - pos) ** 0.5:.3f}"), 0, L, 0)
         s.c(s.to(b, f"*~ {pos ** 0.5:.3f}"), 0, R, 0)
-    bed = [s.ch(s.obj("noise~"), "hip~ 6000", "*~ 0.004") for _ in range(2)]
+    bed = [mul(s, s.ch(s.obj("noise~"), "hip~ 6000", "*~ 0.004"), s.to(Q, "*~ 2")) for _ in range(2)]
     throws_to("ac-senda")(s, mul(s, add(s, L, bed[0]), ln), mul(s, add(s, R, bed[1]), ln), mix=1, send=0.5)
     return s
 
@@ -1305,7 +1326,8 @@ def atm_tides():
     s, ln = switched("atm-tides", "ac-g-atm4")
     s.comment("Tides: waves that wash across from one side to the other - noise whose level and brightness "
               "rise and fall over ~11 s, the right side a third of a wave behind")
-    ph = s.obj("phasor~ 0.09")
+    P, Q = prm(s, "a", 0), prm(s, "a", 1)        # (ATMOSPHERE SHAPE knobs 3 and 4: data.ATMOS_PARAMS)
+    ph = s.to(s.ch(P, "+~ 0.5", "*~ 0.09"), "phasor~")
     outs = []
     for off in (0, 0.33):
         p = s.ch(ph, f"+~ {off}", "wrap~") if off else ph
@@ -1313,7 +1335,7 @@ def atm_tides():
         e2 = mul(s, e, e)
         v = s.obj("vcf~ 0.8")
         s.c(s.obj("noise~"), 0, v, 0)
-        s.c(s.ch(e2, "*~ 2200", "+~ 300"), 0, v, 1)
+        s.c(s.to(mul(s, s.to(e2, "*~ 2200"), s.to(Q, "*~ 2")), "+~ 300"), 0, v, 1)
         outs.append(mul(s, s.ch(mul(s, (v, 1), e2), "*~ 1.1"), ln))
     throws_to("ac-senda")(s, outs[0], outs[1], mix=0.9, send=0.5)
     return s

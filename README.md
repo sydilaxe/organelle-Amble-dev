@@ -54,7 +54,7 @@ The layers and their rhythms:
   - low G: hold for **Root** and press a key, play a MIDI note or turn knob 1;
   - low A chord change now (hold it: the **CHORD** page, to pick the next chord), A# **Resolve** (the tonic as open fifths, held),
     B next section (hold it: hold section);
-  - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, drive, width; aux: the layer's page - its sound, in / out / auto, level and reverb send; E (motion) or D# (bells) held, the low keys change the rhythm - randomize, rotate, more or fewer hits, cycle length, harmony in the key, ratchets, ghost notes, swing or rubato); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
+  - top C to G: the layers in or out (hold: its **SHAPE** page - sound, tone, and two parameters of that sound (a pad's Vowel, a drone's Beat, the chip's Duty ...); aux: the layer's page - its sound, in / out / auto, level and reverb send; E (motion) or D# (bells) held, the low keys change the rhythm - randomize, rotate, more or fewer hits, cycle length, harmony in the key, ratchets, ghost notes, swing or rubato); G# input mode (hold: the **INPUT** page - mode, level, how much it steers the chords, reverb send; aux: capture), A **Freeze** (aux:
     ANCHOR), A# start / stop (aux: COMPOSE / DRIFT), B new piece (hold: COMPARE, hold + key: load a slot);
   - aux + a low key opens that SETUP page.
 - **Your own form:** SETUP FORM, SECTIONS and SECTION MIX build a piece section by section: roles, lengths, pad

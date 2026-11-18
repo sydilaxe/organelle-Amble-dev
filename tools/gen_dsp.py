@@ -507,6 +507,7 @@ def tex_rain():
     s, ln = switched("rain", "ac-g-tex0")
     s.comment("Rain: a soft hiss, a dense patter of tiny unpitched ticks (sparse noise impulses ringing bright "
               "bands that wander), and a few heavier plops - each side its own")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     swell = s.ch(s.obj("osc~ 0.031"), "*~ 0.3", "+~ 0.7")
     outs = []
     for side in range(2):
@@ -517,7 +518,8 @@ def tex_rain():
         plop = s.obj("vcf~ 6")
         s.c(s.ch(s.obj("noise~"), "-~ 0.9997", "max~ 0", "*~ 1500"), 0, plop, 0)
         s.c(s.obj(f"sig~ {850 + 150 * side}"), 0, plop, 1)
-        o = add(s, add(s, bed, s.to(pat, f"*~ {TEXG['RAIN_PAT']}")), s.to(plop, f"*~ {TEXG['RAIN_PLOP']}"))
+        o = add(s, add(s, bed, mul(s, s.to(pat, f"*~ {TEXG['RAIN_PAT']}"), s.to(P, "*~ 2"))),
+                mul(s, s.to(plop, f"*~ {TEXG['RAIN_PLOP']}"), s.to(Q, "*~ 2")))
         outs.append(mul(s, mul(s, o, swell), ln))
         s.col(220)
     throws(s, s.to(outs[0], f"*~ {TEXG['RAIN_G']}"), s.to(outs[1], f"*~ {TEXG['RAIN_G']}"), mix=0.5, send=0.35)
@@ -533,13 +535,17 @@ def tex_wind():
     s.c(up, 2, p2, 1)
     s.c(up, 1, p2, 0)
     s.c(up, 0, p1, 0)
-    gust = s.ch(add(s, s.obj("osc~ 0.043"), s.ch(s.obj("osc~ 0.071"), "*~ 0.6")), "*~ 0.4", "+~ 0.55", "max~ 0.05")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
+    gust = s.ch(mul(s, s.ch(add(s, s.obj("osc~ 0.043"), s.ch(s.obj("osc~ 0.071"), "*~ 0.6")), "*~ 0.4"), s.to(Q, "*~ 2")),
+                "+~ 0.55", "max~ 0.05")
+    wq = s.to(prmc(s, "t", 0), "expr 25*(0.3 + 1.4*$f1)")
     outs = []
     for p, rate in ((p1, 0.05), (p2, 0.037)):
         cf = mul(s, s.ch(p, "line~"), s.ch(s.obj(f"osc~ {rate}"), "*~ 0.12", "+~ 1"))
         v = s.obj("vcf~ 25")
         s.c(s.obj("noise~"), 0, v, 0)
         s.c(cf, 0, v, 1)
+        s.c(wq, 0, v, 2)
         outs.append(mul(s, mul(s, s.to(v, "*~ 4"), gust), ln))
     throws(s, outs[0], outs[1], mix=0.5, send=0.5)
     return s
@@ -548,19 +554,21 @@ def tex_wind():
 def tex_ember():
     s, ln = switched("ember", "ac-g-tex2")
     s.comment("Embers: sparse crackles and soft wood knocks (thresholded noise into resonant filters)")
+    P, Q = prm(s, "t", 0), prm(s, "t", 1)        # (TEXTURES SHAPE knobs 3 and 4: data.TEX_PARAMS)
     swell = s.ch(s.obj("osc~ 0.02"), "*~ 0.4", "+~ 0.6")
     outs = []
     for cf, th in ((2600, 0.9993), (1700, 0.9993)):
         v = s.obj("vcf~ 4")
         s.c(s.ch(s.obj("noise~"), f"-~ {th}", "max~ 0", "*~ 700"), 0, v, 0)
         s.c(s.obj(f"sig~ {cf}"), 0, v, 1)
-        outs.append(v)
+        outs.append(mul(s, v, s.to(P, "*~ 2")))
     k = s.obj("vcf~ 9")
     s.c(s.ch(s.obj("noise~"), "-~ 0.9997", "max~ 0", "*~ 1500"), 0, k, 0)
     s.c(s.obj("sig~ 380"), 0, k, 1)
     g = mul(s, s.to(swell, "*~ 15"), ln)
-    L = mul(s, add(s, outs[0], s.to(k, "*~ 0.7")), g)
-    R = mul(s, add(s, outs[1], s.to(k, "*~ 0.7")), g)
+    kq = mul(s, s.to(k, "*~ 0.7"), s.to(Q, "*~ 2"))
+    L = mul(s, add(s, outs[0], kq), g)
+    R = mul(s, add(s, outs[1], kq), g)
     throws(s, L, R, mix=0.5, send=0.5)
     return s
 
@@ -569,14 +577,14 @@ def tex_chirp():
     s, ln = switched("chirp", "ac-g-tex3")
     s.comment("Chirps: creature calls - a fast pitch sweep with a buzz, in bursts")
     tl = s.to(s.recv("ac-chirp"), "t l l")
-    ex = s.to((tl, 0), "expr $f1; $f1*$f2; $f3")
+    ex = s.to((tl, 0), "expr $f1*(0.5 + acshtp); $f1*$f2*(0.5 + acshtp); $f3")      # (knob 3, Pitch)
     pk = s.obj("pack f f f")
     for i in (2, 1, 0):
         s.c(ex, i, pk, i)
     fr = s.ch(s.m(pk, "$1, $2 $3"), "vline~")
     env = s.ch(s.m(s.to((tl, 1), "expr $f3*1.3"), "1, 0 $1"), "vline~")
     pn = s.to((tl, 1), "expr cos($f4*1.5708); sin($f4*1.5708)")
-    buzz = s.ch(s.obj("osc~ 33"), "*~ 0.05", "+~ 1")
+    buzz = s.to(mul(s, s.ch(s.obj("osc~ 33"), "*~ 0.05"), s.to(prm(s, "t", 1), "*~ 2")), "+~ 1")      # (knob 4, Buzz)
     sig = mul(s, s.to(mul(s, buzz, fr), "osc~"), mul(s, env, env))
     sig = mul(s, s.to(sig, "*~ 0.5"), ln)
     L, R = s.to(sig, "*~ 1"), s.to(sig, "*~ 1")
@@ -590,7 +598,9 @@ def cloud():
     s, ln = switched("cloud", "ac-g-cloud", hook="ac-cloud-on")
     s.comment("Cloud: 4 overlapping grain streams from the 8 s buffer, each transposed by a chord-friendly ratio "
               "(sometimes reversed)")
-    rate = s.to(s.recv("ac-gdur"), "expr 1000/$f1")
+    # (CLOUD SHAPE knob 3, Grain: the grains' length x1/4 .. x4; knob 4, Spread: how far they scatter in stereo)
+    rate = mul(s, s.ch(s.recv("ac-gdur"), "expr 1000/$f1", "sig~"), s.to(prm(s, "c", 0), "expr~ pow(4, 1 - 2*$v1)"))
+    Qc = s.to(prm(s, "c", 1), "*~ 2")
     on = s.recv("ac-cloud-on")
     L, R = s.obj("*~ 0.7"), s.obj("*~ 0.7")
     for i in range(4):
@@ -608,7 +618,7 @@ def cloud():
         gsp = s.obj("*~ 0.48")
         s.c(s.obj("noise~"), 0, gsp, 0)
         s.c(s.recv("ac-cloudspread"), 0, gsp, 1)
-        gp = s.ch(gsp, "+~ 0.5", "samphold~")
+        gp = s.ch(mul(s, gsp, Qc), "+~ 0.5", "clip~ 0 1", "samphold~")
         s.c(ph, 0, gp, 1)
         gl, gr = span(s, g, gp)
         s.c(gl, 0, L, 0)

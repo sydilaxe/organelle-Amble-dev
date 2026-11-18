@@ -123,7 +123,7 @@ THE ORGANELLE KEYS (functions; aux + a low key = that SETUP page, C = 1)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
-        page (sound, tone, drive, width); aux + tap: the
+        page (sound, tone, and the sound's own two); aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
         3 its level, 4 its reverb send; aux leaves. E (motion) or D#
         (bells) held + low keys: C random, C# the piece's own, D/D# rotate,

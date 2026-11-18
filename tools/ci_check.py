@@ -1882,5 +1882,26 @@ e, same = sweep_params("s", SUBTYPES, lambda T, i: [(T, "acmsub 2"), (T + 1, "ac
                                                     (T + 3, "ac-subp 55 0")])
 check(not e and not same, f"sub parameters: each changes every sound (by 1 dB or more; unchanged: {same})")
 
+# 85. the textures', the atmospheres' and the cloud's two SHAPE parameters: each changes every sound (the helpers:
+#     section 84)
+from data import TEXTURES, ATMOS_NAMES
+# (the event textures get their events steadily, so no window falls silent; the whisper's syllables leave it silent
+#  for long stretches, so a 2 s window may hold nothing: it is left out here)
+STIM = dict(chirp="ac-chirp 2000 0.7 120 0.5", data="ac-data 84 40", bubbles="ac-bub 0 800 60 0.3 0.5",
+            echoes="ac-echo 1200 0.5", song="ac-song 600 300 280")
+def tstim(T, i):
+    name = TEXTURES[i]
+    ev = [(T, "acmtex 2"), (T, f"actex1 {i}"), (T, f"actex2 {i}"), (T + 1, "ac-layers bang")]
+    if name in STIM:
+        ev += [(T + 100 + 300 * k, STIM[name]) for k in range(34)]
+    return ev
+e, same = sweep_params("t", [n for n in TEXTURES if n != "whisper"],
+                       lambda T, i: tstim(T, TEXTURES.index([n for n in TEXTURES if n != "whisper"][i])))
+check(not e and not same, f"texture parameters: each changes every texture but whisper (unchanged: {same})")
+e, same = sweep_params("a", ATMOS_NAMES, lambda T, i: [(T, "acmatm 2"), (T, f"acatmcur {i}"), (T + 1, "ac-layers bang")])
+check(not e and not same, f"atmosphere parameters: each changes every atmosphere (unchanged: {same})")
+e, same = sweep_params("c", ["cloud"], lambda T, i: [(T, "acmcloud 2"), (T, "acmpad 2"), (T + 1, "ac-layers bang")])
+check(not e and not same, f"cloud parameters: Grain and Spread change it (unchanged: {same})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

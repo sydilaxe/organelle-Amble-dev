@@ -10,7 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
-from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS
+from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS, TEX_PARAMS, ATMOS_PARAMS, CLOUD_PARAMS
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
@@ -145,7 +145,11 @@ SOUND_X = {"b": ("if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela))", 
            # (the pads: one type for all four voices - SETUP SOUNDS - or else a mix, named in general)
            "p": ("if(acspad >= 2, acspad - 1, 0)", [MIXED_PARAMS] + [PAD_PARAMS[k] for k in FLAVOURS]),
            "d": ("acdcur", [DRONE_PARAMS[k] for k in DRONES]),
-           "s": ("acsubt", [SUB_PARAMS[k] for k in SUBTYPES])}
+           "s": ("acsubt", [SUB_PARAMS[k] for k in SUBTYPES]),
+           # (the textures: two may sound - the first one's names; both answer in their own ways)
+           "t": ("if(acstex > 0, acstex - 1, actex1)", [TEX_PARAMS[k] for k in TEXTURES]),
+           "a": ("acatmcur", [ATMOS_PARAMS[k] for k in ATMOS_NAMES]),
+           "c": ("0", [CLOUD_PARAMS])}
 ENGINE_X = SOUND_X
 QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
 # GLIDE (low F held): the glide times you set while playing, together - the same values as their SETUP rows (VOICES
@@ -597,8 +601,7 @@ def quick_pages():
             ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
             ("list 2 Tone $1 $2%", [("s", f"if(acsh{x}t < 0.49, 0, if(acsh{x}t > 0.51, 2, 1))", ["dark", "open", "thin"]),
                                      ("f", f"int(abs(acsh{x}t - 0.5)*200)")]),
-        ] + ([("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
-               ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")])] if x not in ENGINE_X else
+        ] + ([] if x not in ENGINE_X else
              # (the bells and the motion: their engine's two parameters, named by the engine playing)
              [(f"list {3 + j} $1 $2%", [("s", SOUND_X[x][0], [nm[j] for nm in SOUND_X[x][1]]),
                                         ("f", f"int(acsh{x}{'pq'[j]}*100)")]) for j in range(2)])))

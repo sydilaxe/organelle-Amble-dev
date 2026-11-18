@@ -236,6 +236,14 @@ MIXED_PARAMS = ("Character", "Movement")
 DRONE_PARAMS = dict(pure=("Beat", "Breath"), analog=("Detune", "Sweep"), organ=("Drawbars", "Rotary"),
                     fm=("Index", "Cycle"), frost=("Detune", "Glass"), choir=("Vowel", "Breath"),
                     bowed=("Pressure", "Body"), spectral=("Upper", "Drift"), gendy=("Steps", "Rough"))
+TEX_PARAMS = dict(rain=("Patter", "Plops"), wind=("Whistle", "Gusts"), ember=("Crackle", "Knocks"),
+                  chirp=("Pitch", "Buzz"), radio=("Static", "Whistle"), data=("Crush", "Pitch"), buzz=("Crackle", "Hum"),
+                  murmur=("Pitch", "Breath"), echoes=("Repeats", "Wobble"), whisper=("Formant", "Sibilance"),
+                  leaves=("Flutter", "Ticks"), brook=("Pitch", "Babble"), bubbles=("Pitch", "Rise"),
+                  crickets=("Pulse", "Chirp"), harp=("Wind", "Ring"), song=("Vibrato", "Bright"), pulsar=("Rate", "Mask"))
+ATMOS_PARAMS = dict(haze=("Focus", "Swell"), deep=("Rumble", "Thunder"), space=("Ring", "Air"), night=("Pulse", "Hiss"),
+                    tides=("Pace", "Bright"))
+CLOUD_PARAMS = ("Grain", "Spread")
 SUB_PARAMS = dict(sine=("Harmonics", "Body"), warm=("Octave", "Body"), pulse=("Width", "Body"), fm=("Growl", "Body"))
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
