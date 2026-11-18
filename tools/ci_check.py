@@ -677,7 +677,7 @@ check(len(vals) == len(GS.SETTINGS) == 163 and float(vals[27]) == 0 and "ac-txt4
 po = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "pd-opts.txt")).read()
 check("-audiobuf 25" in po, "pd-opts.txt asks for a 25 ms audio buffer (the OS default is 6 ms)")
 
-# 30. SETUP page 5, SOUNDS: one pad type for all four voices at once (and in every later section); raw = the
+# 30. SETUP SOUNDS: one pad type for all four voices at once (and in every later section); raw = the
 #     first demos' types (vox, partials, fold, pulsar) with no character; drone, texture and character by hand
 FL = ["ac-v%d-flav" % k for k in range(4)]
 def flav_vals(text):
@@ -714,14 +714,14 @@ sv = [l.split()[1:] for l in log.splitlines() if l.startswith("SV:")]
 check("2 Drone fm" in log and "3 Texture wind" in log and "4 Character tape" in log
       and sv[-1] == ["3112"], f"SOUNDS: Drone fm, Texture wind, Character tape applied and kept ({sv[-1]})")
 
-# 31. SETUP page 6, MUSIC (key, scale, chords stay as chosen; the bar pulse) and page 7, MIDI IN (where notes go,
+# 31. SETUP MUSIC (key, scale, chords stay as chosen; the bar pulse) and MIDI IN (where notes go,
 #     what breath does)
 import gen_setup as S
 def setk(pg, k, label, opts, t=400):
     return [(t - 100, "acsetup 1"), (t - 90, f"acsetpg {pg}"), (t, f"ac-setknob {k} {(opts.index(label) + 0.5) / len(opts)}"),
             (t + 100, "acsetup 0")]
-ev = [(40, "acmode 0"), (45, "actime 0.05"), (46, "acweird 1"), (50, "ac-setseed 7")] + setk(5, 0, "D", S.SKEYS) + \
-     setk(5, 1, "minpent", S.SSCALES, 700) + setk(5, 2, "quartal", S.SCHORDS, 1000) + [(1200, "h-mark bang"), (6000, "ac-setseed 99")]
+ev = [(40, "acmode 0"), (45, "actime 0.05"), (46, "acweird 1"), (50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MUSIC'), 0, "D", S.SKEYS) + \
+     setk(S.SETUP_NAMES.index('MUSIC'), 1, "minpent", S.SSCALES, 700) + setk(S.SETUP_NAMES.index('MUSIC'), 2, "quartal", S.SCHORDS, 1000) + [(1200, "h-mark bang"), (6000, "ac-setseed 99")]
 log, _ = run(ev, 14, prints=("ac-dronep", "h-mark", "ac-txt2"))
 after = log.split("h-mark")[-1]
 tonics = {int(float(l.split()[1])) % 12 for l in after.splitlines() if l.startswith("ac-dronep")}
@@ -729,14 +729,14 @@ s2 = [l for l in after.splitlines() if l.startswith("ac-txt2")]
 check(tonics == {2} and s2 and all("minpent quartal" in l for l in s2[-3:]),
       f"MUSIC: key D, minpent, quartal stay through changes and a new piece (tonics {sorted(tonics)}, {s2[-1:]})")
 def pulses(label):
-    log, _ = run([(50, "ac-setseed 7"), (60, "acrhythm 1")] + setk(5, 3, label, S.PULSES) +
+    log, _ = run([(50, "ac-setseed 7"), (60, "acrhythm 1")] + setk(S.SETUP_NAMES.index('MUSIC'), 3, label, S.PULSES) +
                  [(1000, "acrole 4"), (1001, "ac-pulseupd bang")], 2,
                  prints=("ac-pulse",))
     return [float(l.split()[1]) for l in log.splitlines() if l.startswith("ac-pulse")][-1]
 p0, p2, p3 = pulses("off"), pulses("normal"), pulses("strong")
 check(p0 == 0 and p3 > p2, f"MUSIC Pulse: off {p0}, normal {p2:.2f}, strong {p3:.2f}")
 def routed(label, notes, prints):
-    ev = [(50, "ac-setseed 7")] + setk(6, 0, label, S.ROUTES) + [(800, "h-mark bang")]
+    ev = [(50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MIDI IN'), 0, label, S.ROUTES) + [(800, "h-mark bang")]
     ev += [(1000 + 10 * i, f"ac-livenote 1 {n} 100") for i, n in enumerate(notes)]
     ev += [(2900, "h-mark2 bang")] + [(3000 + 10 * i, f"ac-livenote 1 {n} 0") for i, n in enumerate(notes)]
     log, _ = run(ev, 5, prints=prints + ("h-mark", "h-mark2", "ac-lvon"))
@@ -751,7 +751,7 @@ dr = [int(float(l.split()[1])) for l in held.splitlines() if l.startswith("ac-dr
 back = [int(float(l.split()[1])) for l in rel.splitlines() if l.startswith("ac-dronep")]
 check(dr and dr[-1] == 43 and back and back[0] != 43, f"MIDI IN Notes to drone: the drone on your note, home after ({dr}, {back})")
 def swell(v):
-    ev = [(50, "ac-setseed 7")] + setk(6, 1, "swell", S.BRTOS) + [(t, f"ac-livebreath 1 {v}") for t in range(800, 6000, 200)]
+    ev = [(50, "ac-setseed 7")] + setk(S.SETUP_NAMES.index('MIDI IN'), 1, "swell", S.BRTOS) + [(t, f"ac-livebreath 1 {v}") for t in range(800, 6000, 200)]
     _, a = run(ev, 6)
     return rms_db(a[4 * SR:6 * SR, 0])
 lo, hi = swell(0), swell(127)
