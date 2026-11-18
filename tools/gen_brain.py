@@ -36,7 +36,7 @@ GLOBALS = dict(
     acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
-    acyon=0, acyoi=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
+    acyon=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
     acbi=0, acbc=0, acdropi=0, acbright=0.5, acbp=0, acgdurv=300, acr1=0.5, acr2=0.5, acr3=0.5, acr4=0.5,
     acknown0=0, acknown1=0, acknown2=0, acknown3=0, acinprev=0, acghost=0,
     # form

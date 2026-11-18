@@ -9,7 +9,7 @@ NV = 4                                    # live voices
 
 GLOBALS = dict(
     acmcix=-1, acmck=0, acmcb=0, acpgn=0,
-    acnow=0, acforce=-1, acroothold=0, acrr=-1, acinkh=-1, acshk=-1, acshkh=0, acsbk=-1, acanx=0, acjx=0, acbdown=0, acbused=0, acbcmp=0, acanp=0, acanheld=0, acrootn=0, acsecfz=0, acauxheld=0, acauxused=0, acauxt=0,
+    acnow=0, acforce=-1, acroothold=0, acrr=-1, acinkh=-1, acshk=-1, acshkh=0, acsbk=-1, acanx=0, acjx=0, acbdown=0, acbused=0, acbcmp=0, acanp=0, acanheld=0, acrootn=0, acsecfz=0, acauxheld=0, acauxused=0,
     aclch=0, aclnote=0, aclvel=0, aclage=0, acvi=0, acheld=0, acfocus=-1, acfocust=0, acfkdone=0,
     acbreath=0, acbreatht=-1e+06, acbrmode=0, acbrt=-1e+06, acbrlast=0, acsechold=0, acfollow=0.7,
     acgbr=2, acnbr=48, aclbv=0, aclbs=0,
@@ -19,7 +19,6 @@ GLOBALS = dict(
     acctlch=1, acctlv=0, acctlv127=0, acccn=0, actg=0, acvtsel=-1, achold=0, acwi=0, acmemn=0, acmemw=0, acmemt=-1e+06, acmemr=0, acmems=0, acmemrate=1, acrec=0,
 )
 ARRAYS = dict(acyh=NV, actim=17, aclev=17, aclsus=NV, acbrch=17, aclvn=NV, aclvc=NV, aclva=NV, acbendt=17, achpc=12, acmemp=4, acmcp=8)
-CLASSES = ["quiet", "pitched", "plucked", "texture"]
 
 
 def midi_in():
@@ -348,7 +347,3 @@ def tables():
     proc(c, "ac-init", [Loop("2048", "acwi", [T("achann", "acwi",
                                                  "if(acwi < 1024, 0.5 - 0.5*cos(6.283185*acwi/1024), 0)")])])
     return c
-
-
-def setup_values():
-    return GLOBALS, ARRAYS

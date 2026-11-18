@@ -472,10 +472,6 @@ def Loop(count, var, steps):
     return st
 
 
-def Raw(fn):
-    return fn
-
-
 def lookup(c, src, names, dest, prefix="symbol "):
     """float index at src -> [sel 0 1 ..] -> 'symbol name' messages into dest (obj, inlet)."""
     bad = [n for n in names if any(ch in str(n) for ch in ",;$")]

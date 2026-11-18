@@ -337,8 +337,6 @@ SERA = ["70s", "80s", "90s", "now"]
 # brightness, the way to the next chord and section, the reverb, the pads' motion, the swell), on change
 SCCBASE = [20, 40, 70, 102]
 SCCRATE = [("2 Hz", 500), ("5 Hz", 200), ("10 Hz", 100)]
-CC_OUT = ["drone", "sub", "pads", "bells", "motion", "textures", "atmos", "cloud", "energy", "density",
-          "brightness", "to chord", "section", "reverb", "pad drift", "swell"]
 ARRAYS.update({n: len(v) for n, v in DATA_TABLES.items()})
 ARRAYS["acsavebuf"] = SAVE_LEN
 ARRAYS.update({n: k for n, k in SAVE_TAIL})

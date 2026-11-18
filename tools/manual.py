@@ -159,7 +159,7 @@ for _var, _name, _g in U.LAYER_KEYS:
             "(a narrow pulse, low-passed) or fm (a slow growl); on its page, the mode (pedal, bass line, both)."
             if _name == "sub" else ""))
 
-SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
+SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does); label@PAGE for one page's own
     "MIDI out": (", ".join(S.MOUT), "Tempo = MIDI clock (24 per beat) following the piece's tempo, with Start and "
                                     "Stop. Notes = the parts listed under MIDI out."),
     "Sync": ("internal, follow clock", "Follow clock: an incoming MIDI clock drives Amble's rhythm; Start restarts "
@@ -236,7 +236,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Memory": ("off, on", "With Memory on, every knob you turn in a section is kept for that section; when the "
                "section comes again - the piece replayed, or loaded from its slot - those knobs glide back to where you "
                "left them (the others stay as they are). Saved with the piece; a new piece starts with an empty memory."),
-    "Glide": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
+    "Glide@MEMORY": (", ".join(n for n, _ in S.SMEMG), "How long a section's kept knobs take to glide back."),
     "Hints": ("off, on", "A key that does something when held says so: a quarter second into the hold, the line "
               "under the form shows what holding it does (hold: CHORD page, hold: compare / load...). A tap shows "
               "nothing."),
@@ -285,7 +285,7 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does)
     "Key plan": (", ".join(S.SKPLAN), "The keys of a COMPOSE piece's sections: the piece's own (auto), home only, "
                  "or each section away from home a 5th or a major 3rd further. The opening, the return and the end "
                  "stay home."),
-    "Breath": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
+    "Breath@PHRASE": (", ".join(n for n, _ in S.SBREATH), "Planned silence: the opening (emerge), the break and the ending (dissolve) stay calm - sparse "
                "bells and motion; the bells and the motion rest a bar as a section "
                "starts, and after each closed phrase (with Phrases; without them now and then, the pads dipping); "
                "the pads hold through. Bells you bring in with their key play through the calm sections."),
@@ -545,6 +545,11 @@ def shot(name, w=3.4, caption=None):
     return img
 
 
+def setup_desc(pg, label):
+    """(choices, what it does) of SETUP page pg's row labelled label (two pages may use one label differently)"""
+    return SETUP_DESC.get(f"{label}@{S.SETUP_NAMES[pg - 1]}") or SETUP_DESC.get(label)
+
+
 def setup_items():
     """[(page, row, label)] from the generator's SETUP rows"""
     out = []
@@ -684,7 +689,7 @@ def story():
     items = setup_items()
     srows = [["Page", "Row", "Item", "Choices", "What it does"]]
     for pg, row, label in sorted(items):
-        ch, desc = SETUP_DESC[label]
+        ch, desc = setup_desc(pg, label)
         srows.append([str(pg), str(row), label, ch, desc])
     s += [PageBreak(), Paragraph("5  SETUP", H1),
           para("The pages come in 7 groups; the header names the group, the page and where it is in the group: "
@@ -859,7 +864,7 @@ def checks():
     """every control and choice in the patch has a description here"""
     missing = [n for p in DT.PAGES for _, n, _ in p if n not in KNOBS]
     missing += [k for k in U.FKEYS if k not in FKEY_DESC]
-    missing += [lab for _, _, lab in setup_items() if lab not in SETUP_DESC]
+    missing += [lab for pg, _, lab in setup_items() if setup_desc(pg, lab) is None]
     for names, desc in ((DT.INMODES, INMODE_DESC), (DT.FLAVOURS, FLAV_DESC), (DT.TEXTURES, TEX_DESC),
                         (DT.DRONES, DRONE_DESC), (DT.CHARACTERS, CHAR_DESC), (DT.ATMOS_NAMES, ATMOS_DESC),
                         (DT.VERBS, VERB_DESC), (DT.ARCHETYPES, ARCH_DESC), (DT.ROLES, ROLE_DESC),

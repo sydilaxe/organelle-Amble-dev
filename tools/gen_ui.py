@@ -11,8 +11,6 @@ from gen_setup import NSET, SETUP_NAMES, GROUP_KEYS, GROUP_START
 from data import MIX_KNOBS
 import gen_setup as _S
 
-SECNAMES = ["emerge", "haze", "drift", "bloom", "swell", "dissolve"]
-DRIFTNAMES = ["haze", "drift", "bloom", "swell", "surge"]
 SIDE = {  # what to do after a knob changes a value (index = page*4 + knob)
     0: [Send("ac-densch")],
     2: [Call("ac-brightupd")],
@@ -272,7 +270,7 @@ def keys():
     c, _ = window(c, "aux", w=3200)
     a = c.ch(c.recv("aux"), "sel 0")
     b = c.to((a, 1), "t b")
-    run_steps(c, (b, 0), [X("1; 0; acnow; 0", "v acauxheld", "v acauxused", "v acauxt", "v acauxlong")])
+    run_steps(c, (b, 0), [X("1; 0; 0", "v acauxheld", "v acauxused", "v acauxlong")])
     run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxlong", [V("acauxlong", "0"), If("acauxused == 0", [
         V("acsetup", "0"), Send("ac-save"), Call("ac-oledall"), Toast("settings saved")])], [
         If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [

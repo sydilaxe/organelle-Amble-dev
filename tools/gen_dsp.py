@@ -728,16 +728,6 @@ def tape():
     return s
 
 
-def allpass(c, src, name, ms, g):
-    w = c.obj("+~")
-    c.c(src, 0, w, 0)
-    c.to(w, f"delwrite~ {name} {ms + 10}")
-    d = c.obj(f"delread~ {name} {ms}")
-    c.c(c.to(d, f"*~ {g}"), 0, w, 1)
-    y = add(c, d, c.to(w, f"*~ {-g}"))
-    return y
-
-
 def master():
     s = Canvas("master", w=2400, h=1200)
     s.comment("Pad bus, 4-line FDN reverb (Householder feedback, two modulated lines), master fade, "

@@ -1919,7 +1919,8 @@ check("settings saved" in b_, "aux held long, no knob: SETUP closes when it is l
 check(not any(l.startswith("ac-sett0") for l in c_.splitlines()), "aux + a black low key: nothing (free)")
 
 # 87. load time: Pd checks each new connection against every one already in its window, so a window's load cost grows
-#     with the square of its connections. No window may hold more than 2000 (the setup window held 7000: a long load)
+#     with the square of its connections. No window may hold more than 600 (the setup window held 7000: a long load;
+#     procs, long step lists and big If branches get their own windows, pdlib)
 import os
 win, stack = [], []
 for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "main.pd")).read().split(";\n"):
@@ -1930,7 +1931,7 @@ for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pa
     elif l.startswith("#X restore"):
         win.append(stack.pop())
 win = sorted(win + stack, key=lambda w: -w[1])
-check(win[0][1] <= 2000, f"no window over 2000 connections (largest: {win[0][0]} {win[0][1]})")
+check(win[0][1] <= 600, f"no window over 600 connections (largest: {win[0][0]} {win[0][1]})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
