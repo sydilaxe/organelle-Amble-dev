@@ -109,6 +109,104 @@ class Canvas:
 
 
 # ======================================================================================
+# Folding: [expr] -> [v name] and [expr v; i] -> [tabwrite t] become one [expr name = ...] / [expr t[i] = v].
+# Pd's expr (0.53 too) evaluates and sends its expressions one at a time, right to left, so a store at
+# expression i happens exactly when the outlet used to set the [v]: before expression i-1 is evaluated. A store
+# finds the [value] by name when it runs, so each stored name needs one [v name] somewhere in the patch
+# (fold_patch adds the missing ones). Fewer boxes and connections: the patch loads faster.
+# ======================================================================================
+
+import re as _re
+
+_NAME = _re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+_STORE = _re.compile(r"(?<![$\\\w])([A-Za-z_]\w*)\s*=(?!=)")     # a store into a value (not tab[i] =, ==, <=, !=)
+
+
+def _fold_canvas(cv, stored, declared):
+    items, conns = cv.items, cv.conns
+    outs, ins = {}, {}
+    for k, (a, ao, b, bi) in enumerate(conns):
+        outs.setdefault((a, ao), []).append(k)
+        ins.setdefault(b, []).append(k)
+    srcs = {a for a, _, _, _ in conns}
+
+    def text(i):
+        kind, p = items[i]
+        return p[2] if kind == "obj" else None
+
+    def lone_sink(i, cls):
+        """item i is [cls name] whose only connections come in (none go out): (name, incoming conns) or None"""
+        t = text(i)
+        if t is None or i in srcs:
+            return None
+        w = t.split()
+        if len(w) != 2 or w[0] not in cls or not _NAME.match(w[1]):
+            return None
+        return w[1], ins.get(i, [])
+
+    dead_items, dead_conns = set(), set()
+    for e, (kind, p) in enumerate(items):
+        if kind != "obj" or not p[2].startswith("expr "):
+            continue
+        exprs = [x.strip() for x in p[2][5:].split(";")]
+        # [expr v; i] -> [tabwrite t]: both outlets into the table writer, nothing else
+        if len(exprs) == 2 and len(outs.get((e, 0), [])) == 1 and len(outs.get((e, 1), [])) == 1:
+            k0, k1 = outs[(e, 0)][0], outs[(e, 1)][0]
+            tw = conns[k0][2]
+            sink = lone_sink(tw, ("tabwrite",))
+            if conns[k1][2] == tw and conns[k0][3] == 0 and conns[k1][3] == 1 and sink and len(sink[1]) == 2:
+                items[e] = ("obj", (p[0], p[1], f"expr {sink[0]}[{exprs[1]}] = ({exprs[0]})"))
+                dead_items.add(tw)
+                dead_conns |= {k0, k1}
+                continue
+        changed = False
+        for i, x in enumerate(exprs):
+            ks = outs.get((e, i), [])
+            if len(ks) != 1 or conns[ks[0]][3] != 0:
+                continue
+            sink = lone_sink(conns[ks[0]][2], ("v", "value"))
+            if not sink or len(sink[1]) != 1:
+                continue
+            exprs[i] = f"{sink[0]} = ({x})"
+            stored.add(sink[0])
+            dead_items.add(conns[ks[0]][2])
+            dead_conns.add(ks[0])
+            changed = True
+        if changed:
+            items[e] = ("obj", (p[0], p[1], "expr " + "; ".join(exprs)))
+    if dead_items:
+        keep = [i for i in range(len(items)) if i not in dead_items]
+        new = {old: n for n, old in enumerate(keep)}
+        cv.items = [items[i] for i in keep]
+        cv.conns = [(new[a], ao, new[b], bi) for k, (a, ao, b, bi) in enumerate(conns) if k not in dead_conns]
+    for kind, p in cv.items:
+        if kind == "sub":
+            _fold_canvas(p[2], stored, declared)
+        elif kind == "obj":
+            w = p[2].split()
+            if len(w) == 2 and w[0] in ("v", "value"):
+                declared.add(w[1])
+            elif w[0] == "expr":
+                stored.update(_STORE.findall(p[2][5:]))
+
+
+def fold_patch(main, *abstractions):
+    """fold the main canvas and the abstractions (in place); every stored name keeps a [v] declaration, in a
+    [pd values] subpatch of the main canvas if nothing else declares it"""
+    stored, declared = set(), set()
+    for cv in (main,) + abstractions:
+        _fold_canvas(cv, stored, declared)
+    missing = sorted(stored - declared)
+    if missing:
+        d = Canvas("values")
+        d.comment("[expr name = ...] stores need the [value]: these names have no other [v]")
+        for n in missing:
+            d.obj("v " + n)
+        main.sub(d)
+    return len(stored), len(missing)
+
+
+# ======================================================================================
 # Steps. A step is a function (canvas, src) -> None, where src is (object, outlet) giving a bang.
 # ======================================================================================
 
@@ -128,6 +226,7 @@ def run_steps(c, src, steps):
     steps = [s for s in steps if s is not None]
     if not steps:
         return
+    steps = _merge(steps)
     if len(steps) == 1:
         steps[0](c, src)
         return
@@ -140,6 +239,45 @@ def run_steps(c, src, steps):
 
 
 CHUNK = 12          # a longer list of steps runs in subpatches of this many (see Sub)
+MERGE = 40          # at most this many stores in one [expr] (Pd's expr takes 100)
+
+
+def _stores(seq):
+    """one step: [expr] with the statements of seq, the first evaluated first (expr goes right to left)"""
+    def st(c, src):
+        c.c(*src, c.obj("expr " + "; ".join(reversed(seq))), 0)
+    st.seq = seq
+    return st
+
+
+def _merge(steps):
+    """Consecutive store steps (V, T, X into [v]s; their .seq) become one [expr] of stores, and stores just before an
+    If go into the If's [expr], ahead of its condition. Pd's expr evaluates its expressions one after another,
+    right to left, each seeing the stores before it: the same order the separate boxes ran in, in one box (an
+    [expr] costs about 30 times another box to create, so the patch loads faster)."""
+    out, run = [], []
+    for st in steps:
+        seq = getattr(st, "seq", None)
+        if seq is not None:
+            if run and len(run) + len(seq) > MERGE:
+                out.append(_stores(run))
+                run = []
+            run = run + list(seq)
+            continue
+        if run and getattr(st, "cond", None) is not None and len(run) < MERGE:
+            out.append(st.after(run))
+        else:
+            if run:
+                out.append(_stores(run))
+            out.append(st)
+        run = []
+    if run:
+        out.append(_stores(run))
+    return out
+
+
+def _simple(name):
+    return bool(_NAME.match(name))
 
 
 def Sub(name, steps):
@@ -160,6 +298,17 @@ def Chunks(name, steps, size=None):
     return [Sub(f"{name}-{k // size + 1}", steps[k:k + size]) for k in range(0, len(steps), size)]
 
 
+def window(c, name, src=None, w=2400):
+    """a child window [pd name] of c, for a block that connects only to itself (Pd's connect is quadratic per
+    window): returns (the child canvas, its [inlet] or None). src (obj, outlet) feeds the inlet."""
+    sc = Canvas(name, w=w)
+    n = c.sub(sc)
+    if src is None:
+        return sc, None
+    c.c(*(src if isinstance(src, tuple) else (src, 0)), n, 0)
+    return sc, sc.obj("inlet")
+
+
 PROCS = set()
 
 
@@ -169,9 +318,10 @@ def proc(c, recv, steps, shared=False):
     listeners to one event, like ac-step's player and its screen mark)."""
     assert recv not in PROCS or shared, f"proc {recv} is defined twice (shared=True on both, if meant)"
     PROCS.add(recv)
-    r = c.recv(recv)
-    run_steps(c, (r, 0), steps)
-    c.col()
+    sc = Canvas(recv, w=2600)           # each proc in its own window (Pd's connect is quadratic per window)
+    r = sc.recv(recv)
+    run_steps(sc, (r, 0), steps)
+    c.sub(sc)
     return r
 
 
@@ -182,6 +332,20 @@ def X(expr, *sinks):
         c.c(*src, e, 0)
         for i, s in enumerate(sinks):
             _sink(c, (e, i), s)
+    # (only stores into [v]s, no $ arguments: it can join its neighbours' [expr], see _merge)
+    exprs = [x.strip() for x in expr.split(";")]
+    seq = []
+    for i, x in enumerate(exprs):
+        s = sinks[i] if i < len(sinks) else None
+        if s is None:
+            seq.append(x)
+        elif isinstance(s, str) and s.startswith("v ") and _simple(s[2:].strip()):
+            seq.append(f"{s[2:].strip()} = ({x})")
+        else:
+            seq = None
+            break
+    if seq is not None and "$" not in expr and len(sinks) <= len(exprs):
+        st.seq = seq[::-1]
     return st
 
 
@@ -197,6 +361,8 @@ def T(table, idx, val):
         tw = c.obj("tabwrite " + table)
         c.c(e, 1, tw, 1)
         c.c(e, 0, tw, 0)
+    if _simple(table) and "$" not in f"{idx} {val}":
+        st.seq = [f"{table}[{idx}] = ({val})"]
     return st
 
 
@@ -235,9 +401,10 @@ def SendL(name, exprs, fmt=None):
     return st
 
 
-def If(cond, steps, else_steps=None):
+def If(cond, steps, else_steps=None, pre=()):
+    """steps if cond, else else_steps. pre: stores evaluated first, in the same [expr] (see _merge)"""
     def st(c, src):
-        e = c.obj("expr " + cond)
+        e = c.obj("expr " + "; ".join([cond] + list(reversed(pre))))
         c.c(*src, e, 0)
         s = c.obj("sel 0")
         c.c(e, 0, s, 0)
@@ -247,6 +414,8 @@ def If(cond, steps, else_steps=None):
             run_steps(c, (b, 0), steps)
         if else_steps:
             run_steps(c, (s, 0), else_steps)
+    st.cond = cond
+    st.after = lambda seq: If(cond, steps, else_steps, list(seq) + list(pre))
     return st
 
 
@@ -294,7 +463,9 @@ def lookup(c, src, names, dest, prefix="symbol "):
 def Line(recv, fmt, parts, dest):
     """Screen/text line: on [r recv] evaluate parts and send fmt (a message using $1..$n) to dest.
     parts: ('f', expr) or ('s', expr, [names])."""
-    def build(c):
+    def build(c0):
+        c = Canvas(recv)                # (in its own window, as a proc)
+        c0.sub(c)
         r = c.recv(recv)
         n = len(parts)
         pk = c.obj("pack " + " ".join("s" if p[0] == "s" else "f" for p in parts))
@@ -310,7 +481,6 @@ def Line(recv, fmt, parts, dest):
         m = c.msg(fmt)
         c.c(pk, 0, m, 0)
         c.c(m, 0, c.obj("s " + dest), 0)
-        c.col()
     return build
 
 

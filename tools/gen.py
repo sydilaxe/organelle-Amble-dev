@@ -57,9 +57,11 @@ def main_patch():
 
 def build(out=OUT):
     os.makedirs(out, exist_ok=True)
-    main_patch().save(os.path.join(out, "main.pd"))
-    D.voice().save(os.path.join(out, "acvoice.pd"))
-    D.live_voice().save(os.path.join(out, "amlive.pd"))
+    main, voice, live = main_patch(), D.voice(), D.live_voice()
+    pdlib.fold_patch(main, voice, live)         # [expr] -> [v] / [tabwrite] pairs become one [expr] store
+    main.save(os.path.join(out, "main.pd"))
+    voice.save(os.path.join(out, "acvoice.pd"))
+    live.save(os.path.join(out, "amlive.pd"))
     seedf = os.path.join(out, "seed.txt")
     if not os.path.exists(seedf):
         open(seedf, "w").write("0;\n")

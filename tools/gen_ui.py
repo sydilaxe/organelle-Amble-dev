@@ -4,7 +4,7 @@ harmony, form, layers, transport, ANCHOR, quick save / recall), aux, the footswi
 The key layout is LOW_KEYS / TOP_KEYS (the manual documents them in that order); keys() wires them, and the
 gestures that use a key's release (low A tap / hold, top B tap / hold / + key, aux + top A) are handled at the top
 of keys()."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line, Later
+from pdlib import window, Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line, Later
 from data import *
 from pdlib import Toast, Arm
 from gen_setup import NSET, SETUP_NAMES, GROUP_KEYS, GROUP_START
@@ -71,7 +71,9 @@ def knobs():
     c = Canvas("knobs", w=2400)
     c.comment("Knob pickup: when a page changes, a knob moves its value proportionally towards the end it "
               "turns to, so nothing jumps")
+    c0 = c
     for k in range(4):
+        c, _ = window(c0, f"knob{k + 1}")
         kr = c.recv(f"knob{k + 1}")
         if k == 0:     # while Root (low G) is held, knob 1 picks the next key
             k1 = c.to(kr, "t f f")              # (right to left: the Root pick, then the knob)
@@ -116,34 +118,35 @@ def knobs():
         c.c(ex, 1, tw2, 1)
         c.c(ex, 0, tw2, 0)
         c.c(c.m((tr, 0), "1"), 0, c.obj(f"v acknown{k}"), 0)
-        c.col()
+    c = c0
     r = c.recv("ac-param")
     names = [n for p in PAGES for _, n, _ in p]
     rt = c.to(r, "route " + " ".join(str(i) for i in range(4 * NP)))
     for i, n in enumerate(names):
-        tb = c.to((rt, i), "t b f")
-        c.c(tb, 1, c.obj("v " + n), 0)
+        pc, inl = window(c, f"param-{n}", (rt, i))
+        tb = pc.to(inl, "t b f")
+        pc.c(tb, 1, pc.obj("v " + n), 0)
         # (a value a morph or a macro offset moves is not your hand: it neither shows nor stops the morph)
         # (your hand, not a morph or a macro: with MEMORY on, kept for the playing section)
         mem = [] if n == "acinput" else [If("acmemon", [T("acsnapt", f"(int(acsec) % {_S.NSNAP})*{len(names)} + {i}", "1"),
                                                          T("acsnapv", f"(int(acsec) % {_S.NSNAP})*{len(names)} + {i}", n)])]
-        run_steps(c, (tb, 0), SIDE.get(i, []) + [If("acmorphing == 0", [T("acmtouch", i, "1"), V("aclastk", str(i)),
-                                                                        Call("ac-oledknob")] + mem), Send("ac-dirty")])
-        c.col(150)
+        run_steps(pc, (tb, 0), SIDE.get(i, []) + [If("acmorphing == 0", [T("acmtouch", i, "1"), V("aclastk", str(i)),
+                                                                         Call("ac-oledknob")] + mem), Send("ac-dirty")])
     # the scaled length shown on the screen
     return c
 
 
 def keys():
-    c = Canvas("keys", w=3200)
+    c = keys_c = Canvas("keys", w=3200)
     c.comment("The Organelle keys are functions: low octave = knob pages, harmony and form (aux + key = that SETUP "
               "page), top octave = layers, input, Freeze, transport. Hold Root (low G) and play a key or MIDI note, "
               "or turn knob 1: the next key. Aux tap: next page. Footswitch: change now.")
-    up = c.to(c.recv("notesRaw"), "unpack f f")
-    c.c(up, 1, c.obj("v ackv"), 0)
-    kb = c.to(up, "t b f")
-    c.c(kb, 1, c.obj("v ackn"), 0)
-    run_steps(c, (kb, 0), [Send("ac-hintstop"), If("ackv > 0", [
+    nc, _ = window(c, "notesRaw", w=3200)
+    up = nc.to(nc.recv("notesRaw"), "unpack f f")
+    nc.c(up, 1, nc.obj("v ackv"), 0)
+    kb = nc.to(up, "t b f")
+    nc.c(kb, 1, nc.obj("v ackn"), 0)
+    run_steps(nc, (kb, 0), [Send("ac-hintstop"), If("ackv > 0", [
         # a key that does something when held: its hint, 0.25 s in, if it is still held alone
         If("acauxheld == 0 && acrkey == 0 && acbdown == 0 && acroothold == 0",
            [V("achk", "ackn"), Arm("ac-hint", "250", stop="ac-hintstop")]),
@@ -228,21 +231,18 @@ def keys():
     ]
     assert len(low) == len(LOW_KEYS) and len(top) == len(TOP_KEYS)
     for i, f in enumerate(low):
-        b = c.obj("t b")
-        c.c(lsel, i, b, 0)
+        kc, inl = window(c, f"lowkey{i}", (lsel, i))
+        b = kc.to(inl, "t b")
         # top E / D# held (with or without aux): a low key picks the motion's / the bells' rhythm - and the held key
         # then neither opens its SHAPE page nor takes the layer in / out when let go; aux + a low key: that SETUP page
         pick = [V("acrsel", str(i)), Send("ac-shpstop"), V("acshkh", "1")]
-        run_steps(c, (b, 0), [If("acrkey == 1", pick + [Call("ac-mop")], [
+        run_steps(kc, (b, 0), [If("acrkey == 1", pick + [Call("ac-mop")], [
             If("acrkey == 2", pick + [Call("ac-bop")], [If("acauxheld", [
                 V("acsetup", "1"), V("acsetpg", str(GROUP_START[GROUP_KEYS.index(i)])), Call("ac-oledsetup")]
                 if i in GROUP_KEYS else [], f)])])])
-        c.col(170)
     for i, f in enumerate(top):
-        b = c.obj("t b")
-        c.c(tsel, i, b, 0)
-        run_steps(c, (b, 0), f)
-        c.col(170)
+        kc, inl = window(c, f"topkey{i}", (tsel, i))
+        run_steps(kc, (kc.to(inl, "t b"), 0), f)
     # top B held 0.6 s with no key: COMPARE (the slot as saved) until it is let go
     proc(c, "ac-cmphold", [If("acbdown && acbused == 0", [V("acbcmp", "1"), Call("ac-cmpon")])])
     proc(c, "ac-ancheld", [V("acanheld", "1"), Call("ac-anchorset")])
@@ -269,6 +269,7 @@ def keys():
     Line("ac-keytoast", "list next key $1", [("s", "acpend", NOTE_NAMES)], "ac-toast")(c)
     Line("ac-inmodetoast", "list input $1", [("s", "acinmode", INMODES)], "ac-toast")(c)
     # aux: knob page
+    c, _ = window(c, "aux", w=3200)
     a = c.ch(c.recv("aux"), "sel 0")
     b = c.to((a, 1), "t b")
     run_steps(c, (b, 0), [X("1; 0; acnow; 0", "v acauxheld", "v acauxused", "v acauxt", "v acauxlong")])
@@ -281,7 +282,7 @@ def keys():
         V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])])
     f = c.ch(c.recv("fs"), "sel 0")
     c.c(c.to((f, 1), "t b"), 0, c.obj("s ac-change"), 0)
-    return c
+    return keys_c
 
 
 def screen():

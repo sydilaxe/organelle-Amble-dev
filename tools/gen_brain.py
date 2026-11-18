@@ -128,9 +128,10 @@ def globals_():
     g.col()
     r = g.recv("ac-init")
     t = g.to(r, "t b b")
-    # defaults
-    for name, val in GLOBALS.items():
-        g.c(g.m((t, 1), str(val)), 0, g.obj("v " + name), 0)
+    # defaults: [expr acx = 1; acy = 0; ...] stores (the [v]s above declare the names), 50 to a box
+    items = list(GLOBALS.items())
+    for k in range(0, len(items), 50):
+        g.c(t, 1, g.obj("expr " + "; ".join(f"{n} = {v:.10g}" for n, v in items[k:k + 50])), 0)
     g.col()
     fam = []
     for _, typ, offs in FAMILIES:
