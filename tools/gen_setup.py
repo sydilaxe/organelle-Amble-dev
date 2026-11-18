@@ -8,7 +8,8 @@ Where things are:
   a saved piece's fields         SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA (saves and loads: gen_saves)
   CC MAP targets                 TARGETS (what a CC can do; gen_live.cc_map acts on them)
 Also the CPU guard (cpu_guard()), whose setting and readout are on the CPU page."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Chunks, Line, Toast, Later
+import re
+from pdlib import Sub, Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Chunks, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
 from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS, TEX_PARAMS, ATMOS_PARAMS, CLOUD_PARAMS
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
@@ -662,6 +663,39 @@ def type_act(var):
     return [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", then)]
 
 
+def _dispatch(item, steps):
+    """steps with a run of If(item == n, [...]) handlers in the middle: the item is computed once and [sel] runs
+    only its own handler(s), in order, instead of every condition in turn (about 150, at each knob step). The same
+    as the chain, since no handler changes the page or the knob (acsetpg, acsk) - only keys and aux do."""
+    pat = re.compile(r"^" + re.escape(item) + r" == (\d+)$")
+
+    def items_of(st):         # If(at(...) [|| at(...)]) with no else: the items it handles, else None
+        parts = (getattr(st, "cond", None) or "").split(" || ")
+        ms = [pat.match(p) for p in parts]
+        return [int(m.group(1)) for m in ms] if all(ms) and not st.els else None
+    keyed = [items_of(st) is not None for st in steps]
+    first, last = keyed.index(True), len(keyed) - 1 - keyed[::-1].index(True)
+    assert all(keyed[first:last + 1]), "SETUP knob handlers: a step that isn't If(at(...)) among them"
+    def timers(sts):         # (an Arm / Later: its [delay] would be built once per item)
+        return any(st.__qualname__.split(".")[0] in ("Arm", "Later") or timers(getattr(st, "then", None))
+                   or timers(getattr(st, "els", None)) for st in sts or [])
+    groups = {}
+    for st in steps[first:last + 1]:
+        assert len(items_of(st)) == 1 or not timers(st.then), "a handler of several SETUP knobs holds a delay"
+        for k in items_of(st):
+            groups.setdefault(k, []).extend(st.then)
+    keys = sorted(groups)
+
+    def dispatch(c, src):
+        e = c.obj("expr " + item)
+        c.c(*src, e, 0)
+        sel = c.obj("sel " + " ".join(str(k) for k in keys))
+        c.c(e, 0, sel, 0)
+        for i, k in enumerate(keys):
+            Sub(f"setup-knob-{k // 4}-{k % 4 + 1}", groups[k])(c, (sel, i))
+    return steps[:first] + [dispatch] + steps[last + 1:]
+
+
 def quick_knobs(item):
     """the quick pages' knobs (item: the page x 4 + the knob)"""
     def at(pg, row):
@@ -689,9 +723,9 @@ def quick_knobs(item):
         pg = SHAPE_PAGE0 + j
         t = "acsubt" if t == "acssub" else t
         st += ([If(at(pg, 1), type_act(t))] if t else []) + [
-            If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call("ac-shpupd")]),
-            If(at(pg, 3), [V(f"acsh{x}d" if x not in SOUND_X else f"acsh{x}p", "acsv"), Call("ac-shpupd")]),
-            If(at(pg, 4), [V(f"acsh{x}w" if x not in SOUND_X else f"acsh{x}q", "acsv"), Call("ac-shpupd")])]
+            If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call(f"ac-shpupd-{x}")]),
+            If(at(pg, 3), [V(f"acsh{x}d" if x not in SOUND_X else f"acsh{x}p", "acsv"), Call(f"ac-shpupd-{x}")]),
+            If(at(pg, 4), [V(f"acsh{x}w" if x not in SOUND_X else f"acsh{x}q", "acsv"), Call(f"ac-shpupd-{x}")])]
     st += [If(at(INPUT_PAGE, 1), [V("acsnew", f"int(acsv*{len(INMODES) - 0.01})"), If("acsnew != acinmode", [
                V("acinmode", "acsnew"), Call("ac-inputupd"), Call("ac-scr5")])]),
            If(at(INPUT_PAGE, 2), knob("acinput")),
@@ -726,7 +760,7 @@ def setup():
     def at(page, row):
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
         return f"{item} == {SETUP_NAMES.index(page) * 4 + row - 1}"
-    run_steps(c, (tb, 0), Chunks("setup-knob", [
+    run_steps(c, (tb, 0), _dispatch(item, [
         If("acsetpg != acsetpgl", [X("1; 1; 1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsvpm3", "v acsvpm4", "v acsetpgl")]),
         If(at("GENERAL", 1), [V("acmout", "int(acsv*3.99)"), If("acmout == 0 || acmout == 3", [Call("ac-clockstop")],
                                                                [Call("ac-clockstart")]),

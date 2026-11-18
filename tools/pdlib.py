@@ -201,11 +201,49 @@ def _fold_canvas(cv, stored, declared):
                 stored.update(_STORE.findall(p[2][5:]))
 
 
+_PORTS = ("inlet", "inlet~", "outlet", "outlet~")
+
+
+def _wrap_canvas(cv):
+    """A subpatch that resamples (switch~ N 1 0.5) still runs its inlets' and outlets' resampling every block while
+    switched off (Pd adds them outside the part switch~ skips). A canvas with .wrap = a receive name goes inside an
+    outer subpatch at the parent's rate whose own [switch~] that name switches (off at load): off, Pd skips all of
+    it. The outer ports sit at the inner ones' x, so their order (and every connection to them) is unchanged."""
+    for idx, (kind, p) in enumerate(cv.items):
+        if kind != "sub":
+            continue
+        inner = p[2]
+        _wrap_canvas(inner)
+        if not getattr(inner, "wrap", None):
+            continue
+        ports = [(it[1][2].split()[0], it[1][0], it[1][1]) for it in inner.items
+                 if it[0] == "obj" and it[1][2].split()[0] in _PORTS]
+        for side in ("inlet", "outlet"):
+            xs = [x for k, x, _ in ports if k.startswith(side)]
+            assert len(xs) == len(set(xs)), f"[pd {inner.name}]: two {side}s at one x (their order is unclear)"
+        outer = Canvas(inner.name, w=inner.w, h=inner.h)
+        outer.comment(f"switched off with {inner.wrap} 0: then none of [pd {inner.name}] runs, not even its resampling")
+        sw = outer.obj("switch~")
+        outer.c(outer.recv(inner.wrap), 0, sw, 0)
+        outer.c(outer.m(outer.obj("loadbang"), "0"), 0, sw, 0)
+        n = outer.sub(inner, 20, 300)
+        for side in ("inlet", "outlet"):
+            mine = sorted((x, k, y) for k, x, y in ports if k.startswith(side))
+            for rank, (x, k, y) in enumerate(mine):
+                b = outer.obj(k, x, 5 if side == "inlet" else 600)
+                if side == "inlet":
+                    outer.c(b, 0, n, rank)
+                else:
+                    outer.c(n, rank, b, 0)
+        cv.items[idx] = ("sub", (p[0], p[1], outer))
+
+
 def fold_patch(main, *abstractions):
     """fold the main canvas and the abstractions (in place); every stored name keeps a [v] declaration, in a
     [pd values] subpatch of the main canvas if nothing else declares it"""
     stored, declared = set(), set()
     for cv in (main,) + abstractions:
+        _wrap_canvas(cv)
         _fold_canvas(cv, stored, declared)
     missing = sorted(stored - declared)
     if missing:
@@ -394,6 +432,27 @@ def T(table, idx, val):
     return st
 
 
+def ACopy(src, src_on, n, dst, dst_on=0):
+    """dst[dst_on + i] = src[src_on + i] for i < n, in one go: [array get] -> [array set] (the same floats as a Loop
+    of T, without its per-element [until] / [expr] work, so a big copy doesn't take a long scheduler tick)"""
+    def st(c, src_):
+        g = c.obj(f"array get {src} {src_on} {n}")
+        c.c(*src_, g, 0)
+        c.c(g, 0, c.obj(f"array set {dst} {dst_on}"), 0)
+    st.size = 2
+    return st
+
+
+def AZero(arr, on, n):
+    """arr[on + i] = 0 for i < n, in one go (a message of n zeros into [array set])"""
+    def st(c, src_):
+        m = c.msg(" ".join(["0"] * n))
+        c.c(*src_, m, 0)
+        c.c(m, 0, c.obj(f"array set {arr} {on}"), 0)
+    st.size = 2
+    return st
+
+
 def Send(name, text=None):
     """bang [s name], or send a fixed message."""
     def st(c, src):
@@ -442,7 +501,7 @@ def If(cond, steps, else_steps=None, pre=()):
             run_steps(c, (b, 0), _boxed("then", steps))
         if else_steps:
             run_steps(c, (s, 0), _boxed("else", else_steps))
-    st.cond = cond
+    st.cond, st.then, st.els = cond, steps, else_steps
     st.size = 3 + _size(steps or []) + _size(else_steps or [])
     st.after = lambda seq: If(cond, steps, else_steps, list(seq) + list(pre))
     return st

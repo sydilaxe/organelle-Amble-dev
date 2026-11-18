@@ -3,7 +3,7 @@
 saves.txt holds one line per saved slot: the slot number, then SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA, SAVE_TAIL and
 SAVE_MORE (all in gen_setup). A load sets them (the knobs through the morph engine, gen_perform) and prepares the piece; an empty slot
 1-6 loads a factory piece from factory.txt, written at build time by factory_rows()."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast
+from pdlib import ACopy, AZero, Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast
 from data import FACTORY, PAGES, NK
 from gen_setup import (GLOBALS, KNOBS, SAVE_SCALARS, SAVE_ARRAYS, SAVE_EXTRA, SAVE_EXTRA_AT, SAVE_LEN, SOUND_ONLY,
                        SAVE_TAIL, SAVE_TAIL_AT, SAVE_MORE, SAVE_MORE_AT,
@@ -69,14 +69,14 @@ def saves():
     off = len(SAVE_SCALARS)
     steps = [T("acsavebuf", i, n) for i, n in enumerate(SAVE_SCALARS)]
     for name, n in SAVE_ARRAYS:
-        steps += [Loop(str(n), "aci", [T("acsavebuf", f"{off} + aci", f"{name}[int(aci)]")])]
+        steps += [ACopy(name, 0, n, "acsavebuf", off)]
         off += n
     steps = [X("int(actonic) % 12; acsci", "v acstonic", "v acsscale")] + steps
     off2 = SAVE_EXTRA_AT
     steps += [T("acsavebuf", off2 + i, n) for i, (n, _) in enumerate(SAVE_EXTRA)]
     off3 = SAVE_TAIL_AT
     for name, n in SAVE_TAIL:
-        steps += [Loop(str(n), "aci", [T("acsavebuf", f"{off3} + aci", f"{name}[int(aci)]")])]
+        steps += [ACopy(name, 0, n, "acsavebuf", off3)]
         off3 += n
     steps += [T("acsavebuf", SAVE_MORE_AT + i, n) for i, (n, _) in enumerate(SAVE_MORE)]
     proc(c, "ac-savepiece", steps + [Send("ac-savewrite"), Call("ac-slotcheck"), Call("ac-basesetnow"),
@@ -104,7 +104,7 @@ def saves():
     # (the fields a line saved before them lacks keep their defaults)
     row = c.to(c.recv("ac-loadrow"), "t b l b")
     run_steps(c, (row, 2), [T("acsavebuf", SAVE_EXTRA_AT + i, str(d)) for i, (_, d) in enumerate(SAVE_EXTRA)]
-              + [Loop(str(sum(n for _, n in SAVE_TAIL)), "aci", [T("acsavebuf", f"{SAVE_TAIL_AT} + aci", "0")])]
+              + [AZero("acsavebuf", SAVE_TAIL_AT, sum(n for _, n in SAVE_TAIL))]
               + [T("acsavebuf", SAVE_MORE_AT + i, str(d)) for i, (_, d) in enumerate(SAVE_MORE)])
     c.c((row, 1), 0, c.obj("array set acsavebuf"), 0)
     c.c((row, 0), 0, c.obj("s ac-loadapply"), 0)
@@ -124,12 +124,12 @@ def saves():
             steps += [V(n, f"acsavebuf[{i}]")]
     arr = []
     for name, n in SAVE_ARRAYS:
-        arr += [Loop(str(n), "aci", [T(name, "aci", f"acsavebuf[int({off} + aci)]")])]
+        arr += [ACopy("acsavebuf", off, n, name)]
         off += n
     steps += [If("acrecall == 0 || acstopped", arr)]
     off3 = SAVE_TAIL_AT
     for name, n in SAVE_TAIL:          # (the section memory: a recall of "sound only" keeps the piece's)
-        steps += [If("acrecall == 0 || acstopped", [Loop(str(n), "aci", [T(name, "aci", f"acsavebuf[int({off3} + aci)]")])])]
+        steps += [If("acrecall == 0 || acstopped", [ACopy("acsavebuf", off3, n, name)])]
         off3 += n
     for i, (n, _) in enumerate(SAVE_EXTRA):
         if n in knobs:

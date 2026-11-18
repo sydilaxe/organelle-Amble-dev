@@ -22,10 +22,14 @@ def switched(name, gain, block=None, hook=None):
     d = s.obj("delay")
     s.c(s.to((up, 1), "+ 100"), 0, d, 1)
     sw = s.obj(f"switch~ {block}" if block else "switch~")
-    st = s.obj("t f f")
+    resampled = bool(block) and len(str(block).split()) == 3 and str(block).split()[2] != "1"
+    st = s.obj("t f f f" if resampled else "t f f")
     s.c(st, 0, sw, 0)
+    if resampled:           # (an outer subpatch switches with it, so its resampling stops too: pdlib._wrap_canvas)
+        s.wrap = f"ac-sw-{name}"
+        s.c(st, 1, s.obj("s " + s.wrap), 0)
     if hook:
-        s.c(s.ch((st, 1), "change", "sel 1"), 0, s.obj("s " + hook), 0)
+        s.c(s.ch((st, 2 if resampled else 1), "change", "sel 1"), 0, s.obj("s " + hook), 0)
     sel = s.to((up, 0), "sel 0")
     s.c(sel, 0, d, 0)
     s.c(s.m(d, "0"), 0, st, 0)
@@ -730,8 +734,7 @@ def tape():
 
 def master():
     s = Canvas("master", w=2400, h=1200)
-    s.comment("Pad bus, 4-line FDN reverb (Householder feedback, two modulated lines), master fade, "
-              "compressor, clip")
+    s.comment("Pad bus, character, the send buses into the reverbs (Bloom, Hall), master fade, compressor, clip")
     pg = s.ch(s.recv("ac-g-pad"), "line~")
     pL, pR = shaped(s, mul(s, s.obj("catch~ ac-padL"), pg), mul(s, s.obj("catch~ ac-padR"), pg), "p")
     # the piece's character on the pads (chorus, tape, ring, crush) - dry scaled by ac-chdry

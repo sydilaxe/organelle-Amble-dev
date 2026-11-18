@@ -804,13 +804,17 @@ def verb():
     # the layers' SHAPE stages (gen_dsp.shaped): tone 0..1 (50 % open: below, a low-pass from 20 kHz down to 300 Hz;
     # above, a high-pass from 5 Hz up to 2 kHz), drive, width (x2)
     from gen_dsp import SHAPE_LAYERS
-    proc(c, "ac-shpupd", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
-                                                f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
-                                                f"acsh{x}d", f"2*acsh{x}w"]) for x in SHAPE_LAYERS]
-         + [SendL("ac-subt", ["acsubt"])]          # (and the sub's sound: its SHAPE page)
-         # (each layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
-         + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for x in "dsptac" for j in "pq"]
-         + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for x in "dsptac" for j in "pq"])
+    # one proc per layer (ac-shpupd-<x>): a SHAPE knob sends only its own layer's values - all of them reach some
+    # 700 receivers (each pad type in each voice has its own), a long tick to repeat at every knob step
+    for x in SHAPE_LAYERS:
+        proc(c, f"ac-shpupd-{x}", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
+                                                       f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
+                                                       f"acsh{x}d", f"2*acsh{x}w"])]
+             + ([SendL("ac-subt", ["acsubt"])] if x == "s" else [])      # (and the sub's sound: its SHAPE page)
+             # (the layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
+             + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for j in "pq" if x in "dsptac"]
+             + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for j in "pq" if x in "dsptac"])
+    proc(c, "ac-shpupd", [Call(f"ac-shpupd-{x}") for x in SHAPE_LAYERS])
     # (after the defaults: ac-init's other receivers set them, in no set order)
     c.c(c.to(c.recv("ac-init"), "delay 20"), 0, c.obj("s ac-shpupd"), 0)
     proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])

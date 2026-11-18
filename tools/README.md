@@ -82,6 +82,14 @@ every one already in its window (quadratic per window). So the build keeps both 
   A step must not hold a box of the canvas it was written in (it may run in another window): `Canvas.c` stops the
   build on a connection between two windows. Use a send instead. Check 87 keeps every window under 600 connections.
 
+**Ticks.** Pd runs a message and everything it triggers in one scheduler tick; a long one makes the audio drop out.
+- `ACopy(src, onset, n, dst, onset)` / `AZero(arr, onset, n)` copy or clear a block of an array in one go
+  (`[array get]` -> `[array set]`), not element by element in a `Loop` (saving and loading a slot use them).
+- SETUP's knob handlers are reached through one `[sel]` on the page and knob (`gen_setup._dispatch`), not by testing
+  every `If(at(...))` in turn; a SHAPE knob updates only its own layer (`ac-shpupd-<x>`; `ac-shpupd` = all).
+- A subpatch that resamples (`switch~ N 1 0.5`) still resamples its inlets and outlets while switched off: `switched()`
+  marks it (`.wrap`) and `pdlib._wrap_canvas` puts it in an outer `[switch~]` that goes off with it.
+
 ## Where things are
 
 | To find... | Look in |
