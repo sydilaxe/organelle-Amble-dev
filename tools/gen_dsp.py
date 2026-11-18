@@ -632,10 +632,15 @@ def bells():
         # the note's place; its upper partials fan out a little to either side
         bpn = s.to((up, 2), "expr cos($f1*1.5708); sin($f1*1.5708); cos(max(0, $f1-0.22)*1.5708); "
                             "sin(max(0, $f1-0.22)*1.5708); cos(min(1, $f1+0.22)*1.5708); sin(min(1, $f1+0.22)*1.5708)")
+        # (the BELLS SHAPE page's Bright and Decay: the upper partials x0..x2, the decay x1/3..x3)
         for k, (amp, dec) in enumerate(((0.32, 5200), (0.15, 2600), (0.08, 1100))):
             fr = s.to(mf, "* 1")
             s.c(bs, k, fr, 1)
-            env = s.ch(s.m(s.to((up, 1), f"* {amp}"), f"$1, 0 {dec}"), "vline~")
+            ex = s.to((up, 1), f"expr $f1*{amp}" + ("*2*acshbp" if k else "") + f"; {dec}*pow(3, acshbq*2 - 1)")
+            pk = s.obj("pack f f")
+            s.c(ex, 1, pk, 1)
+            s.c(ex, 0, pk, 0)
+            env = s.ch(s.m(pk, "$1, 0 $2"), "vline~")
             part = mul(s, s.to(fr, "osc~"), mul(s, env, env))
             for side, dst in ((0, L), (1, R)):
                 m = s.to(part, "*~ 0.7")
@@ -876,10 +881,15 @@ def motion_fm():
         ap = s.obj("pack f 500")
         s.c(vel, 1, ap, 0)
         s.c(t2, 1, ap, 1)
-        aenv = s.ch(s.m(ap, "$1 4, 0 $2 4"), "vline~")
+        # (the MOTION SHAPE page's Index and Decay: the FM index x0..x2, the decay x1/3..x3)
+        apx = s.to(ap, "expr $f1; $f2*pow(3, acshmq*2 - 1)")
+        ap2 = s.obj("pack f f")
+        s.c(apx, 1, ap2, 1)
+        s.c(apx, 0, ap2, 0)
+        aenv = s.ch(s.m(ap2, "$1 4, 0 $2 4"), "vline~")
         iv = s.to((vel, 0), "* 2")
         s.c(t2, 0, iv, 1)
-        ienv = s.ch(s.m(iv, "$1, 0 140"), "vline~")
+        ienv = s.ch(s.m(s.to(iv, "expr $f1*2*acshmp"), "$1, 0 140"), "vline~")
         # pitch: carrier, and a modulator at the piece's ratio
         hz = s.ch((pp, 0), "mtof", "t f f")
         fsig = s.to((hz, 1), "sig~")

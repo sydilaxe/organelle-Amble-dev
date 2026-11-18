@@ -68,11 +68,12 @@ def _env(s, vel, hz, amp, att, dec, slen, sq=True):
     return mul(s, e, e) if sq else e
 
 
-def _partials(s, vel, hz, parts, dec, slen, scale_hz=None):
+def _partials(s, vel, hz, parts, dec, slen, scale_hz=None, bright=None):
     """sine partials (ratio, amp, decay factor) of hz, each with its own struck envelope; ratios None = from
-    [r ac-bellset] (the piece's bar tuning)"""
+    [r ac-bellset] (the piece's bar tuning); bright: an expression scaling every partial above the first"""
     sm = s.obj("*~ 1")
     for k, (ratio, amp, df) in enumerate(parts):
+        amp = f"{amp}*{bright}" if bright and k > 0 else amp
         fr = s.to(hz, f"* {ratio if ratio is not None else 1}")
         if ratio is None:
             s.c(scale_hz, k, fr, 1)
@@ -109,9 +110,9 @@ def engine(layer, kind):
                       "low-pass gate, the filter and the level closing together like a vactrol",
                "gong": "Gong: FM as on the DX7's bells - two modulators at inharmonic ratios (1.41, 2.83); the "
                        "index swells for 0.12 s after the strike, then falls slower than the level (a tam-tam's bloom)",
-               "chip": "Chip: a game console's pulse - a narrow pulse for hard notes, a square for soft ones (on the motion, "
-                       "each note an arpeggio: root, 5th, octave, 18 times a second), its "
-                       "level stepping down in 16 steps (4-bit), a short tick of pitch at the start"}[kind])
+               "chip": "Chip: a game console's pulse, its level stepping down in 16 steps (4-bit). Duty: 0 the raw "
+                       "square; up, a narrower pulse for hard notes, a tick of pitch at the start, then a slow "
+                       "pulse-width sweep. Arp: the console arpeggio - root, 5th (and octave), 8-32 times a second"}[kind])
     # the length of the layer's notes: the bells ring their full decay; the motion follows the piece's ping
     # decay (250-950 ms) times the engine's own factor
     # (a value per engine: [v] names are global)
@@ -123,6 +124,14 @@ def engine(layer, kind):
         t2 = s.to(s.recv("ac-mtimbre2"), "unpack f f")
         s.c(s.to((t2, 1), f"expr $f1/{STRIKE_DEC[kind]}*{STRIKE_MDEC[kind]}"), 0, lv, 0)
         s.c(s.m(s.obj("loadbang"), f"{600 / STRIKE_DEC[kind] * STRIKE_MDEC[kind]:.4f}"), 0, lv, 0)
+    # the layer's two SHAPE parameters (its key held, knobs 3 and 4), read at each note: P the engine's
+    # character (ENGINE_PARAMS: 50 % = as designed), Q its decay (x1/3 .. x3; 50 % = as designed) - for the chip,
+    # its arpeggio instead
+    x = "b" if layer == "bell" else "m"
+    P, Q = f"acsh{x}p", f"acsh{x}q"
+    kP = f"(2*{P})"
+    if kind != "chip":
+        slen = f"{slen}*pow(3, {Q}*2 - 1)"
     dec = STRIKE_DEC[kind]
     L, R = s.obj("*~"), s.obj("*~")
     s.c(ln, 0, L, 1)
@@ -136,11 +145,11 @@ def engine(layer, kind):
         hz = s.to((up, 0), "mtof")
         pn = s.to((up, 2), "expr cos($f1*1.5708); sin($f1*1.5708)")
         if kind == "bars":
-            sig = _partials(s, vel, hz, [(None, 0.32, 1.0), (None, 0.15, 0.5), (None, 0.08, 0.21)], dec, slen, bset)
+            sig = _partials(s, vel, hz, [(None, 0.32, 1.0), (None, 0.15, 0.5), (None, 0.08, 0.21)], dec, slen, bset, kP)
         elif kind == "fm":
             rat = s.to(hz, "* 1")
             s.c(s.recv("ac-mtimbre"), 0, rat, 1)
-            ie = _env(s, vel, hz, 3.0, 1, int(dec * 0.12), slen, sq=False)
+            ie = _env(s, vel, hz, f"3.0*{kP}", 1, int(dec * 0.12), slen, sq=False)
             fsig = s.to(hz, "sig~")
             dev = mul(s, mul(s, s.to(rat, "osc~"), ie), fsig)
             sig = mul(s, s.to(add(s, fsig, dev), "osc~"), _env(s, vel, hz, 0.5, 3, dec, slen))
@@ -156,7 +165,7 @@ def engine(layer, kind):
             sub = s.ch(s.to(fv, "*~ 0.5"), "osc~", "*~ 0.35")
             src = add(s, saw, sub)
             # cutoff: from 2-11x the note (by velocity) down to 1.2x
-            cx = s.obj(f"expr $f1*(2 + 9*$f2); $f1*1.2; {int(dec * 0.35)}*{slen}")
+            cx = s.obj(f"expr $f1*(2 + 9*$f2)*(0.25 + 1.5*{P}); $f1*1.2; {int(dec * 0.35)}*{slen}")
             s.c(vel, 0, cx, 1)
             s.c(hz, 0, cx, 0)
             ck = s.obj("pack f f f")
@@ -168,9 +177,9 @@ def engine(layer, kind):
             s.c(cf, 0, vf, 1)
             sig = mul(s, s.to((vf, 1), "*~ 1"), _env(s, vel, hz, 0.6, 2, dec, slen))
         elif kind == "wood":
-            sig = _partials(s, vel, hz, [(1, 0.5, 1.0), (3.93, 0.2, 0.2), (9.2, 0.07, 0.06)], dec, slen)
+            sig = _partials(s, vel, hz, [(1, 0.5, 1.0), (3.93, 0.2, 0.2), (9.2, 0.07, 0.06)], dec, slen, bright=kP)
             # the mallet: a noise knock through a band-pass at about 2.5x the note
-            kn = mul(s, noise, _env(s, vel, hz, 0.9, 0.5, 9, 1))
+            kn = mul(s, noise, _env(s, vel, hz, f"0.9*{kP}", 0.5, 9, 1))
             bp = s.obj("bp~ 1000 2")
             s.c(kn, 0, bp, 0)
             s.c(s.to(hz, "* 2.5"), 0, bp, 1)
@@ -178,7 +187,7 @@ def engine(layer, kind):
         elif kind == "wave":
             fs = s.to(hz, "sig~")
             ta, tb = s.to(fs, "tabosc4~ acwtA"), s.to(fs, "tabosc4~ acwtB")
-            me = _env(s, vel, hz, 1.0, 1, int(dec * 0.25), slen, sq=False)    # bright at the strike
+            me = _env(s, vel, hz, kP, 1, int(dec * 0.25), slen, sq=False)    # bright at the strike
             mo = s.to(me, "clip~ 0 1")
             dif = s.obj("-~")
             s.c(tb, 0, dif, 0)
@@ -187,8 +196,8 @@ def engine(layer, kind):
             sh = s.ch(s.to(fs, "*~ 2.003"), "tabosc4~ acwtB", "*~ 0.15")
             sig = mul(s, add(s, body, sh), _env(s, vel, hz, 0.45, 3, dec, slen))
         elif kind == "kalimba":
-            sig = _partials(s, vel, hz, [(1, 0.55, 1.0), (5.9, 0.12, 0.12), (13.6, 0.05, 0.05)], dec, slen)
-            ck = mul(s, s.obj("noise~"), _env(s, vel, hz, 0.35, 0.3, 4, 1))
+            sig = _partials(s, vel, hz, [(1, 0.55, 1.0), (5.9, 0.12, 0.12), (13.6, 0.05, 0.05)], dec, slen, bright=kP)
+            ck = mul(s, s.obj("noise~"), _env(s, vel, hz, f"0.35*{kP}", 0.3, 4, 1))
             bp = s.obj("bp~ 3000 3")
             s.c(ck, 0, bp, 0)
             s.c(bp, 0, sig, 0)
@@ -202,56 +211,68 @@ def engine(layer, kind):
             fv = s.ch(s.m(pk, "$1, $2 60"), "vline~")
             sig = s.obj("*~ 1")
             for ratio, amp, df in ((1, 0.45, 1.0), (2, 0.3, 0.6), (3, 0.16, 0.35)):
-                e = _env(s, vel, hz, amp, 2, int(dec * df), slen)
+                e = _env(s, vel, hz, amp if ratio == 1 else f"{amp}*{kP}", 2, int(dec * df), slen)
                 s.c(mul(s, s.ch(fv, f"*~ {ratio}", "osc~"), e), 0, sig, 0)
         elif kind == "pluck":
-            sig = _partials(s, vel, hz, [(n, 0.5 / n, 1.0 / n ** 0.8) for n in range(1, 7)], dec, slen)
+            sig = _partials(s, vel, hz, [(n, 0.5 / n, 1.0 / n ** 0.8) for n in range(1, 7)], dec, slen, bright=kP)
         elif kind in MODES:
-            sig = _partials(s, vel, hz, [(r, a, d) for r, a, d, _ in MODES[kind]], dec, slen)
+            # (Hardness: the upper modes and the strike, 0.4 .. 1.6 of their own)
+            sig = _partials(s, vel, hz, [(r, a, d) for r, a, d, _ in MODES[kind]], dec, slen, bright=f"(0.4 + 1.2*{P})")
             for r, a, d, tw in MODES[kind]:
                 if tw:          # the mode's twin, a few tenths of a Hz up: the slow beating of a real bowl
                     o = s.ch(s.to(hz, f"* {r}"), f"+ {tw}", "osc~")
                     s.c(mul(s, o, _env(s, vel, hz, a * 0.6, 2, int(dec * d), slen)), 0, sig, 0)
             # the strike: a short noise knock through a band at twice the note (softer for the bowl's mallet)
-            kn = mul(s, noise, _env(s, vel, hz, {"bowl": 0.25, "plate": 0.5, "crystal": 0.3}[kind], 0.5, 5, 1))
+            kn = mul(s, noise, _env(s, vel, hz, f"{ {'bowl': 0.25, 'plate': 0.5, 'crystal': 0.3}[kind]}*{kP}", 0.5, 5, 1))
             bp = s.obj("bp~ 1000 3")
             s.c(kn, 0, bp, 0)
             s.c(s.to(hz, "* 2"), 0, bp, 1)
             s.c(bp, 0, sig, 0)
         elif kind == "lpg":
             # the fold: sin(pi/2 x) - a sine below 1, folding back above it - its depth by velocity, falling
-            fd = s.ch(_env(s, vel, hz, 3.0, 1, int(dec * 0.5), slen, sq=False), "+~ 0.6")
+            fd = s.ch(_env(s, vel, hz, f"3.0*{kP}", 1, int(dec * 0.5), slen, sq=False), "+~ 0.6")
             x = mul(s, s.to(hz, "osc~"), fd)
             fo = s.ch(x, "*~ 0.25", "-~ 0.25", "cos~")
             # the gate: one envelope closes the low-pass (from the note + 6 kHz down to the note) and the level
-            cf = s.to(add(s, s.to(hz, "sig~"), _env(s, vel, hz, 6000, 1, int(dec * 0.45), slen)), "clip~ 30 12000")
+            cf = s.to(add(s, s.to(hz, "sig~"), _env(s, vel, hz, f"6000*{kP}", 1, int(dec * 0.45), slen)), "clip~ 30 12000")
             lp = s.obj("vcf~ 0.8")
             s.c(fo, 0, lp, 0)
             s.c(cf, 0, lp, 1)
             sig = mul(s, s.to((lp, 1), "*~ 1"), _env(s, vel, hz, 0.55, 1, dec, slen))
         elif kind == "gong":
             fsig = s.to(hz, "sig~")
-            i1 = _env(s, vel, hz, 4.5, 120, int(dec * 0.7), slen, sq=False)     # (rising 120 ms: the bloom)
-            i2 = _env(s, vel, hz, 1.2, 40, int(dec * 0.3), slen, sq=False)
+            i1 = _env(s, vel, hz, f"4.5*{kP}", 120, int(dec * 0.7), slen, sq=False)     # (rising 120 ms: the bloom)
+            i2 = _env(s, vel, hz, f"1.2*{kP}", 40, int(dec * 0.3), slen, sq=False)
             d1 = mul(s, mul(s, s.ch(hz, "* 1.41", "osc~"), i1), fsig)
             d2 = mul(s, mul(s, s.ch(hz, "* 2.83", "osc~"), i2), fsig)
             car = s.to(add(s, add(s, fsig, d1), d2), "osc~")
             sig = mul(s, car, _env(s, vel, hz, 0.42, 4, dec, slen))
         elif kind == "chip":
             # the duty: 0.5 (soft) .. 0.125 (hard); a pitch tick from a 4th up in 25 ms
-            du = s.obj("expr 0.5 - 0.375*$f1")
+            # Duty (P): 0 the raw square (50 %), no tick; up to 50 % velocity narrows the pulse (hard: 12.5 %) and a
+            # pitch tick comes in; above, a slow pulse-width sweep
+            du = s.obj(f"expr 0.5 - 0.375*$f1*min(1, 2*{P})")
             s.c(vel, 0, du, 0)
-            tk = s.obj("expr $f1*1.335; $f1")
+            tk = s.obj(f"expr $f1*(1 + 0.335*min(1, 2*{P})); $f1")
             s.c(hz, 0, tk, 0)
             pk = s.obj("pack f f")
             s.c(tk, 1, pk, 1)
             s.c(tk, 0, pk, 0)
             fv = s.ch(s.m(pk, "$1, $2 25"), "vline~")
             pl = s.obj("expr~ ($v1 < $v2)*2 - 1")
-            if layer == "motion":     # (the console arpeggio: each note runs root, 5th, octave, 18 times a second)
-                fv = mul(s, fv, s.ch(s.obj("phasor~ 18"), "expr~ if($v1 < 0.333, 1, if($v1 < 0.667, 1.4983, 2))"))
+            # Arp (Q): off in its lower half; then each note runs root, 5th (to 75 %), then root, 5th, octave,
+            # faster as it turns (8 .. 32 times a second) - the console arpeggio
+            ax = s.obj(f"expr 8 + 48*max(0, {Q} - 0.5); ({Q} > 0.5) + ({Q} > 0.75)")
+            s.c(hz, 0, ax, 0)
+            am = s.obj("expr~ if($v2 < 0.5, 1, if($v1 < 0.333, 1, if($v1 < 0.667, 1.4983, if($v2 < 1.5, 1, 2))))")
+            s.c(s.to(ax, "phasor~"), 0, am, 0)
+            s.c(s.to((ax, 1), "sig~"), 0, am, 1)
+            fv = mul(s, fv, am)
             s.c(s.to(fv, "phasor~"), 0, pl, 0)
-            s.c(s.to(du, "sig~"), 0, pl, 1)
+            pw = s.obj(f"expr max(0, {P} - 0.5)*0.5")
+            s.c(hz, 0, pw, 0)
+            dsig = s.to(add(s, s.to(du, "sig~"), mul(s, s.obj("osc~ 0.7"), s.to(pw, "sig~"))), "clip~ 0.06 0.94")
+            s.c(dsig, 0, pl, 1)
             e = s.to(_env(s, vel, hz, 1.0, 1, dec, slen), "expr~ floor($v1*15)/15")
             sig = mul(s, s.to(pl, "lop~ 9000"), s.to(e, "*~ 0.22"))
         else:   # metal

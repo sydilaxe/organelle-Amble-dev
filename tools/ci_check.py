@@ -669,8 +669,8 @@ vals = open(os.path.join(d, "settings.txt")).read().split()
 log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (500, "aux 1"), (550, "aux 0"),
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
-#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC joined)
-check(len(vals) == len(GS.SETTINGS) == 147 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+#  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC and the engines' SHAPE parameters joined)
+check(len(vals) == len(GS.SETTINGS) == 151 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -1753,6 +1753,56 @@ log, _ = run([(10, "aclen 0.3"), (20, "acmbell 2"), (50, "ac-setseed 303")], 120
 L_ = log.splitlines()
 nb = sum(1 for l in L_[max(k for k, l in enumerate(L_) if l.startswith("ac-setseed")):] if l.startswith("ac-bell:"))
 check(not errors(log) and nb >= 12, f"bells brought in play in a calm opening ({nb} notes in 2 minutes)")
+# (and the bells key: on but not struck yet, the bells sound silent - a tap brings them in, a note at once)
+log, _ = run([(10, "acans 1"), (10, "acdens 0.2"), (10, "acsform 6"), (10, "acsroles 0 2 2 8 8 8 8 8 8 8 8 8 8"),
+              (50, "ac-setseed 303"), (4800, "h-mark bang"), (5000, "notesRaw 75 100"), (5100, "notesRaw 75 0")], 7,
+             prints=("ac-bell", "ac-toast", "h-mark"))
+seg = log.split("h-mark: bang")[-1]
+pre = [l for l in log.split("h-mark: bang")[0].splitlines()[-200:] if l.startswith("ac-bell:")]
+tl = [l.split("list ", 1)[1] for l in seg.splitlines() if l.startswith("ac-toast") and "bells" in l]
+check("bells in" in tl and sum(1 for l in seg.splitlines() if l.startswith("ac-bell:")) >= 1,
+      f"bells key: on but not struck yet, a tap brings them in and they sound at once ({tl}, before: {len(pre)} notes)")
+
+# 82. the bells' and motion's engine parameters (their SHAPE pages, knobs 3 and 4): the chip raw at Duty 0 (a square:
+#     odd harmonics only), its duty and arpeggio brought in; a character control brightens, a decay control lengthens
+from data import STRIKES
+def eng(layer, kind, P, Q, sparse=False):
+    x = "b" if layer == "bell" else "m"
+    k = STRIKES.index(kind)
+    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALL] + \
+         [(311, "acfade 10"), (312, "ac-layers bang"), (313, "ac-rwet 0 10"), (320, f"acsh{x}p {P}"), (320, f"acsh{x}q {Q}")]
+    if layer == "bell":
+        ev += [(600, f"ac-g-bel{k} 1 10")] + [(1000 + 2500 * i, "ac-bell 72 0.8 0.5") for i in range(3)]
+    else:
+        ev += [(600, "ac-g-motion 1 10"), (600, f"ac-g-mot{k} 1 10")] + [(1000 + (2500 if sparse else 400) * i, "ac-mnote 60 0.8 0 0.5")
+                                                                          for i in range(3 if sparse else 18)]
+    log, a = run(ev, 8)
+    seg = a[SR:8 * SR, 0]
+    S = np.abs(np.fft.rfft(seg * np.hanning(len(seg))))
+    fr = np.fft.rfftfreq(len(seg), 1 / SR)
+    band = lambda f: S[(fr > f * 0.98) & (fr < f * 1.02)].max()
+    fn = 523.25 if layer == "bell" else 261.63
+    cen = 100 * (S[fr > 1.5 * fn] ** 2).sum() / (S ** 2).sum()      # (the share of the power above the note, %)
+    return band, cen, seg, errors(log)
+f0_ = 261.63
+b0, *_ = eng("motion", "chip", 0, 0.5)
+b1, *_ = eng("motion", "chip", 1, 0.5)
+check(b0(2 * f0_) < 0.1 * b0(f0_) and b1(2 * f0_) > 0.2 * b1(f0_),
+      f"chip Duty: 0 the raw square (2nd harmonic {b0(2 * f0_) / b0(f0_):.2f} of the 1st), up a narrower pulse "
+      f"({b1(2 * f0_) / b1(f0_):.2f})")
+_, _, _, e = eng("motion", "chip", 0, 0.5)
+ba, *_ = eng("motion", "chip", 0, 1.0)
+check(ba(1.4983 * f0_) > 5 * b0(1.4983 * f0_), f"chip Arp: the 5th comes in ({ba(1.4983 * f0_) / max(1e-9, b0(1.4983 * f0_)):.0f}x)")
+for layer, kind in (("bell", "bars"), ("bell", "bowl"), ("motion", "fm"), ("motion", "lpg"), ("bell", "kalimba")):
+    _, c0, s0, e0 = eng(layer, kind, 0.1, 0.5)
+    _, c1, s1, e1 = eng(layer, kind, 0.9, 0.5)
+    _, _, d0, _ = eng(layer, kind, 0.5, 0.1, True)
+    _, _, d1, _ = eng(layer, kind, 0.5, 0.9, True)
+    w0, w1 = (1.2, 2.4) if layer == "bell" else (0.35, 0.7)          # (the motion's notes are short)
+    tail = lambda x: rms_db(x[int(w0 * SR):int(w1 * SR)]) - rms_db(x[:int(0.3 * SR)])
+    check(not (e0 or e1) and c1 > c0 * 1.3 + 0.1 and tail(d1) > tail(d0) + 3,
+          f"{layer} {kind}: character brightens (overtones {c0:.1f} -> {c1:.1f} % of the power), decay lengthens "
+          f"(tail {tail(d0):.0f} -> {tail(d1):.0f} dB)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

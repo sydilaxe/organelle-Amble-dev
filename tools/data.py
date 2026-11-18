@@ -215,6 +215,13 @@ STRIKE_DEC = dict(bars=5200, fm=2600, blip=900, wood=700, wave=3200, metal=3600,
                   bowl=7000, plate=3800, crystal=5200, lpg=1500, gong=6500, chip=900)
 STRIKE_MDEC = dict(bars=1.0, fm=1.0, blip=0.8, wood=0.6, wave=1.2, metal=1.4, kalimba=0.9, steel=1.0, pluck=1.0,
                    bowl=1.5, plate=1.1, crystal=1.3, lpg=0.8, gong=1.4, chip=0.6)
+# the two SHAPE parameters of each struck engine (its layer's key held, knobs 3 and 4; 50 % = as designed): the
+# character, then the decay (the chip: its duty - 0 the raw square - and its arpeggio)
+ENGINE_PARAMS = dict(bars=("Bright", "Decay"), fm=("Index", "Decay"), blip=("Cutoff", "Decay"),
+                     wood=("Mallet", "Decay"), wave=("Morph", "Decay"), metal=("Bright", "Decay"),
+                     kalimba=("Tine", "Decay"), steel=("Bright", "Decay"), pluck=("Bright", "Decay"),
+                     bowl=("Hardness", "Ring"), plate=("Hardness", "Ring"), crystal=("Hardness", "Ring"),
+                     lpg=("Fold", "Gate"), gong=("Bloom", "Ring"), chip=("Duty", "Arp"))
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
 # with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat

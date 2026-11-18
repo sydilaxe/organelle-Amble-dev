@@ -130,7 +130,10 @@ for _var, _name, _g in U.LAYER_KEYS:
         f"A tap (on its release): bring the {_name} in (on at its MIX level, whatever the piece does) if it is "
         "silent, or take it out if it plays. The fade takes SETUP LIVE Key fade. Held half a second: its SHAPE "
         "page - knob 1 its sound, knob 2 Tone (50 % open; down darkens with a low-pass, up thins with a "
-        "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider); "
+        "high-pass), knob 3 Drive (soft saturation), knob 4 Width (100 % as designed, 0 mono, 200 % wider) - for the "
+        "bells and the motion, knobs 3 and 4 are their engine's own two parameters instead, named on the page (50 % "
+        "as designed): " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
+        "is the raw console square, its Arp off below 50 %; "
         "on everything the layer sends, the reverb too; kept in a saved piece. Aux + tap: the layer's page - knob 1 its sound (auto: the "
         "piece chooses; the cloud has none), knob 2 Play: out, auto (the piece and its sections decide) or in, knob "
         "3 its level, knob 4 its reverb send (the sub has none). Aux leaves the page." + (

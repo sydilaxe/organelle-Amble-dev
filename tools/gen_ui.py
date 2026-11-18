@@ -4,7 +4,7 @@ harmony, form, layers, transport, ANCHOR, quick save / recall), aux, the footswi
 The key layout is LOW_KEYS / TOP_KEYS (the manual documents them in that order); keys() wires them, and the
 gestures that use a key's release (low A tap / hold, top B tap / hold / + key, aux + top A) are handled at the top
 of keys()."""
-from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, run_steps, Line, Later
 from data import *
 from pdlib import Toast, Arm
 from gen_setup import NSET
@@ -182,7 +182,11 @@ def keys():
     def layer(i, var, label, g):
         # a tap (on its release): in (always on) if it's silent now, out if it plays; held 0.5 s: its SHAPE page;
         # aux + tap: the layer's page (its sound, in / out / auto, level, reverb send)
-        proc(c, f"ac-laytog{i}", [If(f"{g} > 0.01", [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")]),
+        # (the bells: out only if you could hear them - in, or a strike in the last 6 s: a layer that is on but has
+        # not struck yet sounds silent; brought in, a note at once, as the fade begins)
+        on = f"{g} > 0.01" + (" && (acmbell == 2 || acnow - acblt < 6000)" if label == "bells" else "")
+        now = [Later("ac-bellnow", 400)] if label == "bells" else []
+        proc(c, f"ac-laytog{i}", [If(on, [V(var, "0"), Toast(label + " out")], [V(var, "2"), Toast(label + " in")] + now),
                                   V("acfade", _S.LFADE), Call("ac-layers")])
         return [If("acauxheld", [V("acsetup", "1"), V("acsetpg", str(_S.LAYER_PAGE0 + i)), Call("ac-oledsetup")],
                    [X(f"{i}; 0", "v acshk", "v acshkh"), Arm("ac-shphold", "500", stop="ac-shpstop")])]

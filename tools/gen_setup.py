@@ -10,6 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
+from data import ENGINE_PARAMS
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
@@ -23,7 +24,8 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acrcell=1, acarc=3, acbassm=1, acctr=1)
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5)
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
@@ -42,7 +44,8 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            ["acmelm", "acmutp", "accanon", "accand", "acmovm", "achmvp", "acsecd", "acnewt",     # (LINES, HARMONY,
             "acphr", "acvlead", "ackplan", "acrests", "acmdev", "acans", "acphase", "acreg",    # PHRASE, DIALOGUE,
             "acwrite", "acpadm", "acdrsub", "acendp",                                         # WRITING,
-            "acrcell", "acarc", "acbassm", "acctr"]                                           # ARC)
+            "acrcell", "acarc", "acbassm", "acctr",                                           # ARC,
+            "acshbp", "acshbq", "acshmp", "acshmq"]           # (the bells' and motion's engine parameters, SHAPE)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
@@ -132,6 +135,10 @@ LAYER_PAGE0 = NSET + 1                     # + the layer (gen_ui.LAYER_KEYS orde
 SHAPE_X = "dspbmtac"                       # each layer's letter (its SHAPE values acsh<x>t/d/w), LAYER_KEYS order
 INPUT_PAGE = LAYER_PAGE0 + len(LAYER_PAGES)  # (top G# held)
 SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the layer key held)
+# the bells' and the motion's SHAPE pages: knobs 3 and 4 are their engine's parameters (data.ENGINE_PARAMS), named
+# by the engine that plays (a journey's, your choice, or the piece's)
+ENGINE_X = {"b": "if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela))",
+            "m": "if(acjmi >= 0, acjmi, if(acsmot > 0, acsmot - 1, acmota))"}
 QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
 # GLIDE (low F held): the glide times you set while playing, together - the same values as their SETUP rows (VOICES
 # Glide, RECALL Morph and Anchor glide, MEMORY Glide); nothing new is saved
@@ -253,7 +260,7 @@ SAVE_TAIL_AT = SAVE_EXTRA_AT + len(SAVE_EXTRA)
 SAVE_MORE = [(n, GLOBALS[n]) for n in ("acmelm", "acmutp", "accanon", "accand", "acmovm", "achmvp", "acsecd", "acnewt",
                                        "acphr", "acvlead", "ackplan", "acrests", "acmdev", "acans", "acphase", "acreg",
                                        "acwrite", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm",
-                                       "acctr")]
+                                       "acctr", "acshbp", "acshbq", "acshmp", "acshmq")]
 SAVE_MORE_AT = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
 SAVE_LEN = SAVE_MORE_AT + len(SAVE_MORE)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -581,9 +588,11 @@ def quick_pages():
             ("list 1 Sound $1", [("s", t, types[t])]) if t else ("list 1 Sound -", None),
             ("list 2 Tone $1 $2%", [("s", f"if(acsh{x}t < 0.49, 0, if(acsh{x}t > 0.51, 2, 1))", ["dark", "open", "thin"]),
                                      ("f", f"int(abs(acsh{x}t - 0.5)*200)")]),
-            ("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
-            ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")]),
-        ]))
+        ] + ([("list 3 Drive $1%", [("f", f"int(acsh{x}d*100)")]),
+               ("list 4 Width $1%", [("f", f"int(acsh{x}w*200)")])] if x not in ENGINE_X else
+             # (the bells and the motion: their engine's two parameters, named by the engine playing)
+             [(f"list {3 + j} $1 $2%", [("s", ENGINE_X[x], [ENGINE_PARAMS[k][j] for k in STRIKES]),
+                                        ("f", f"int(acsh{x}{'pq'[j]}*100)")]) for j in range(2)])))
     pages.append(("GLIDE", [
         ("list 1 Chords $1", [("s", "acglide", GLIDES)]),
         ("list 2 Morph $1", [("s", "acmorph", [n for n, _ in SMORPH])]),
@@ -642,8 +651,8 @@ def quick_knobs(item):
         t = "acsubt" if t == "acssub" else t
         st += ([If(at(pg, 1), type_act(t))] if t else []) + [
             If(at(pg, 2), [V(f"acsh{x}t", "acsv"), Call("ac-shpupd")]),
-            If(at(pg, 3), [V(f"acsh{x}d", "acsv"), Call("ac-shpupd")]),
-            If(at(pg, 4), [V(f"acsh{x}w", "acsv"), Call("ac-shpupd")])]
+            If(at(pg, 3), [V(f"acsh{x}d", "acsv"), Call("ac-shpupd")] if x not in ENGINE_X else [V(f"acsh{x}p", "acsv")]),
+            If(at(pg, 4), [V(f"acsh{x}w", "acsv"), Call("ac-shpupd")] if x not in ENGINE_X else [V(f"acsh{x}q", "acsv")])]
     st += [If(at(INPUT_PAGE, 1), [V("acsnew", f"int(acsv*{len(INMODES) - 0.01})"), If("acsnew != acinmode", [
                V("acinmode", "acsnew"), Call("ac-inputupd"), Call("ac-scr5")])]),
            If(at(INPUT_PAGE, 2), knob("acinput")),
