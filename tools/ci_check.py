@@ -1835,5 +1835,52 @@ for fl, name in enumerate(FLAVOURS):
     T += 10500
 check(not errors(log) and not same, f"pad parameters: each changes every type's sound (by 1 dB or more; unchanged: {same})")
 
+# 84. the drones' and the sub's two SHAPE parameters: each changes every drone design and sub sound
+from data import DRONES, DRONE_PARAMS, SUBTYPES, SUB_PARAMS
+ALLL = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud"]
+def bands(x):
+    S = np.abs(np.fft.rfft(x * np.hanning(len(x)))) + 1e-9
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    return 20 * np.log10(np.array([S[(fr >= lo) & (fr < max(lo * 1.26, lo + 2))].mean() for lo in [25 * 1.26 ** k for k in range(28)]]))
+def sweep_params(x, sounds, setup):
+    """for each sound: 4 s as designed, then knob 3 up, then knob 4 up - the spectra compared"""
+    ev = [(50, "ac-setseed 77"), (305, "ac-secstop bang"), (306, "ac-chgstop bang")] + [(310, f"{m} 0") for m in ALLL] + \
+         [(311, "acfade 10"), (313, "ac-rwet 0 10")]
+    T = 1000
+    for i in range(len(sounds)):
+        ev += setup(T, i) + [(T, f"acsh{x}p 0.5"), (T, f"acsh{x}q 0.5"), (T + 1, "ac-shpupd bang"),
+                             (T + 4500, f"acsh{x}p 0.95"), (T + 4501, "ac-shpupd bang"), (T + 7500, f"acsh{x}p 0.5"),
+                             (T + 7500, f"acsh{x}q 0.95"), (T + 7501, "ac-shpupd bang")]
+        T += 10500
+    log, a = run(ev, T / 1000 + 1)
+    T, same = 1000, []
+    for i, name in enumerate(sounds):
+        st = lambda t0, t1: a[int((T + t0) * SR / 1000):int((T + t1) * SR / 1000)]
+        # (a parameter may change the spectrum, or what moves in time - beating, a rotary, a sweep - or the stereo:
+        # it counts when any of the three changes: 1 dB of spectrum, 0.5 dB of fluctuation, 0.05 of L/R correlation)
+        def feat(x2):
+            m = x2.mean(1)
+            w = int(0.05 * SR)
+            env = 20 * np.log10(np.sqrt((m[:len(m) // w * w] ** 2).reshape(-1, w).mean(1)) + 1e-9)
+            return bands(m), env.std(), np.corrcoef(x2[:, 0], x2[:, 1])[0, 1]
+        b0, e0, c0 = feat(st(2500, 4400))
+        res = []
+        for t0, t1 in ((5500, 7400), (8500, 10400)):
+            b1, e1, c1 = feat(st(t0, t1))
+            res.append((np.abs(b1 - b0).mean(), abs(e1 - e0), abs(c1 - c0)))
+        ok_ = [d >= 1.0 or de >= 0.5 or dc >= 0.05 for d, de, dc in res]
+        if not all(ok_):
+            same.append(f"{name} " + " / ".join(f"{d:.1f} dB, {de:.1f} dB, {dc:.2f}" for d, de, dc in res))
+        print(f"      {x} {name}: " + "; ".join(f"knob {3 + j}: spectrum {d:.1f} dB, movement {de:.1f} dB, L/R {dc:.2f}"
+                                          for j, (d, de, dc) in enumerate(res)))
+        T += 10500
+    return errors(log), same
+e, same = sweep_params("d", DRONES, lambda T, i: [(T, "acmdrone 1"), (T, "acfdrone 1"), (T, f"acdcur {i}"), (T + 1, "ac-layers bang"),
+                                                  (T + 2, "ac-g-sub 0 10")])
+check(not e and not same, f"drone parameters: each changes every design (by 1 dB or more; unchanged: {same})")
+e, same = sweep_params("s", SUBTYPES, lambda T, i: [(T, "acmsub 2"), (T + 1, "ac-layers bang"), (T + 2, f"ac-subt {i}"),
+                                                    (T + 3, "ac-subp 55 0")])
+check(not e and not same, f"sub parameters: each changes every sound (by 1 dB or more; unchanged: {same})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

@@ -10,7 +10,7 @@ Where things are:
 Also the CPU guard (cpu_guard()), whose setting and readout are on page 4."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, run_steps, Line, Toast, Later
 from gen_oled import Fill, FLIP, gated_text
-from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS
+from data import ENGINE_PARAMS, PAD_PARAMS, MIXED_PARAMS, DRONE_PARAMS, SUB_PARAMS
 from data import FACTORY, PAGES, TEMPOS, FILE_KNOBS, SEND_KNOBS, MIX_KNOBS, SUBMODES, ARCHETYPES, ATMOS_NAMES, ROLES, STRIKES, FLAVOURS, DRONES, TEXTURES, CHARACTERS, SCALES, FAMILIES, NOTE_NAMES, CHORD_NAMES, INMODES, SUBTYPES
 
 GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, acsv=0, acextbpm=60,
@@ -143,7 +143,9 @@ SHAPE_PAGE0 = INPUT_PAGE + 1               # + the layer: its SHAPE page (the la
 SOUND_X = {"b": ("if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela))", [ENGINE_PARAMS[k] for k in STRIKES]),
            "m": ("if(acjmi >= 0, acjmi, if(acsmot > 0, acsmot - 1, acmota))", [ENGINE_PARAMS[k] for k in STRIKES]),
            # (the pads: one type for all four voices - SETUP SOUNDS - or else a mix, named in general)
-           "p": ("if(acspad >= 2, acspad - 1, 0)", [MIXED_PARAMS] + [PAD_PARAMS[k] for k in FLAVOURS])}
+           "p": ("if(acspad >= 2, acspad - 1, 0)", [MIXED_PARAMS] + [PAD_PARAMS[k] for k in FLAVOURS]),
+           "d": ("acdcur", [DRONE_PARAMS[k] for k in DRONES]),
+           "s": ("acsubt", [SUB_PARAMS[k] for k in SUBTYPES])}
 ENGINE_X = SOUND_X
 QUICK_NAMES += [n + " SHAPE" for n, *_ in LAYER_PAGES]
 # GLIDE (low F held): the glide times you set while playing, together - the same values as their SETUP rows (VOICES

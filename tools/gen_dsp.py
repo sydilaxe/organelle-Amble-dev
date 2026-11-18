@@ -465,8 +465,9 @@ def drone():
     sL, sR = s.obj("lop~ 1000"), s.obj("lop~ 1000")
     for sm in (sL, sR):
         ctl(s, sm, "ac-bright", "350 + 3500*$f1", first=True)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     root = s.ch(f, "osc~", "*~ 0.26")
-    twin = s.ch(f, "*~ 1.0035", "osc~", "*~ 0.13")
+    twin = s.ch(mul(s, f, s.ch(P, "*~ 0.007", "+~ 1")), "osc~", "*~ 0.13")
     iv = s.to(f, "*~ 1.5")
     s.c(s.recv("ac-dint"), 0, iv, 1)
     ivs = mul(s, s.to(iv, "osc~"), s.ch(s.obj("osc~ 0.031"), "*~ 0.06", "+~ 0.1"))
@@ -476,7 +477,7 @@ def drone():
         tube = s.obj("vcf~ 40")
         s.c(s.obj("noise~"), 0, tube, 0)
         s.c(mul(s, f, s.to(harm, f"*~ {hm}")), 0, tube, 1)
-        tubes.append(mul(s, s.to(tube, "*~ 5"), s.ch(s.obj(f"osc~ {rt}"), "*~ 0.5", "+~ 0.5")))
+        tubes.append(mul(s, mul(s, s.to(tube, "*~ 5"), s.ch(s.obj(f"osc~ {rt}"), "*~ 0.5", "+~ 0.5")), s.to(Q, "*~ 2")))
     # the twin and the interval orbit in opposite directions; the two tubes drift on their own cycles
     s.c(s.to(root, "*~ 0.7"), 0, sL, 0)
     s.c(s.to(root, "*~ 0.7"), 0, sR, 0)

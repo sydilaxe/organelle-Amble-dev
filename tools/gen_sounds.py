@@ -437,14 +437,17 @@ def drone_analog():
     s, ln = switched("drone-analog", "ac-g-drone1")
     s.comment("Analog drone: two saws and a square an octave down through a slow resonant sweep")
     f = _drone_freq(s)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     sq = s.ch(s.to(f, "*~ 0.5"), "phasor~", "-~ 0.5", "*~ 1000", "clip~ -0.25 0.25")
     br = s.ch(s.recv("ac-bright"), "line~")
     outs = []
     for d, rate in ((1.0, 0.021), (1.0042, 0.017)):          # a saw and its own sweep on each side
         sm = s.obj("*~ 0.3")
-        s.c(s.ch(s.to(f, f"*~ {d}"), "phasor~", "-~ 0.5"), 0, sm, 0)
+        # (Detune: x0 .. x4 - 4 P^2, 1 at 50 %)
+        fd = mul(s, f, s.to(s.to(mul(s, P, P), f"*~ {4 * (d - 1):.4f}"), "+~ 1")) if d != 1.0 else f
+        s.c(s.ch(fd, "phasor~", "-~ 0.5"), 0, sm, 0)
         s.c(s.to(sq, "*~ 0.7"), 0, sm, 0)
-        sweep = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.5", "+~ 0.5")
+        sweep = mul(s, s.ch(s.obj(f"osc~ {rate}"), "*~ 0.5", "+~ 0.5"), s.to(Q, "*~ 2"))
         cf = s.to(mul(s, f, add(s, s.to(mul(s, sweep, br), "*~ 10"), s.obj("sig~ 1.5"))), "clip~ 40 4000")
         v = s.obj("vcf~ 3")
         s.c(sm, 0, v, 0)
@@ -458,10 +461,12 @@ def drone_organ():
     s, ln = switched("drone-organ", "ac-g-drone2")
     s.comment("Organ drone: drawbar partials 1 2 3 4 6 8 with a slow rotary shimmer")
     f = _drone_freq(s)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     sm = s.obj("*~ 1")
     for h, a in ((1, 0.22), (2, 0.16), (3, 0.1), (4, 0.07), (6, 0.04), (8, 0.03)):
-        s.c(s.ch(s.to(f, f"*~ {h}"), "osc~", f"*~ {a}"), 0, sm, 0)
-    rot = s.ch(s.obj("osc~ 0.8"), "*~ 0.22")
+        o = s.ch(s.to(f, f"*~ {h}"), "osc~", f"*~ {a}")
+        s.c(mul(s, o, s.to(P, "*~ 2")) if h >= 3 else o, 0, sm, 0)
+    rot = mul(s, s.ch(s.obj("osc~ 0.8"), "*~ 0.22"), s.to(Q, "*~ 2"))
     # rotary: opposite swells left and right, and the right is a slowly moving delayed copy
     s.to(sm, "delwrite~ $0-ow 40")
     dly = s.obj("vd~ $0-ow")
@@ -474,7 +479,8 @@ def drone_fm():
     s, ln = switched("drone-fm", "ac-g-drone3")
     s.comment("FM drone: an electric growl, the index cycling slowly; a little noise in the attack band")
     f = _drone_freq(s)
-    idx = s.ch(s.obj("osc~ 0.037"), "*~ 1.5", "+~ 2")
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
+    idx = mul(s, add(s, mul(s, s.ch(s.obj("osc~ 0.037"), "*~ 1.5"), s.to(Q, "*~ 2")), s.obj("sig~ 2")), s.to(P, "*~ 2"))
     mo = mul(s, mul(s, s.to(f, "osc~"), idx), f)
     car = s.to(add(s, f, mo), "osc~")
     _drone_out(s, s.ch(car, "lop~ 1800", "*~ 0.3"), ln)
@@ -487,10 +493,11 @@ def drone_frost():
               "a little sharp on the right - each drifting on its own, through a resonant low-pass that follows the "
               "note and the brightness; under them noise through three resonators on the note (x1, x2, x3), glassy")
     f = _drone_freq(s)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     br = s.ch(s.recv("ac-bright"), "line~")
     saws = []
     for cents, rate in ((0, 0.023), (-7, 0.031), (7, 0.037)):
-        dr = s.ch(s.obj(f"osc~ {rate}"), "*~ 0.0025", f"+~ {2 ** (cents / 1200):.5f}")   # +-4 cents of drift
+        dr = add(s, s.ch(s.obj(f"osc~ {rate}"), "*~ 0.0025"), s.to(s.to(mul(s, P, P), f"*~ {4 * (2 ** (cents / 1200) - 1):.6f}"), "+~ 1"))
         saws.append(s.ch(mul(s, f, dr), "phasor~", "-~ 0.5"))
     cf = s.to(mul(s, f, add(s, s.to(br, "*~ 5"), s.ch(s.obj("osc~ 0.019"), "*~ 0.6", "+~ 2"))), "clip~ 60 6000")
     outs = []
@@ -505,7 +512,7 @@ def drone_frost():
         r = s.obj(f"vcf~ {q}")
         s.c(nz, 0, r, 0)
         s.c(s.to(f, f"*~ {h}"), 0, r, 1)
-        s.c(s.to(r, f"*~ {0.5 / h:.3f}"), 0, outs[k % 2], 0)
+        s.c(mul(s, s.to(r, f"*~ {0.5 / h:.3f}"), s.to(Q, "*~ 2")), 0, outs[k % 2], 0)
     _drone_out(s, outs[0], ln, outs[1])
     return s
 
@@ -516,14 +523,20 @@ def drone_choir():
               "two vowel formants that move slowly between ah, oh and oo")
     f = _drone_freq(s)
     # the vowel: F1 450-750 Hz and F2 800-1150 Hz, wandering together
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     vw = s.ch(s.obj("osc~ 0.023"), "*~ 0.5", "+~ 0.5")
-    f1, f2 = s.ch(vw, "*~ 300", "+~ 450"), s.ch(vw, "*~ 350", "+~ 800")
+    vs = s.ch(P, "*~ 0.8", "+~ 0.6")
+    f1, f2 = mul(s, s.ch(vw, "*~ 300", "+~ 450"), vs), mul(s, s.ch(vw, "*~ 350", "+~ 800"), vs)
+    pex = s.ch(Q, "*~ -8", "+~ 12")                  # (the pulses: narrower (8) as designed, wider = breathier)
     outs = []
     for side, voices in enumerate((((1.0, 4.9), (1.5, 5.3)), ((1.003, 5.1), (1.5, 5.6)))):
         src = s.obj("*~ 1")
         for ratio, vr in voices:
             vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.004", f"+~ {ratio}")
-            pulse = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~", "pow~ 8")
+            pw = s.obj("pow~")
+            s.c(s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~"), 0, pw, 0)
+            s.c(pex, 0, pw, 1)
+            pulse = pw
             s.c(pulse, 0, src, 0)
         sm = s.obj("+~")
         for fm, q in ((f1, 6), (f2, 9)):
@@ -541,18 +554,20 @@ def drone_bowed():
     s.comment("Bowed drone: a cello on the note - a saw with a slow bow-pressure swell and a light vibrato, through "
               "the body's resonances (about 200, 500 and 1300 Hz) and a soft low-pass")
     f = _drone_freq(s)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
+
     outs = []
     for d, vr, pr in ((1.0, 4.7, 0.11), (0.9985, 5.2, 0.09)):
         vib = s.ch(s.obj(f"osc~ {vr}"), "*~ 0.003", f"+~ {d}")
         saw = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5")
-        press = s.ch(s.obj(f"osc~ {pr}"), "*~ 0.25", "+~ 0.75")
+        press = mul(s, s.ch(s.obj(f"osc~ {pr}"), "*~ 0.25", "+~ 0.75"), s.to(P, "*~ 2"))
         x = mul(s, saw, press)
         sm = s.obj("*~ 1")
         s.c(s.to(x, "lop~ 1600"), 0, sm, 0)
         for hz, q, a in ((200, 4, 0.6), (500, 5, 0.5), (1300, 6, 0.3)):
             bp = s.obj(f"bp~ {hz} {q}")
             s.c(x, 0, bp, 0)
-            s.c(s.to(bp, f"*~ {a}"), 0, sm, 0)
+            s.c(mul(s, s.to(bp, f"*~ {a}"), s.to(Q, "*~ 2")), 0, sm, 0)
         outs.append(s.to(sm, "*~ 0.35"))
     _drone_out(s, outs[0], ln, outs[1])
     return s
@@ -563,10 +578,12 @@ def drone_spectral():
     s.comment("Spectral drone: eight harmonics, each swelling on its own slow cycle, so the spectrum keeps "
               "shifting while the note holds; odd harmonics lean left, even right")
     f = _drone_freq(s)
+    P, Q = prm(s, "d", 0), prm(s, "d", 1)        # (DRONE SHAPE knobs 3 and 4: data.DRONE_PARAMS)
     L, R = s.obj("*~ 0.32"), s.obj("*~ 0.32")
     for n in range(1, 9):
-        sw = s.ch(s.obj(f"osc~ {0.013 * (1 + 0.37 * n):.4f}"), "*~ 0.5", "+~ 0.5")
+        sw = s.to(mul(s, s.ch(s.obj(f"osc~ {0.013 * (1 + 0.37 * n):.4f}"), "-~ 1"), Q), "+~ 1")
         p = mul(s, s.ch(s.to(f, f"*~ {n}"), "osc~"), s.to(sw, f"*~ {1 / n ** 0.7:.3f}"))
+        p = mul(s, p, s.to(mul(s, P, P), "*~ 4")) if n > 1 else p     # (Upper: x0 .. x4)
         s.c(s.to(p, f"*~ {1.0 if n % 2 else 0.45}"), 0, L, 0)
         s.c(s.to(p, f"*~ {0.45 if n % 2 else 1.0}"), 0, R, 0)
     _drone_out(s, L, ln, R)
@@ -596,8 +613,9 @@ def drone_gendy():
     tw = s.obj(f"tabwrite {tab}")
     s.c(ix, 1, tw, 1)
     rd = s.ch((ix, 0), f"tabread {tab}", "t f b")
-    stp = s.obj("expr $f1 + ($f2/1000 - 0.5)*0.14; if($f1 + ($f2/1000 - 0.5)*0.14 > 0.95, 1.9 - $f1 - ($f2/1000 - 0.5)*0.14, "
-                "if($f1 + ($f2/1000 - 0.5)*0.14 < -0.95, -1.9 - $f1 - ($f2/1000 - 0.5)*0.14, $f1 + ($f2/1000 - 0.5)*0.14))")
+    # (DRONE SHAPE knob 3, Steps: the walk's step x0..x2 - read from its value at each step)
+    w = "($f2/1000 - 0.5)*0.28*acshdp"
+    stp = s.obj(f"expr $f1 + {w}; if($f1 + {w} > 0.95, 1.9 - $f1 - {w}, if($f1 + {w} < -0.95, -1.9 - $f1 - {w}, $f1 + {w}))")
     s.c(s.ch((rd, 1), "random 1000"), 0, stp, 1)
     s.c((rd, 0), 0, stp, 0)
     s.c((stp, 1), 0, tw, 0)
@@ -608,7 +626,9 @@ def drone_gendy():
     outs = []
     for d in (1.0, 1.0025):
         rdx = s.ch(s.to(f, f"*~ {d}"), "phasor~", f"*~ {GENDY_N}", "+~ 1", f"tabread4~ {tab}")
-        outs.append(s.ch(rdx, "lop~ 1800", "lop~ 2400", "*~ 0.55"))
+        lp1 = s.to(rdx, "lop~ 1800")
+        s.c(s.to(prmc(s, "d", 1), "expr 1800*pow(4, $f1*2 - 1)"), 0, lp1, 1)    # (knob 4, Rough: x1/4 .. x4)
+        outs.append(s.ch(lp1, "lop~ 2400", "*~ 0.55"))
     _drone_out(s, outs[0], ln, outs[1])
     return s
 
@@ -621,14 +641,18 @@ def sub():
     s.comment("Sub: a sine under everything - the pedal an octave under the tonic, or the chord root as a bass "
               "line - softly saturated so small speakers hear its harmonics; swells with the bar pulse")
     f = s.ch(s.recv("ac-subp"), "line~")
+    P = prm(s, "s", 0)                              # (SUB SHAPE knob 3: data.SUB_PARAMS; knob 4 Body below)
     x = s.to(f, "osc~")
     sat = s.ch(x, "*~ 1.8", "clip~ -1 1")
-    y0 = add(s, s.to(x, "*~ 0.6"), s.to(sat, "*~ 0.25"))
+    y0 = add(s, s.to(x, "*~ 0.6"), mul(s, s.to(sat, "*~ 0.25"), s.to(P, "*~ 2")))
     # its sound (the sub's SHAPE page): sine (above), warm (a rounder saturation and the octave), pulse (a narrow
     # pulse, low-passed), fm (a slow growl); each crossfaded in by its own gain
-    warm = add(s, s.ch(x, "*~ 3", "clip~ -1 1", "*~ 0.55"), s.ch(s.to(f, "*~ 2"), "osc~", "*~ 0.18"))
-    pulse = s.ch(f, "phasor~", "-~ 0.75", "*~ 1000", "clip~ -0.5 0.5", "lop~ 220", "lop~ 220", "*~ 1.6")
-    idx = s.ch(s.obj("osc~ 0.07"), "*~ 0.5", "+~ 1")
+    warm = add(s, s.ch(x, "*~ 3", "clip~ -1 1", "*~ 0.55"), mul(s, s.ch(s.to(f, "*~ 2"), "osc~", "*~ 0.18"), s.to(P, "*~ 2")))
+    pd_ = s.obj("-~")
+    s.c(s.to(f, "phasor~"), 0, pd_, 0)
+    s.c(s.ch(P, "*~ 0.5", "+~ 0.5"), 0, pd_, 1)
+    pulse = s.ch(pd_, "*~ 1000", "clip~ -0.5 0.5", "lop~ 220", "lop~ 220", "*~ 1.6")
+    idx = mul(s, s.ch(s.obj("osc~ 0.07"), "*~ 0.5", "+~ 1"), s.to(P, "*~ 2"))
     fm = s.ch(add(s, f, mul(s, mul(s, x, idx), f)), "osc~", "*~ 0.7")
     y = s.obj("+~")
     for k, sig in enumerate((y0, warm, pulse, fm)):
@@ -642,7 +666,9 @@ def sub():
     s.c(pu, 1, dep, 1)
     pa = s.to(dep, "+~ 1")
     s.c(s.to((pu, 0), "expr 1-$f1"), 0, pa, 1)
-    o = mul(s, mul(s, s.to(y, "lop~ 500"), pa), ln)
+    body = s.to(y, "lop~ 500")
+    s.c(s.to(prmc(s, "s", 1), "expr 500*(0.5 + $f1)"), 0, body, 1)
+    o = mul(s, mul(s, body, pa), ln)
     throws_to("ac-sendd")(s, o, o, mix=0.42, send=0.05, bus="bed")
     return s
 

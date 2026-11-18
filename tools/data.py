@@ -233,6 +233,10 @@ PAD_PARAMS = dict(fm=("Index", "Ratio"), vox=("Vowel", "Resonance"), bow=("Press
                   vosim=("Formant", "Decay"), whistle=("Breath", "Vibrato"), lissa=("Ratio", "Turn"),
                   chip=("Duty", "Crush"))
 MIXED_PARAMS = ("Character", "Movement")
+DRONE_PARAMS = dict(pure=("Beat", "Breath"), analog=("Detune", "Sweep"), organ=("Drawbars", "Rotary"),
+                    fm=("Index", "Cycle"), frost=("Detune", "Glass"), choir=("Vowel", "Breath"),
+                    bowed=("Pressure", "Body"), spectral=("Upper", "Drift"), gendy=("Steps", "Rough"))
+SUB_PARAMS = dict(sine=("Harmonics", "Body"), warm=("Octave", "Body"), pulse=("Width", "Body"), fm=("Growl", "Body"))
 # modal engines: a struck object's modes (ratio to the note, amplitude, decay as a factor of the engine's) - the
 # impulse response of a bank of tuned resonators, as damped sines (exact, and cheaper than filters at these Qs);
 # with a beating twin (Hz) on some modes, as a real bowl's or glass's split mode pairs beat
