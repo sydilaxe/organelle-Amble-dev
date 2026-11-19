@@ -570,6 +570,7 @@ def section():
         If("(acrests*acwrite) > 0", [X("1; 3; 0", "v acrestb", "v acrestl", "v acrestp")]),
         Later("ac-scr", 97),
         Send("ac-led"),
+        Call("ac-mossec"),          # (MOSAIC FORM: the layers this section wants)
     ]
     # (MEMORY: the section's kept knobs, once its own settings are in)
     proc(c, "ac-section", [If("acmode==1 && acsec>=acnsec", [Call("ac-fin")],

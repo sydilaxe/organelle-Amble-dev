@@ -325,6 +325,13 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
                          "octave); pulse."),
     "Drone@MOSAIC ROLES": (", ".join(S.SMDRONE), "MOSAIC: held - as it is; pulse - it re-articulates on the pattern; "
                            "pedal - a 5th up and back, a bar each, the long note under the patterns; both."),
+    "Sections@MOSAIC FORM": (", ".join(S.SMSEC), "MOSAIC FORM: the sections the piece brings the mosaic into by "
+                             "itself - its climax, its development (develop, intensify) and climax, or every section "
+                             "but the calm ones (emerge, break, dissolve); it leaves when the section ends. Writing "
+                             "still: never. aux + C# brings it in yourself, all five layers."),
+    "Develop": (", ".join(S.SMSPN), "MOSAIC FORM: how many layers a development section brings in (bells, pads, sub, "
+                "drone, textures, in that order); a climax brings all five."),
+    "Joins": (", ".join(S.SMSJO), "MOSAIC FORM: the layers come in and leave a bar each (cascade), or all at once."),
     "Bells@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the bells' step - a quarter, half, once or "
                            "twice the Pace (at most 16ths). All the rates share one grid, so the layers interlock."),
     "Pads@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the pads' step, as the bells'."),

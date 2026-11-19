@@ -26,7 +26,9 @@ Working memory for this project: read it first in a new session.
 - **MOSAIC** (`gen_mosaic.py`): `acmosn` layers joined (bells, pads, sub, drone, textures), one a bar via
   `ac-mosbar` (from `ac-bar`); each plays its pattern (MOSAIC Hits, or the motion's) `acmcas` of its own steps after the one before, at
   its rate (MOSAIC RATES: 1/4x..2x the Pace, one 16th grid). Accents: `ac-v<k>-acc` (pad voices) and `ac-acc-d/s/t` (vline~ in `switched()`, 1 when idle);
-  the sub's bass via `ac-subp`, the drone's pedal via `ac-dronep`; leaving, `ac-bassupd` puts both back.
+  the sub's bass via `ac-subp`, the drone's pedal via `ac-dronep`; leaving, `ac-bassupd` puts both back. The target
+  `acmost` is all five while you have it in (`acmos`), else the piece's wish `acmosp` (`ac-mossec` at each section:
+  MOSAIC FORM Sections / Develop).
 - **DRIFT** (each layer's quick page: its SHAPE page, then aux; `gen_perform` ac-ptick): sound and tone wander,
   three slow sines each (from 0, no jump), per-layer phases; bells / motion through offsets `acdo<x>p/q` their
   engines add. Back to 0: `ac-shpupd-<x>` restores. No random draws.

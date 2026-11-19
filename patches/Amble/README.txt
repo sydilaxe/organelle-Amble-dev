@@ -299,6 +299,9 @@ and let go, without knob 1, to leave and save)
   pedal, pulse+pedal)
   MOSAIC RATES: Bells, Pads, Sub, Textures (held, or gated): each
   layer's step, 1/4x .. 2x the Pace, all on one grid
+  MOSAIC FORM: Sections (the piece brings it in by itself: off,
+  climax, develop+climax, all but calm), Develop (2-5 layers; a
+  climax all five), Joins (a layer a bar, or at once)
   MACRO A / B: four macros (CC targets macro 1-4), each
   moving two knobs with a depth (-100..+100 %), offset or latch
   - SAVES -

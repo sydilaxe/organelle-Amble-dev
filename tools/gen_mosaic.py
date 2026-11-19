@@ -1,6 +1,7 @@
 """MOSAIC: one rhythmic pattern carried across the layers - a cascade, like a canon across the ensemble.
 
-aux + low C# (a tap) brings it in, one layer a bar (bells, pads, sub, drone, textures), and out again the same way
+The piece brings it into its development sections and its climax (SETUP MOSAIC FORM); aux + low C# (a tap) brings
+it in yourself, one layer a bar (bells, pads, sub, drone, textures), and out again the same way
 backwards; held, it opens SETUP MOSAIC. The pattern is the motion's Euclidean rhythm (its hits in its steps, rotated),
 on the clock's 16ths (an external MIDI clock too) at the MOSAIC Pace; each layer plays it Cascade steps after the
 one before. Its pattern is its own (SETUP MOSAIC Hits: k of n steps, or the motion's), not the piece's density; each
@@ -17,7 +18,7 @@ gated). Nothing here draws random numbers: seeds replay."""
 from pdlib import Canvas, proc, X, V, Send, Call, SendL, If, Toast
 import gen_setup as S
 
-GLOBALS = dict(acmos=0, acmosn=0, acmst=0, acmsd=250, acmbn=0, acmsb=0, acmped=0, acmoskh=-1)
+GLOBALS = dict(acmos=0, acmosp=0, acmost=0, acmosn=0, acmst=0, acmsd=250, acmbn=0, acmsb=0, acmped=0, acmoskh=-1)
 ARRAYS = {}
 
 LAYERS = ["bells", "pads", "sub", "drone", "textures"]      # (their cascade order: the join order)
@@ -66,13 +67,23 @@ def mosaic():
     # aux + low C# held 0.5 s: the MOSAIC page (gen_ui)
     proc(c, "ac-moshold", [V("acmoskh", "1"), V("acsetup", "1"), V("acsetpg", str(S.SETUP_NAMES.index("MOSAIC"))),
                            Call("ac-oledsetup")])
-    # a bar: one more layer in (or out), and the drone's pedal
+    # the piece's own (SETUP MOSAIC FORM): at each section, how many layers it wants - a development section Develop's,
+    # a climax all five (Sections: off, climax, develop+climax, all but the calm emerge / break / dissolve)
+    want = ("(acmsec*acwrite) > 0 && acrun && (acrole == 4 || ((acmsec*acwrite) >= 2 && (acrole == 2 || acrole == 3)) || "
+            "((acmsec*acwrite) == 3 && acrole != 0 && acrole != 5 && acrole != 7))")
+    proc(c, "ac-mossec", [V("acmosp", f"({want})*if(acrole == 4, {len(LAYERS)}, acmspn + 2)")])
+    # a bar: a layer in (or out) towards the target - all five while you have it in (aux + C#), else the piece's;
+    # Joins at once: straight there. And the drone's pedal.
     join = [If(f"acmosn == {i + 1}", [Toast(f"mosaic + {n}")]) for i, n in enumerate(LAYERS)]
     leave = [If(f"acmosn == {i}", reset(i)) for i in range(len(LAYERS))]
     pedal = "acmosn > 3 && (acmrd == 2 || acmrd == 3)"
     proc(c, "ac-mosbar", [
-        If(f"acmos && acmosn < {len(LAYERS)}", [V("acmosn", "acmosn + 1")] + join),
-        If("acmos == 0 && acmosn > 0", [V("acmosn", "acmosn - 1")] + leave + [If("acmosn == 0", [Toast("mosaic out")])]),
+        V("acmost", f"if(acmos, {len(LAYERS)}, acmosp)"),
+        If("acmsjo == 1 && acmosn != acmost", [
+            *[If(f"{i} >= acmost && {i} < acmosn", reset(i)) for i in range(len(LAYERS))],
+            If("acmosn == 0", [Toast("mosaic in")]), V("acmosn", "acmost"), If("acmosn == 0", [Toast("mosaic out")])], [
+            If("acmosn < acmost", [V("acmosn", "acmosn + 1")] + join),
+            If("acmosn > acmost", [V("acmosn", "acmosn - 1")] + leave + [If("acmosn == 0", [Toast("mosaic out")])])]),
         If(f"{pedal} && acgdrone > 0.01", [
             V("acmped", "1 - acmped"),
             SendL("ac-dronep", ["if(acpedal, acpedp, if(acsdnow, acsdt, actonic)) + 7*acmped", "3000"])],

@@ -2067,7 +2067,7 @@ def mosprobe(c):
 
 
 _ml = [f"{v} 2" for v in ("acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex")]
-log, _ = run([(50, "ac-setseed 7")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
              (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0"),
              (62000, "aux 1"), (62050, "notesRaw 61 100"), (62150, "notesRaw 61 0"), (62300, "aux 0"),
              (100000, "aux 1"), (100050, "notesRaw 61 100"), (100800, "notesRaw 61 0"), (101000, "aux 0")], 102,
@@ -2085,7 +2085,7 @@ check(joined == ["bells", "pads", "sub", "drone", "textures"] and all(v > 3 for 
       f"MOSAIC: joins {joined}, plays {during}, out with the levels back ({lastv}, {lastt}), held: its page")
 # (each layer at its own rate on one grid: the pads at 2x play about twice the pads at 1x)
 def padsteps(rate_knob):
-    log, _ = run([(50, "ac-setseed 7")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+    log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
                  (600, "acsetup 1"), (601, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC RATES')}"), (602, f"ac-setknob 1 {rate_knob}"),
                  (603, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC')}"), (604, "ac-setknob 1 0.95"), (700, "acsetup 0"),
                  (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0")], 40,
@@ -2093,6 +2093,31 @@ def padsteps(rate_knob):
     return len([l for l in log.splitlines() if l.startswith("h-m-ac-v0-acc:") and float(l.split()[1]) > 25000])
 p1, p2 = padsteps(0.6), padsteps(0.95)
 check(p1 > 3 and 1.6 < p2 / p1 < 2.4, f"MOSAIC RATES: the pads at 2x step {p2} times, at 1x {p1} (every step, on one grid)")
+
+# 94. MOSAIC FORM: the piece brings the mosaic into its development and its climax by itself (all five layers at the
+#     climax), and out again after; Sections off: never (Joins at once: the sections here are short)
+def mosform(sec):
+    def pr(c):
+        e = c.obj("expr int(acnow); acrole; acmosn; acmosp", 1400, 50)
+        c.c(c.obj("r ac-bar", 1400, 20), 0, e, 0)
+        p = c.obj("pack f f f f", 1400, 80)
+        for i in range(4):
+            c.c(e, i, p, i)
+        c.c(p, 0, c.obj("print h-mf", 1400, 110), 0)
+    log, _ = run([(0, "actime 0.1"), (50, "ac-setseed 2026"), (60, f"acmsec {sec}"), (61, "acmsjo 1")], 110, extra=pr)
+    return [[int(float(x)) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("h-mf")]
+
+
+mf2, mf0 = mosform(2), mosform(0)
+by_role = {}
+for t, role, n, want in mf2:
+    by_role.setdefault(role, []).append(n)
+climax_full = max(by_role.get(4, [0])) == 5
+calm_none = all(max(by_role.get(r, [0])) == 0 for r in (0,))
+check(climax_full and calm_none and any(n > 0 for r in (2, 3) for n in by_role.get(r, [])) and mf2[-1][2] < 5
+      and all(r[2] == 0 for r in mf0),
+      f"MOSAIC FORM: develop + climax - the most layers by role {dict((r, max(v)) for r, v in by_role.items())}; "
+      f"Sections off: {max(r[2] for r in mf0) if mf0 else '?'}")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

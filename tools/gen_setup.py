@@ -26,7 +26,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acmpace=1, acmhit=2, acmcas=1, acmacc=0.6, acmrb=1, acmrd=2, acmrp=2, acmrs=1, acmrtb=2, acmrtp=2, acmrts=2, acmrtt=3, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acmpace=1, acmhit=2, acmcas=1, acmacc=0.6, acmrb=1, acmrd=2, acmrp=2, acmrs=1, acmrtb=2, acmrtp=2, acmrts=2, acmrtt=3, acmsec=2, acmspn=1, acmsjo=0, acrcell=1, acarc=3, acbassm=1, acctr=1,
                acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5,
                **{f"acsh{x}{j}": 0.5 for x in "dsptac" for j in "pq"})
 ARRAYS = dict(acout=4, acarp=4)
@@ -53,7 +53,8 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
            [f"acsh{x}{j}" for x in "dsptac" for j in "pq"] + \
            ["acpln", "acplv", "acplm", "acplp"] + \
            [f"acdr{x}{k}" for x in "dspbmtac" for k in "ats"] + \
-           ["acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt"]
+           ["acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt",
+            "acmsec", "acmspn", "acmsjo"]
            # (PAD LINES, each layer's DRIFT, MOSAIC)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
@@ -67,7 +68,7 @@ OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everyth
 SETUP_GROUPS = [("PIECE", ["GENERAL", "MUSIC", "FORM", "SECTIONS", "SECTION MIX"]),
                 ("WRITING", ["WRITING", "LINES", "PAD LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
                 ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "JOURNEY"]),
-                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MOSAIC", "MOSAIC ROLES", "MOSAIC RATES", "MACRO A", "MACRO B"]),
+                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MOSAIC", "MOSAIC ROLES", "MOSAIC RATES", "MOSAIC FORM", "MACRO A", "MACRO B"]),
                 ("SAVES", ["SAVES", "RECALL", "MEMORY"]),
                 ("MIDI", ["MIDI IN", "CC MAP", "NOTES OUT", "CC OUT"]),
                 ("SYSTEM", ["OUTPUT", "DISPLAY", "CPU"])]
@@ -358,6 +359,9 @@ SMCAS = ["together", "1 step", "2 steps", "3 steps"]      # between one layer an
 SMHIT = [("motion's", 0, 0), ("3 of 8", 3, 8), ("5 of 8", 5, 8), ("7 of 8", 7, 8), ("5 of 16", 5, 16),
          ("every step", 1, 1)]                    # MOSAIC's own pattern (hits in steps), not the piece's density
 SMRATE = [("1/4x", 4), ("1/2x", 2), ("1x", 1), ("2x", 0.5)]   # a layer's step: the Pace's x this many
+SMSEC = ["off", "climax", "develop+climax", "all but calm"]   # MOSAIC FORM: the sections the piece brings it into
+SMSPN = ["2 layers", "3 layers", "4 layers", "5 layers"]   # (a development section's; a climax brings all five)
+SMSJO = ["cascade", "at once"]
 SMBELL = ["off", "echo", "high"]
 SMDRONE = ["held", "pulse", "pedal", "pulse+pedal"]
 SMPADS = ["held", "pulse", "arpeggio", "lines"]
@@ -598,6 +602,12 @@ def _setup_pages():
             ("list 2 Pads $1", [("s", "acmrtp", [n for n, _ in SMRATE])]),
             ("list 3 Sub $1", [("s", "acmrts", [n for n, _ in SMRATE])]),
             ("list 4 Textures $1", [("s", "acmrtt", ["held"] + [n for n, _ in SMRATE])]),
+        ]),
+        ("MOSAIC FORM", [
+            ("list 1 Sections $1", [("s", "acmsec", SMSEC)]),
+            ("list 2 Develop $1", [("s", "acmspn", SMSPN)]),
+            ("list 3 Joins $1", [("s", "acmsjo", SMSJO)]),
+            ("list 4 -", None),
         ]),
         ("PAD LINES", [
             ("list 1 Lines $1%", [("f", "int(acpln*100)")]),
@@ -1013,6 +1023,9 @@ def setup():
         If(at("MOSAIC", 3), [V("acmcas", f"int(acsv*{len(SMCAS) - 0.01})")]),
         If(at("MOSAIC", 4), [V("acmacc", "acsv")]),
         If(at("MOSAIC ROLES", 1), [V("acmrb", f"int(acsv*{len(SMBELL) - 0.01})")]),
+        If(at("MOSAIC FORM", 1), [V("acmsec", f"int(acsv*{len(SMSEC) - 0.01})"), Call("ac-mossec")]),
+        If(at("MOSAIC FORM", 2), [V("acmspn", f"int(acsv*{len(SMSPN) - 0.01})"), Call("ac-mossec")]),
+        If(at("MOSAIC FORM", 3), [V("acmsjo", f"int(acsv*{len(SMSJO) - 0.01})")]),
         If(at("MOSAIC RATES", 1), [V("acmrtb", f"int(acsv*{len(SMRATE) - 0.01})")]),
         If(at("MOSAIC RATES", 2), [V("acmrtp", f"int(acsv*{len(SMRATE) - 0.01})")]),
         If(at("MOSAIC RATES", 3), [V("acmrts", f"int(acsv*{len(SMRATE) - 0.01})")]),
