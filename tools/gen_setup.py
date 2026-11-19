@@ -26,13 +26,13 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acmpace=1, acmhit=2, acmcas=1, acmacc=0.6, acmrb=1, acmrd=2, acmrp=2, acmrs=1, acmrtb=2, acmrtp=2, acmrts=2, acmrtt=3, acmsec=2, acmspn=1, acmsjo=0, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acmpace=1, acmhit=2, acmcas=1, acmacc=0.6, acmrb=1, acmrd=2, acmrp=3, acmrs=1, acmrtb=2, acmrtp=2, acmrts=2, acmrtt=3, acmsec=2, acmspn=1, acmsjo=0, acmspk=3, acrcell=1, acarc=3, acbassm=1, acctr=1,
                acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5,
                **{f"acsh{x}{j}": 0.5 for x in "dsptac" for j in "pq"})
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
-GLOBALS.update({f"acdr{x}{k}": (1 if k == "s" else 0) for x in "dspbmtac" for k in "ats"})   # (each layer's DRIFT)
+GLOBALS.update({f"acdr{x}{k}": (1 if k == "s" else 0) for x in "dspbmtac" for k in "atsl"})   # (each layer's DRIFT)
 SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "acfollow", "acnbr",
                                                   "acoutch", "accurve", "acmono", "acwidth", "acpanmot",
                                                   "actrange", "acmparts", "acarpoct", "acguard"] + KNOBS[FILE_KNOBS:SEND_KNOBS] + \
@@ -52,9 +52,9 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
             "acshbp", "acshbq", "acshmp", "acshmq"] + \
            [f"acsh{x}{j}" for x in "dsptac" for j in "pq"] + \
            ["acpln", "acplv", "acplm", "acplp"] + \
-           [f"acdr{x}{k}" for x in "dspbmtac" for k in "ats"] + \
+           [f"acdr{x}{k}" for x in "dspbmtac" for k in "atsl"] + \
            ["acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt",
-            "acmsec", "acmspn", "acmsjo"]
+            "acmsec", "acmspn", "acmsjo", "acmspk"]
            # (PAD LINES, each layer's DRIFT, MOSAIC)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
@@ -297,7 +297,7 @@ SAVE_MORE = [(n, GLOBALS[n]) for n in ("acmelm", "acmutp", "accanon", "accand", 
                                        "acwrite", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm",
                                        "acctr", "acshbp", "acshbq", "acshmp", "acshmq") +
              tuple(f"acsh{x}{j}" for x in "dsptac" for j in "pq") + ("acpln", "acplv", "acplm", "acplp")
-             + tuple(f"acdr{x}{k}" for x in "dspbmtac" for k in "ats")]
+             + tuple(f"acdr{x}{k}" for x in "dspbmtac" for k in "atsl")]
 SAVE_MORE_AT = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
 SAVE_LEN = SAVE_MORE_AT + len(SAVE_MORE)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -354,6 +354,7 @@ ARRAYS.update({n: k for n, k in SAVE_TAIL})
 ARRAYS["acsetbuf"] = len(SETTINGS) - 12
 ARRAYS["acslotbuf"] = SAVE_LEN
 SDRIFT = [("very slow", 240), ("slow", 120), ("medium", 60), ("fast", 25)]   # DRIFT: the wander's time scale, s
+SDRIFTB = [32, 16, 8, 4]       # (locked to the clock: one cycle in so many bars - each divides the clock's 64)
 SMPACE = ["16ths", "8ths", "beat"]              # MOSAIC: the pattern's step
 SMCAS = ["together", "1 step", "2 steps", "3 steps"]      # between one layer and the next
 SMHIT = [("motion's", 0, 0), ("3 of 8", 3, 8), ("5 of 8", 5, 8), ("7 of 8", 7, 8), ("5 of 16", 5, 16),
@@ -601,13 +602,13 @@ def _setup_pages():
             ("list 1 Bells $1", [("s", "acmrtb", [n for n, _ in SMRATE])]),
             ("list 2 Pads $1", [("s", "acmrtp", [n for n, _ in SMRATE])]),
             ("list 3 Sub $1", [("s", "acmrts", [n for n, _ in SMRATE])]),
-            ("list 4 Textures $1", [("s", "acmrtt", ["held"] + [n for n, _ in SMRATE])]),
+            ("list 4 Tex+atmos $1", [("s", "acmrtt", ["held"] + [n for n, _ in SMRATE])]),
         ]),
         ("MOSAIC FORM", [
             ("list 1 Sections $1", [("s", "acmsec", SMSEC)]),
             ("list 2 Develop $1", [("s", "acmspn", SMSPN)]),
             ("list 3 Joins $1", [("s", "acmsjo", SMSJO)]),
-            ("list 4 -", None),
+            ("list 4 Sparkle $1", [("s", "acmspk", ["off"] + [n for n, _ in SMRATE])]),
         ]),
         ("PAD LINES", [
             ("list 1 Lines $1%", [("f", "int(acpln*100)")]),
@@ -702,7 +703,7 @@ def quick_pages():
             ("list 1 Sound drift $1%", [("f", f"int(acdr{x}a*100)")]),
             ("list 2 Tone drift $1%", [("f", f"int(acdr{x}t*100)")]),
             ("list 3 Speed $1", [("s", f"acdr{x}s", [n for n, _ in SDRIFT])]),
-            ("list 4 -", None),
+            ("list 4 Lock $1", [("s", f"acdr{x}l", ["free", "clock"])]),
         ]))
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
@@ -799,7 +800,8 @@ def quick_knobs(item):
                    + ([X("0; 0", f"v acdo{x}p", f"v acdo{x}q")] if x in "bm" else []))]
         drift += [If(at(DRIFT_PAGE0 + j, 1), [V(f"acdr{x}a", "acsv")] + back),
                   If(at(DRIFT_PAGE0 + j, 2), [V(f"acdr{x}t", "acsv")] + back),
-                  If(at(DRIFT_PAGE0 + j, 3), [V(f"acdr{x}s", f"int(acsv*{len(SDRIFT) - 0.01})")])]
+                  If(at(DRIFT_PAGE0 + j, 3), [V(f"acdr{x}s", f"int(acsv*{len(SDRIFT) - 0.01})")]),
+                  If(at(DRIFT_PAGE0 + j, 4), [V(f"acdr{x}l", "acsv > 0.5")])]
     st = drift + [
         # CHORD: knob 1 the next chord, from the key's chords (and, with On pick now, at once); knob 3 fully up
         # another one picked by the piece (re-armed below 90 %)
@@ -1026,6 +1028,7 @@ def setup():
         If(at("MOSAIC FORM", 1), [V("acmsec", f"int(acsv*{len(SMSEC) - 0.01})"), Call("ac-mossec")]),
         If(at("MOSAIC FORM", 2), [V("acmspn", f"int(acsv*{len(SMSPN) - 0.01})"), Call("ac-mossec")]),
         If(at("MOSAIC FORM", 3), [V("acmsjo", f"int(acsv*{len(SMSJO) - 0.01})")]),
+        If(at("MOSAIC FORM", 4), [V("acmspk", f"int(acsv*{len(SMRATE) + 1 - 0.01})"), Call("ac-sparkupd")]),
         If(at("MOSAIC RATES", 1), [V("acmrtb", f"int(acsv*{len(SMRATE) - 0.01})")]),
         If(at("MOSAIC RATES", 2), [V("acmrtp", f"int(acsv*{len(SMRATE) - 0.01})")]),
         If(at("MOSAIC RATES", 3), [V("acmrts", f"int(acsv*{len(SMRATE) - 0.01})")]),

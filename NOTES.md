@@ -28,10 +28,13 @@ Working memory for this project: read it first in a new session.
   its rate (MOSAIC RATES: 1/4x..2x the Pace, one 16th grid). Accents: `ac-v<k>-acc` (pad voices) and `ac-acc-d/s/t` (vline~ in `switched()`, 1 when idle);
   the sub's bass via `ac-subp`, the drone's pedal via `ac-dronep`; leaving, `ac-bassupd` puts both back. The target
   `acmost` is all five while you have it in (`acmos`), else the piece's wish `acmosp` (`ac-mossec` at each section:
-  MOSAIC FORM Sections / Develop).
+  MOSAIC FORM Sections / Develop). A layer fades in: its accent depth x min(1, time since it joined (`acmjt`) / 2
+  bars); leaving, the levels ease back over 1.5 s. Pads `lines`: `ac-plgo` forced on each hit, `acplmv` says whether
+  it moved - if not, an arpeggio step. Sparkle: GLINT notes, the 6th layer.
 - **DRIFT** (each layer's quick page: its SHAPE page, then aux; `gen_perform` ac-ptick): sound and tone wander,
   three slow sines each (from 0, no jump), per-layer phases; bells / motion through offsets `acdo<x>p/q` their
-  engines add. Back to 0: `ac-shpupd-<x>` restores. No random draws.
+  engines add. Back to 0: `ac-shpupd-<x>` restores. No random draws. Lock clock: the phase is `actick` over
+  32/16/8/4 bars (dividing the clock's 64-bar wrap), whole-number partials - a cycle that meets itself.
 - **PAD LINES** (`gen_brain.pad_lines`, on `ac-step`): one pad voice moves per pulse - by scale step from its chord
   tone (`acplh`) against the motion's last direction (`acmdir`), clear of the other voices' notes and chord tones,
   resolving back or passing on to the next chord tone, home again before the chord ends. A voice may move once

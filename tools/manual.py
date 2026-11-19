@@ -136,7 +136,10 @@ for _var, _name, _g in U.LAYER_KEYS:
         "high-pass), knobs 3 and 4 the sound's own two parameters, named on the page for the sound playing (50 % as "
         "designed; the overall stereo width is SETUP OUTPUT Width). From the SHAPE page, aux: the layer's DRIFT page - "
         "knob 1 Sound drift and knob 2 Tone drift (how far its two parameters and its tone wander, slowly and smoothly, "
-        "inside the engine - 0 = still), knob 3 Speed (about 25 s to 4 min); aux leaves. The bells' and the motion's engines: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
+        "inside the engine - 0 = still), knob 3 Speed (about 25 s to 4 min), knob 4 Lock (free: it never repeats; "
+        "clock: it turns with the music, one cycle in 32, 16, 8 or 4 bars, an external MIDI clock too); aux leaves. "
+        "Every layer may drift while the MOSAIC plays on it: the one moves the timbre, the other the level and "
+        "the rhythm. The bells' and the motion's engines: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
         "is the raw console square, its Arp off below 50 %. The pads too have their type's own two (while the voices "
         "play different types, Character and Movement, each type answering in its way): " +
         "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.PAD_PARAMS.items()) + ". The drone's designs: " +
@@ -319,8 +322,9 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
     "Bells@MOSAIC ROLES": (", ".join(S.SMBELL), "MOSAIC: the bells play the pattern - the chord tones in turn, two "
                            "(echo) or three (high) octaves up. off: they play as the piece has them."),
     "Pads@MOSAIC ROLES": (", ".join(S.SMPADS), "MOSAIC: held; pulse - all four voices re-articulate on the pattern; "
-                          "arpeggio - one voice sounds out at a time, rising, the others dip; lines - a PAD LINES "
-                          "move on each hit."),
+                          "arpeggio - one voice sounds out at a time, rising, the others dip; lines (the default) - "
+                          "the PAD LINES carried on the pattern: a line move on each hit, the voice that moved sounding "
+                          "out, and where no line moves (a still chord, Lines at 0) the chord arpeggiated instead."),
     "Sub@MOSAIC ROLES": (", ".join(S.SMSUB), "MOSAIC: held; bass - a bass line on the pattern (root, root, 5th, "
                          "octave); pulse."),
     "Drone@MOSAIC ROLES": (", ".join(S.SMDRONE), "MOSAIC: held - as it is; pulse - it re-articulates on the pattern; "
@@ -330,14 +334,17 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
                              "but the calm ones (emerge, break, dissolve); it leaves when the section ends. Writing "
                              "still: never. aux + C# brings it in yourself, all five layers."),
     "Develop": (", ".join(S.SMSPN), "MOSAIC FORM: how many layers a development section brings in (bells, pads, sub, "
-                "drone, textures, in that order); a climax brings all five."),
+                "drone, textures, sparkle, in that order); a climax brings them all."),
     "Joins": (", ".join(S.SMSJO), "MOSAIC FORM: the layers come in and leave a bar each (cascade), or all at once."),
     "Bells@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the bells' step - a quarter, half, once or "
                            "twice the Pace (at most 16ths). All the rates share one grid, so the layers interlock."),
     "Pads@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the pads' step, as the bells'."),
     "Sub@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the sub's step, as the bells'."),
-    "Textures@MOSAIC RATES": ("held, " + ", ".join(n for n, _ in S.SMRATE), "MOSAIC: held - the textures as they "
-                              "are; else gated at this step: open on each hit, closing towards the next."),
+    "Tex+atmos": ("held, " + ", ".join(n for n, _ in S.SMRATE), "MOSAIC RATES: held - the textures, the "
+                  "atmosphere and the cloud as they are; else gated at this step: open on each hit, closing towards "
+                  "the next."),
+    "Sparkle@MOSAIC FORM": ("off, " + ", ".join(n for n, _ in S.SMRATE), "MOSAIC FORM: GLINT's small bells high on "
+                            "the chord tones join the mosaic, last, at this rate of the Pace (off: not in it)."),
     "Lines": ("0-100 %", "PAD LINES: how often a pad voice moves between the chord changes, as a line in counterpoint "
               "(0 = off: the pads hold each chord). A voice steps to the next note of the scale, away from its chord "
               "tone and back, against the motion's direction, never onto or across another voice; near the chord's "

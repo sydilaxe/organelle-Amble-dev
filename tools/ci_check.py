@@ -2065,7 +2065,7 @@ check(all(len(v) > 200 and max(v) - min(v) > 0.3 and max(abs(a - b) for a, b in 
 #     pads arpeggiate, the sub plays a bass line, the drone a pedal (calm), the textures gate; again: out, the levels
 #     back at 1; held: the MOSAIC page
 def mosprobe(c):
-    for i, n in enumerate(["ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t"]):
+    for i, n in enumerate(["ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t", "ac-glint"]):
         r = c.obj(f"r {n}", 1400 + i * 120, 20)
         e = c.obj("expr int(acnow)", 1400 + i * 120, 50)
         c.c(r, 0, e, 0)
@@ -2075,17 +2075,17 @@ def mosprobe(c):
 _ml = [f"{v} 2" for v in ("acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex")]
 log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
              (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0"),
-             (62000, "aux 1"), (62050, "notesRaw 61 100"), (62150, "notesRaw 61 0"), (62300, "aux 0"),
-             (100000, "aux 1"), (100050, "notesRaw 61 100"), (100800, "notesRaw 61 0"), (101000, "aux 0")], 102,
+             (75000, "aux 1"), (75050, "notesRaw 61 100"), (75150, "notesRaw 61 0"), (75300, "aux 0"),
+             (125000, "aux 1"), (125050, "notesRaw 61 100"), (125800, "notesRaw 61 0"), (126000, "aux 0")], 127,
              extra=mosprobe, prints=("ac-v0-acc", "ac-acc-t", "ac-sett0"))
 L_ = log.splitlines()
 mt = {n: [int(float(l.split()[1])) for l in L_ if l.startswith(f"h-m-{n}:")]
-      for n in ("ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t")}
+      for n in ("ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t", "ac-glint")}
 joined = [l.split("mosaic + ")[1] for l in L_ if l.startswith("ac-toast: list mosaic + ")]
-during = {n: len([t for t in v if 4000 < t < 62000]) for n, v in mt.items()}
+during = {n: len([t for t in v if 4000 < t < 75000]) for n, v in mt.items()}
 lastv = [l.split()[1] for l in L_ if l.startswith("ac-v0-acc:")][-1:]
 lastt = [l.split()[1] for l in L_ if l.startswith("ac-acc-t:")][-1:]
-check(joined == ["bells", "pads", "sub", "drone", "textures"] and all(v > 3 for v in during.values())
+check(joined == ["bells", "pads", "sub", "drone", "textures", "sparkle"] and all(v > 3 for v in during.values())
       and "ac-toast: list mosaic out" in L_ and lastv == ["1"] and lastt == ["1"]
       and any(l.startswith("ac-sett0: list LIVE MOSAIC") for l in L_),
       f"MOSAIC: joins {joined}, plays {during}, out with the levels back ({lastv}, {lastt}), held: its page")
@@ -2093,6 +2093,7 @@ check(joined == ["bells", "pads", "sub", "drone", "textures"] and all(v > 3 for 
 def padsteps(rate_knob):
     log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
                  (600, "acsetup 1"), (601, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC RATES')}"), (602, f"ac-setknob 1 {rate_knob}"),
+                 (605, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC ROLES')}"), (606, "ac-setknob 1 0.6"),
                  (603, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC')}"), (604, "ac-setknob 1 0.95"), (700, "acsetup 0"),
                  (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0")], 40,
                  extra=mosprobe)
@@ -2118,12 +2119,49 @@ mf2, mf0 = mosform(2), mosform(0)
 by_role = {}
 for t, role, n, want in mf2:
     by_role.setdefault(role, []).append(n)
-climax_full = max(by_role.get(4, [0])) == 5
+climax_full = max(by_role.get(4, [0])) == 6
 calm_none = all(max(by_role.get(r, [0])) == 0 for r in (0,))
 check(climax_full and calm_none and any(n > 0 for r in (2, 3) for n in by_role.get(r, [])) and mf2[-1][2] < 5
       and all(r[2] == 0 for r in mf0),
       f"MOSAIC FORM: develop + climax - the most layers by role {dict((r, max(v)) for r, v in by_role.items())}; "
       f"Sections off: {max(r[2] for r in mf0) if mf0 else '?'}")
+
+# 95. MOSAIC layers fade in (the bells' first notes in it far softer than later); the pads' lines on its pattern (each
+#     hit a line move or, where none, an arpeggio step); DRIFT locked to the clock turns with it (a cycle meets itself)
+def velprobe(c):
+    for n in ("ac-bell", "ac-v0-acc", "ac-v1-acc", "ac-v2-acc", "ac-v3-acc"):
+        r = c.obj(f"r {n}", 1400, 20)
+        e = c.obj("expr int(acnow); $f1", 1400, 50)
+        c.c(r, 0, e, 0)
+        c.c(e, 0, c.obj(f"print h-v-{n}", 1400, 80), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0"), (70, "acmsjo 1")] + [(500, m) for m in _ml] +
+             [(510, "ac-layers bang"), (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"),
+              (4300, "aux 0")], 40, extra=velprobe, prints=("ac-bell",))
+bells = [float(l.split()[2]) for l in log.splitlines() if l.startswith("ac-bell: ")]
+pads = sum(1 for l in log.splitlines() if l.startswith("h-v-ac-v") and int(float(l.split()[1])) > 20000)
+check(len(bells) >= 6 and sum(bells[:2]) / 2 < 0.5 * sum(bells[-4:]) / 4 and pads > 5,
+      f"MOSAIC: a layer fades in (bells {[round(b, 2) for b in bells[:2]]} first, {[round(b, 2) for b in bells[-2:]]} "
+      f"later); the pads' lines play on its pattern ({pads} accents)")
+def lockprobe(c):
+    e = c.obj("expr acbars + (actick % int(24*acmeter))/(24*acmeter); $f1", 1400, 50)
+    c.c(c.obj("r ac-prm-dp", 1400, 20), 0, e, 0)
+    p = c.obj("pack f f", 1400, 80)
+    c.c(e, 0, p, 0)
+    c.c(e, 1, p, 1)
+    c.c(p, 0, c.obj("print h-lk", 1400, 110), 0)
+
+
+_dp = GS.DRIFT_PAGE0
+log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "acsetup 1"), (1001, f"acsetpg {_dp}"),
+              (1010, "ac-setknob 0 0.8"), (1020, "ac-setknob 2 0.99"), (1030, "ac-setknob 3 0.99")], 60, extra=lockprobe)
+lk = [(float(l.split()[1]), float(l.split()[2])) for l in log.splitlines() if l.startswith("h-lk")][20:]
+# (the same place in the bars, one 4-bar cycle apart, whatever the meter does)
+gaps = [abs(v - w) for (t, v) in lk for (u, w) in lk if abs(u - t - 4) < 0.02]
+check(len(gaps) > 5 and max(gaps) < 0.05 and max(v for _, v in lk) - min(v for _, v in lk) > 0.2,
+      f"DRIFT Lock clock: the drone's drift meets itself a 4-bar cycle on ({len(gaps)} pairs, worst gap "
+      f"{max(gaps) if gaps else 1:.3f}), and moves {min(v for _, v in lk):.2f}..{max(v for _, v in lk):.2f}")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

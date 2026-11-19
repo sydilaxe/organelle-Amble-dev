@@ -34,7 +34,7 @@ def switched(name, gain, block=None, hook=None):
     ln = s.to((tl, 1), "line~")
     s.c(ln, 0, snap, 0)
     gl = ln
-    if s.layer in ("d", "s", "t"):      # (MOSAIC's accents on this layer: a vline~ at 1 unless it plays)
+    if s.layer in ("d", "s", "t", "a", "c"):      # (MOSAIC's accents on this layer: a vline~ at 1 unless it plays)
         acc = s.obj("vline~")
         s.c(s.m(s.obj("loadbang"), "1"), 0, acc, 0)
         s.c(s.recv(f"ac-acc-{s.layer}"), 0, acc, 0)

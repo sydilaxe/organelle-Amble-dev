@@ -32,7 +32,7 @@ GLOBALS = dict(
     acmgi=-1, acmgn=1, acvc=0, acvd0=0, acvd1=0, acvd2=0, accp=0, acpsd=0, acphc=-1, acphn=0, acphd=4, acphs=3, acsfit=1,
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
-    acmdg=0, acbdir=0, acbpl=0, acmdir=0, acmlp=0, acplk=-1, acplt=0, acpldr=0, acplup=0, acpldn=0, acplf=0, acplq=0, acplb=0, acplforce=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
+    acmdg=0, acbdir=0, acbpl=0, acmdir=0, acmlp=0, acplk=-1, acplt=0, acpldr=0, acplup=0, acpldn=0, acplf=0, acplq=0, acplb=0, acplforce=0, acplmv=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
     acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
@@ -1407,7 +1407,8 @@ def pad_lines(c):
     holds a suspension (Pads carry), and while you play the chord (MIDI IN Notes to chords)."""
     nv = "if(acplv == 0, 1, if(acplv == 1, 2, 4))"
     glide = "if(acglide == 0, 30, 15000/acbpm)"
-    send = [If(f"acplk == {k}", [SendL(f"ac-v{k}-pitch", ["acplt", glide, "0"]), T("acplc", k, "acplt")]) for k in range(4)]
+    send = [If(f"acplk == {k}", [SendL(f"ac-v{k}-pitch", ["acplt", glide, "0"]), T("acplc", k, "acplt"), V("acplmv", "1")])
+            for k in range(4)]
     # (the voice off its chord tone: back home, or on through to the next chord tone)
     resolve = [V("acpldr", "(acplc[int(acplk)] > acplh[int(acplk)]) - (acplc[int(acplk)] < acplh[int(acplk)])"),
                V("acplt", "acplh[int(acplk)]"),
@@ -1430,7 +1431,9 @@ def pad_lines(c):
             [If(_chord_tone("acplt"), [T("acplh", 3, "acplt")])] if k == 3 else []))])]
     # (ac-plgo: one pulse of the lines; on the Pace here, or on MOSAIC's pattern with acplforce: a move each hit)
     proc(c, "ac-step", shared=True, steps=[If(
-        "(acpln*acwrite) > 0 && int(acstep) % if(acplp == 0, 1, if(acplp == 1, 2, if(acplp == 2, 4, 8))) == 0",
+        # (while the pads play lines in the MOSAIC, its pattern times them instead)
+        "(acpln*acwrite) > 0 && (acmosn < 2 || acmrp != 3) && "
+        "int(acstep) % if(acplp == 0, 1, if(acplp == 1, 2, if(acplp == 2, 4, 8))) == 0",
         [V("acplforce", "0"), Call("ac-plgo")])])
     proc(c, "ac-plgo", [If("acrun && acgpad > 0.01 && acres == 0 && (acroute != 1 || acheld == 0) && acfirst == 0", [
             V("acplf", "(acnow - acchgt)/max(1, acchsec*1000*actime)"),

@@ -235,7 +235,8 @@ def perform():
         ve = f"if(aci == {i}, {vals[i]}, {ve})"
     # GLINT: now and then (a few a minute at a little Sparkle, about six a second at all), a bell high on a chord
     # tone, one in three an octave more - while the drone or the pads sound
-    proc(c, "ac-sparkupd", [SendL("ac-g-glint", ["acspark > 0.001", "300"])])
+    # (on with Sparkle, or while the MOSAIC's sparkle plays)
+    proc(c, "ac-sparkupd", [SendL("ac-g-glint", ["acspark > 0.001 || (acmosn > 5 && acmspk > 0)", "300"])])
     # DRIFT (each layer's: its SHAPE page, then aux): every 100 ms the layer's two sound parameters (knobs 3-4 of its
     # SHAPE page) and its tone wander slowly around where they are set, inside the engine - three slow sines at
     # unrelated rates each (a smooth wander that never repeats audibly - no pulse; no random draws, so seeds replay),
@@ -248,17 +249,29 @@ def perform():
 
     gains = dict(d="drone", s="sub", p="pad", b="bell", m="motion", t="tex", a="atm", c="cloud")
 
+    # Lock clock: the phase is the clock's (an external MIDI clock too) - one cycle in 32, 16, 8 or 4 bars, its
+    # partials whole multiples, so the cycle meets itself: the drift turns with the music
+    def lockw(ph, r, o):
+        r = 1 if r < 1.2 else 2
+        return f"((sin({ph}*{r} + {o}) + 0.6*sin({ph}*{r}*2 + {o} + 1.3) + 0.4*sin({ph}*{r}*3 + {o} + 2.9))/1.6)"
+
     def drift(i, x):
         per, ph, amt, ton = S._pick(f"acdr{x}s", S.SDRIFT), f"acdph{x}", f"acdr{x}a", f"acdr{x}t"
-        tone = f"min(1, max(0, acsh{x}t + {ton}*0.5*{wander(ph, 0.83, 4 + i)}))"
+        lk = f"acdr{x}l"
+        bars = S._pick(f"acdr{x}s", list(enumerate(S.SDRIFTB)))
+
+        def w(r, o):
+            return f"if({lk}, {lockw(ph, r, o)}, {wander(ph, r, o)})"
+        tone = f"min(1, max(0, acsh{x}t + {ton}*0.5*{w(0.83, 4 + i)}))"
         if x in "bm":
-            sound = [V(f"acdo{x}{j}", f"{amt}*0.5*{wander(ph, r, o + i)}") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]
+            sound = [V(f"acdo{x}{j}", f"{amt}*0.5*{w(r, o + i)}") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]
         else:
-            sound = [SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {amt}*0.5*{wander(ph, r, o + i)}))"]
+            sound = [SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {amt}*0.5*{w(r, o + i)}))"]
                            + (["120"] if kind == "prm" else []))
                      for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]
         return If(f"({amt} > 0.001 || {ton} > 0.001) && acg{gains[x]} > 0.01", [
-            V(ph, f"fmod({ph} + 0.6283185/({per}), 62831.85)"),
+            V(ph, f"if({lk}, 6.2831853*(acbars + (actick % int(24*acmeter))/(24*acmeter))/({bars}), "
+                  f"fmod({ph} + 0.6283185/({per}), 62831.85))"),
             If(f"{amt} > 0.001", sound),
             If(f"{ton} > 0.001", [SendL(f"ac-shp-{x}", [f"if({tone} < 0.5, 300*pow(66.67, {tone}*2), 20000)",
                                                        f"if({tone} > 0.5, 5*pow(400, {tone}*2 - 1), 5)",

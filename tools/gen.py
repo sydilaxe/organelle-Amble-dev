@@ -82,7 +82,7 @@ def build(out=OUT):
         from data import PAGES
         from data import FILE_KNOBS
         kd = [d for p in PAGES for _, _, d in p]
-        vals = kd[:FILE_KNOBS] + [1, 0, -1, 0, 0.7, 48, 1, 1.2, 0, 1, 0.8, 0, 0, 48, 1] + kd[FILE_KNOBS:gen_setup.SEND_KNOBS] + [0, 0, 0, 0] + [0, 0, 0, 2, 0, 0, 1, 5.5] + gen_setup.CC_DEFAULTS + [0, 0, 5] + [d for _, _, d in PAGES[5] + PAGES[6]] + [0, 0, 0, 0, 0, 0] + [0, 0, 1, 2] + [d for _, _, d in PAGES[7]] + [0, 0, 2, 0, 0.5, 0, 2] + [0, 0, 0.75, 0, 0.75] * 4 + [0, 0, 0, 0, 0, 3, 0, 1, 0, 1] + [0, 1] + [1] + [1, 0, 2, 0] + [gen_setup.GLOBALS[n] for n, _ in gen_setup.SAVE_MORE] + [gen_setup.GLOBALS[n] for n in ("acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt", "acmsec", "acmspn", "acmsjo")]
+        vals = kd[:FILE_KNOBS] + [1, 0, -1, 0, 0.7, 48, 1, 1.2, 0, 1, 0.8, 0, 0, 48, 1] + kd[FILE_KNOBS:gen_setup.SEND_KNOBS] + [0, 0, 0, 0] + [0, 0, 0, 2, 0, 0, 1, 5.5] + gen_setup.CC_DEFAULTS + [0, 0, 5] + [d for _, _, d in PAGES[5] + PAGES[6]] + [0, 0, 0, 0, 0, 0] + [0, 0, 1, 2] + [d for _, _, d in PAGES[7]] + [0, 0, 2, 0, 0.5, 0, 2] + [0, 0, 0.75, 0, 0.75] * 4 + [0, 0, 0, 0, 0, 3, 0, 1, 0, 1] + [0, 1] + [1] + [1, 0, 2, 0] + [gen_setup.GLOBALS[n] for n, _ in gen_setup.SAVE_MORE] + [gen_setup.GLOBALS[n] for n in ("acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt", "acmsec", "acmspn", "acmsjo", "acmspk")]
         assert len(vals) == len(gen_setup.SETTINGS), (len(vals), len(gen_setup.SETTINGS))
         open(sf, "w").write(" ".join(f"{v:g}" for v in vals) + ";\n")
     # Pd start-up options: the Organelle OS starts Pd with a 6 ms audio buffer and appends the patch folder's

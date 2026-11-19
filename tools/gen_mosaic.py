@@ -15,13 +15,13 @@ does with a hit is its role (SETUP MOSAIC ROLES):
   textures  held / gated (open on a hit, closing towards the next) - their role is their rate
 An accent is the layer's level dipping by Accent and swelling back (pulse), or held down between hits (arpeggio,
 gated). Nothing here draws random numbers: seeds replay."""
-from pdlib import Canvas, proc, X, V, Send, Call, SendL, If, Toast
+from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Toast
 import gen_setup as S
 
-GLOBALS = dict(acmos=0, acmosp=0, acmost=0, acmosn=0, acmst=0, acmsd=250, acmbn=0, acmsb=0, acmped=0, acmoskh=-1)
-ARRAYS = {}
+GLOBALS = dict(acbars=0, acmkn=0, acmos=0, acmosp=0, acmost=0, acmosn=0, acmst=0, acmsd=250, acmbn=0, acmsb=0, acmped=0, acmoskh=-1)
+ARRAYS = dict(acmjt=6)            # (when each layer joined: it fades in over two bars)
 
-LAYERS = ["bells", "pads", "sub", "drone", "textures"]      # (their cascade order: the join order)
+LAYERS = ["bells", "pads", "sub", "drone", "textures", "sparkle"]     # (their cascade order: the join order)
 PACE = "if(acmpace == 0, 1, if(acmpace == 1, 2, 4))"         # (steps of 16ths per mosaic step)
 # (the pattern: its hits K in N steps - the motion's, or MOSAIC Hits' own)
 K = "if(acmhit == 0, acmk, " + "".join(f"if(acmhit == {i}, {k}, " for i, (_, k, _) in enumerate(S.SMHIT) if i) + "1" + ")" * len(S.SMHIT)
@@ -44,19 +44,30 @@ def hit(s):
     return f"((((int({s}) + int({ROT})) % int({N}) + int({N})) % int({N})) * int({K})) % int({N}) < {K}"
 
 
-def pulse(dest):
+def fade(i):
+    """layer i's share of the mosaic: 0 when it joins, all of it two bars later (it fades in, not suddenly)"""
+    return f"min(1, max(0, (acnow - acmjt[{i}])/max(1, 120000/acbpm*acmeter)))"
+
+
+def dep(i):
+    return f"acmacc*{fade(i)}"
+
+
+def pulse(dest, i):
     """a dip by Accent and a swell back over most of the step"""
-    return SendL(dest, ["1 - acmacc", "acmsd*0.8"], "$1 5, 1 $2 5")
+    return SendL(dest, [f"1 - {dep(i)}", "acmsd*0.8"], "$1 5, 1 $2 5")
 
 
 def reset(i):
     """layer i leaves the mosaic (or its role changes): its levels and notes back as the piece has them"""
+    # (the levels ease back over 1.5 s - it fades out, not suddenly)
     return [
         [],
-        [SendL(f"ac-v{k}-acc", ["1"], "$1 200") for k in range(4)],
-        [SendL("ac-acc-s", ["1"], "$1 100"), Call("ac-bassupd")],
-        [SendL("ac-acc-d", ["1"], "$1 100"), V("acmped", "0"), Call("ac-bassupd")],
-        [SendL("ac-acc-t", ["1"], "$1 100")],
+        [SendL(f"ac-v{k}-acc", ["1"], "$1 1500") for k in range(4)],
+        [SendL("ac-acc-s", ["1"], "$1 1500"), Call("ac-bassupd")],
+        [SendL("ac-acc-d", ["1"], "$1 1500"), V("acmped", "0"), Call("ac-bassupd")],
+        [SendL(f"ac-acc-{x}", ["1"], "$1 1500") for x in "tac"],
+        [Call("ac-sparkupd")],
     ][i]
 
 
@@ -74,14 +85,18 @@ def mosaic():
     proc(c, "ac-mossec", [V("acmosp", f"({want})*if(acrole == 4, {len(LAYERS)}, acmspn + 2)")])
     # a bar: a layer in (or out) towards the target - all five while you have it in (aux + C#), else the piece's;
     # Joins at once: straight there. And the drone's pedal.
-    join = [If(f"acmosn == {i + 1}", [Toast(f"mosaic + {n}")]) for i, n in enumerate(LAYERS)]
+    join = [If(f"acmosn == {i + 1}", [T("acmjt", i, "acnow"), Toast(f"mosaic + {n}")] + (
+        [Call("ac-sparkupd")] if n == "sparkle" else [])) for i, n in enumerate(LAYERS)]
     leave = [If(f"acmosn == {i}", reset(i)) for i in range(len(LAYERS))]
     pedal = "acmosn > 3 && (acmrd == 2 || acmrd == 3)"
     proc(c, "ac-mosbar", [
+        V("acbars", "(acbars + 1) % 64"),        # (bars counted, whatever the meter: DRIFT Lock's clock)
         V("acmost", f"if(acmos, {len(LAYERS)}, acmosp)"),
         If("acmsjo == 1 && acmosn != acmost", [
             *[If(f"{i} >= acmost && {i} < acmosn", reset(i)) for i in range(len(LAYERS))],
-            If("acmosn == 0", [Toast("mosaic in")]), V("acmosn", "acmost"), If("acmosn == 0", [Toast("mosaic out")])], [
+            *[If(f"{i} < acmost && {i} >= acmosn", [T("acmjt", i, "acnow")]) for i in range(len(LAYERS))],
+            If("acmosn == 0", [Toast("mosaic in")]), V("acmosn", "acmost"), Call("ac-sparkupd"),
+            If("acmosn == 0", [Toast("mosaic out")])], [
             If("acmosn < acmost", [V("acmosn", "acmosn + 1")] + join),
             If("acmosn > acmost", [V("acmosn", "acmosn - 1")] + leave + [If("acmosn == 0", [Toast("mosaic out")])])]),
         If(f"{pedal} && acgdrone > 0.01", [
@@ -91,29 +106,37 @@ def mosaic():
     ])
     # a 16th: each layer on its own step (its rate), on the pattern Cascade of its steps after the layer before
     acts = [
-        # bells: the chord tones in turn, high (the bar's first step a little stronger)
+        # bells: the chord tones in turn, high (the bar's first step a little stronger), louder as they fade in
         ("acmrtb", 0, If("acmrb > 0 && acgbell > 0.01", [
             V("acmbn", "(acmbn + 1) % 4"),
-            SendL("ac-bell", ["min(103, acnew[int(acmbn)] + 12*(1 + acmrb))", "0.4 + 0.15*(int(acmst) % 8 == 0)",
-                              "0.25 + 0.5*(int(acmst) % 2)"])])),
-        # pads
+            SendL("ac-bell", ["min(103, acnew[int(acmbn)] + 12*(1 + acmrb))",
+                              f"(0.4 + 0.15*(int(acmst) % 8 == 0))*(0.3 + 0.7*{fade(0)})", "0.25 + 0.5*(int(acmst) % 2)"])])),
+        # pads: pulse, arpeggio, or lines - the PAD LINES carried on the pattern: a line move on each hit, the voice
+        # that moved sounding out; where no line moves (a still chord, Lines at 0) the chord is arpeggiated instead
         ("acmrtp", 0, If("acgpad > 0.01", [
-            If("acmrp == 1", [pulse(f"ac-v{k}-acc") for k in range(4)]),
-            If("acmrp == 2", [SendL(f"ac-v{k}-acc", [f"if(int(acmst) % 4 == {k}, 1, 1 - acmacc)", "15"])
-                              for k in range(4)]),
-            If("acmrp == 3", [V("acplforce", "1"), Call("ac-plgo"), V("acplforce", "0")])])),
+            If("acmrp == 1", [pulse(f"ac-v{k}-acc", 1) for k in range(4)]),
+            If("acmrp == 3", [X("1; 0", "v acplforce", "v acplmv"), Call("ac-plgo"), V("acplforce", "0")]),
+            If("acmrp == 3 && acplmv", [If(f"acplk == {k}", [pulse(f"ac-v{k}-acc", 1)]) for k in range(4)]),
+            If("acmrp == 2 || (acmrp == 3 && acplmv == 0)",
+               [SendL(f"ac-v{k}-acc", [f"if(int(acmst) % 4 == {k}, 1, 1 - {dep(1)})", "15"]) for k in range(4)])])),
         # sub: a bass line (root, root, 5th, octave) or a pulse
         ("acmrts", 0, If("acgsub > 0.01", [
             If("acmrs == 1", [
                 V("acmsb", "(acmsb + 1) % 4"),
                 V("acmbn", deg2p("acdeg + if(acmsb == 2, 4, if(acmsb == 3, acn, 0))")),
                 V("acmbn", "acmbn - 12*ceil(max(0, acmbn - 43)/12) + 12*ceil(max(0, 28 - acmbn)/12)"),
-                SendL("ac-subp", ["mtof(acmbn)", "30"]), V("acmbn", "int(acmst) % 4")]),
-            If("acmrs == 2", [pulse("ac-acc-s")])])),
+                SendL("ac-subp", ["mtof(acmbn)", f"30 + 400*(1 - {fade(2)})"])]),
+            If("acmrs == 2", [pulse("ac-acc-s", 2)])])),
         # drone: a pulse (pulse, pulse+pedal), at the Pace
-        (None, 0, If("acgdrone > 0.01 && (acmrd == 1 || acmrd == 3)", [pulse("ac-acc-d")])),
-        # textures: gated, open on the hit, closing towards the next (their rate: held, or 1/4x .. 2x)
-        ("acmrtt", 1, If("acmrtt > 0 && acgtex > 0.01", [SendL("ac-acc-t", ["1 - acmacc", "acmsd*0.8"], "1 3, $1 $2 3")])),
+        (None, 0, If("acgdrone > 0.01 && (acmrd == 1 || acmrd == 3)", [pulse("ac-acc-d", 3)])),
+        # textures, atmosphere and cloud: gated, open on the hit, closing towards the next (held, or 1/4x .. 2x)
+        ("acmrtt", 1, If("acmrtt > 0", [SendL(f"ac-acc-{x}", [f"1 - {dep(4)}", "acmsd*0.8"], "1 3, $1 $2 3")
+                                        for x in "tac"])),
+        # sparkle: GLINT's small bells high on the chord tones, on the pattern (off, or 1/4x .. 2x)
+        ("acmspk", 1, If("acmspk > 0", [
+            V("acmkn", "(acmkn + 1) % 4"),
+            SendL("ac-glint", ["min(108, acnew[int(acmkn)] + 24 + 12*(int(acmst) % 3 == 0))",
+                               f"(0.3 + 0.1*(int(acmst) % 4 == 0))*{fade(5)}", "0.15 + 0.7*fmod(acmst*0.37, 1)", "700"])])),
     ]
     steps = []
     for i, (rv, shift, act) in enumerate(acts):

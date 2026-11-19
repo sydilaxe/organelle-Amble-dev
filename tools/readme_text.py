@@ -127,7 +127,8 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
         page (sound, tone, and the sound's own two; then aux: its DRIFT
-        page - sound drift, tone drift, speed); aux + tap: the
+        page - sound drift, tone drift, speed, lock: free / clock);
+        aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
         3 its level, 4 its reverb send; aux leaves. E (motion) or D#
         (bells) held + low keys: C random, C# the piece's own, D/D# rotate,
@@ -297,13 +298,15 @@ and let go, without knob 1, to leave and save)
   / beat), Hits (its own pattern: 3, 5, 7 of 8, 5 of 16, every
   step, or the motion's), Cascade (steps between layers), Accent
   MOSAIC ROLES: Bells (off / echo / high), Pads (held, pulse,
-  arpeggio, lines), Sub (held, bass, pulse), Drone (held, pulse,
-  pedal, pulse+pedal)
-  MOSAIC RATES: Bells, Pads, Sub, Textures (held, or gated): each
+  arpeggio, lines: the pad lines on the pattern, arpeggiated where
+  they rest), Sub (held, bass, pulse), Drone (held, pulse, pedal,
+  pulse+pedal)
+  MOSAIC RATES: Bells, Pads, Sub, Tex+atmos (held, or gated): each
   layer's step, 1/4x .. 2x the Pace, all on one grid
   MOSAIC FORM: Sections (the piece brings it in by itself: off,
   climax, develop+climax, all but calm), Develop (2-5 layers; a
-  climax all five), Joins (a layer a bar, or at once)
+  climax all), Joins (a layer a bar, or at once), Sparkle (off, or
+  its rate). A layer fades in over two bars; out over 1.5 s
   MACRO A / B: four macros (CC targets macro 1-4), each
   moving two knobs with a depth (-100..+100 %), offset or latch
   - SAVES -
