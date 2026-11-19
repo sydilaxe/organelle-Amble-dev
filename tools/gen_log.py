@@ -135,7 +135,7 @@ def perflog():
                             X("0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0", *[f"v {n}" for n in (
                                 "aclgpk", "aclgdcs", "aclgmn", "aclgclip", "aclgq", "aclglate", "aclgrs", "aclgrn",
                                 "aclglo", "aclghi", "aclgsub")]),
-                            If("aclgl % 12 == 0", [Send("ac-logwrite")]),
+                            If("aclgl % 6 == 0", [Send("ac-logwrite")]),      # (every 30 s: little lost at a power-off)
                             If("aclgl >= 120", [Send("ac-logwrite"), Call("ac-lognew")])])
     c.col()
     # the file: logs/perf-BBBBPP.txt; a new part every 120 lines (10 minutes)
@@ -146,7 +146,10 @@ def perflog():
     hdr = c.m((clr, 0), "list " + " ".join(n for n, _ in FIELDS))
     c.c(hdr, 0, c.obj("text set aclog 1e+06"), 0)
     c.c(c.m((clr, 1), "clear"), 0, td, 0)
-    fn = c.ch(c.recv("ac-logwrite"), "expr aclgfile", "makefilename logs/perf-%06d.txt")
+    # (a part with no line yet isn't written: stopping the piece as logging starts, as a profile does, left files
+    #  holding only the header)
+    run_steps(c, (c.recv("ac-logwrite"), 0), [If("aclgl > 0", [Send("ac-logwrite1")])])
+    fn = c.ch(c.recv("ac-logwrite1"), "expr aclgfile", "makefilename logs/perf-%06d.txt")
     c.c(c.m(fn, "write $1"), 0, td, 0)
     c.col()
     # ---- the profile run: the piece stops, the output is silent (the parts still compute); then every part alone:
@@ -168,7 +171,8 @@ def perflog():
     c.c(c.m((pc, 1), "clear"), 0, pt, 0)
     steps = []
     for i, (name, act) in enumerate(parts):
-        steps += [If(f"acprst == {i}", act + [Toast(f"{i + 1}/{len(parts)} {name}")])]
+        left = max(1, round((len(parts) - i) * 6 / 60))
+        steps += [If(f"acprst == {i}", act + [Toast(f"~{left}m {i + 1}/{len(parts)} {name}")])]
     proc(c, "ac-profgo", base + steps + [Arm("ac-profmeasure", "2000", stop="ac-profstop")])
     proc(c, "ac-profmeasure", [X("0; 0; 0", "v acprsum", "v acprn", "v acprmax"), Arm("ac-profrecord", "4000", stop="ac-profstop")])
     # (the crossfade part: the voices fade from sine to glass over 10 s, so two types compute in each)
@@ -184,7 +188,8 @@ def perflog():
         c.c(c.m((sel, i), f"symbol {name}"), 0, lst, 0)
     c.c(c.to(c.recv("ac-profvals"), "t l"), 0, lst, 1)
     c.c(lst, 0, c.obj("text set acprofile 1e+06"), 0)
-    run_steps(c, (rec, 0), [V("acflxf", "50"), V("acprst", "acprst + 1"),
+    # (the file is written after every part: stopped, or the power cut, it holds every part measured so far)
+    run_steps(c, (rec, 0), [Send("ac-profwrite"), V("acflxf", "50"), V("acprst", "acprst + 1"),
                             If(f"acprst < {len(parts)}", [Later("ac-profgo", 10, stop="ac-profstop")], [Call("ac-profend")])])
     proc(c, "ac-profvalsq", [SendL("ac-profvals", ["int(1000*acprsum/max(1, acprn))/10", "int(1000*acprmax)/10"])])
     c.c((rec, 2), 0, c.obj("s ac-profvalsq"), 0)
@@ -199,7 +204,9 @@ def perflog():
             Toast("profile written")])
     # A# while it runs: the profile stops (what it measured so far is written) and the piece is back, stopped
     # (its timers listened for ac-profstop, but nothing sent it: a started profile could not be cancelled)
-    proc(c, "ac-profabort", [If("acprof", [Send("ac-profstop"), Call("ac-profend"), Toast("profile stopped")])])
+    proc(c, "ac-profabort", [If("acprof", [Send("ac-profstop"), SendL("ac-profstopped", ["acprst"]), Call("ac-profend"),
+                                           Toast("profile stopped")])])
+    c.c(c.m(c.recv("ac-profstopped"), "list stopped-after $1"), 0, c.obj("text set acprofile 1e+06"), 0)
     c.col()
     # on, off (SETUP CPU); when the piece stops, the part so far is written
     proc(c, "ac-logupd", [If("acguard >= 2", [If("aclogon == 0", [V("aclogon", "1"), Call("ac-lognew"),

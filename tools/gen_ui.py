@@ -13,6 +13,7 @@ import gen_setup as _S
 
 SIDE = {  # what to do after a knob changes a value (index = page*4 + knob)
     0: [Send("ac-densch")],
+    1: [Call("ac-tideupd")],          # (Tide: the playing chord's length too, not only the next one's)
     2: [Call("ac-brightupd")],
     3: [Call("ac-inputupd")],
     4: [Call("ac-revupd")],

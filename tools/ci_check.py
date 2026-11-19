@@ -1971,5 +1971,23 @@ check(ok and jr[3][5] == (_be + 1) % len(STRIKES) and jr[3][6] == (_mo + 1) % le
       f"then the journey goes on from the pick (bells {STRIKES[_be]} -> {STRIKES[jr[3][5]] if ok else '?'}, motion "
       f"{STRIKES[_mo]} -> {STRIKES[jr[3][6]] if ok else '?'}, pads {[FLAVOURS[f] for f in jr[3][:4]] if ok else '?'})")
 
+# 89. Tide acts on the playing chord (turned down mid-chord, the change comes within a second, not when the long chord
+#     ends); a heavy SETUP choice turned quickly acts once, for the last (MUSIC Key: one key change, to the key it rests on)
+def chgtimes(c):
+    e = c.obj("expr int(acnow)", 1400, 50)
+    c.c(c.obj("r ac-change2", 1400, 20), 0, e, 0)
+    c.c(e, 0, c.obj("print h-chg", 1400, 80), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (20000, "knob2 0.3"), (20100, "knob2 0.1"), (20200, "knob2 0.0")], 26, extra=chgtimes)
+ct = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+check(any(20200 <= t <= 21500 for t in ct), f"Tide down at 20 s: the chord changes within a second (changes at {ct} ms)")
+_mu = GS.SETUP_NAMES.index("MUSIC")
+ev = [(50, "ac-setseed 7"), (3000, "acsetup 1"), (3001, f"acsetpg {_mu}")] + \
+     [(3010 + 25 * i, f"ac-setknob 0 {0.05 + 0.06 * i}") for i in range(12)] + [(4500, "h-q bang")]
+log, _ = run(ev, 5, extra=lambda c: (chgtimes(c), jprobe(c)), prints=("ac-keytoast",))
+ct = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+check(len([t for t in ct if t > 3000]) == 1, f"MUSIC Key turned through 12 steps: one chord change once it rests ({ct})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

@@ -33,7 +33,8 @@ KNOBS = {   # value name -> (range, what it does)
     "acdens": ("0-100 %", "How much plays. With the section's energy it decides which layers sound and how full "
                           "they are; low values leave the drone and a few voices, high values bring in textures, "
                           "cloud, bells and motion."),
-    "actide": ("0-100 %", "Harmonic pace: the time between chord changes (the section's role scales it further)."),
+    "actide": ("0-100 %", "Harmonic pace: the time between chord changes (the section's role scales it further). It "
+                          "acts on the playing chord at once: turned down, the next change comes sooner."),
     "accolor": ("0-100 %", "Brightness of the pads, filters and resonators."),
     "acinput": ("0-100 %", "External audio amount. At 0 the input is ignored completely (no dry signal, no "
                            "processing, no listening, the pitch tracker off). It always starts at 0 when Amble "
@@ -698,7 +699,9 @@ def story():
                + esc("; ".join(f"{g}: {', '.join(ps)}" for g, ps in S.SETUP_GROUPS)) + "."),
           para(f"Hold <b>aux</b> for 1 s. A tap on aux turns the {S.NSET} pages; with aux held, knob 1 scrolls through "
                "all of them, back and forth; aux + a white low key jumps to a group. Knobs 1-4 set the 4 rows "
-               "(absolute positions). Hold aux and let it go (without turning knob 1) to leave; settings are saved."),
+               "(absolute positions). A choice that starts something heavy - a sound, a key, scale or chords, the mode, "
+               "a section, JOURNEY - shows at once and acts once the knob has rested a moment, so turning through the "
+               "choices acts once, for the last. Hold aux and let it go (without turning knob 1) to leave; settings are saved."),
           table(srows, [0.45, 0.4, 1.0, 1.75, 3.1]),
           Spacer(1, 6),
           Table([[shot("setup" if n == 1 else f"setup_page{n}", 3.1, f"SETUP {S.SETUP_NAMES[n - 1]}")
