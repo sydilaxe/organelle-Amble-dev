@@ -1010,10 +1010,11 @@ D = [x for i, x in enumerate(L) if i == 0 or x != L[i - 1]]
 #  e.g. when the key plan moves the key at a section)
 bad = [(a, b) for a, b in zip(D[1:], D[2:]) if a.split(" > ")[0] != b.split(" > ")[0] and a.split(" > ")[1] != b.split(" > ")[0]]
 check(len(D) > 8 and not bad, f"chord line: each next chord is the one that plays ({len(D)} lines, {bad[:2]})")
+# (On pick: next change first - "now" is the default; a pick plays once knob 1 rests, 150 ms)
 log, _ = run([(50, "ac-setseed 7"), (2900, "h-mark bang"), (3000, "notesRaw 69 100"), (3700, "notesRaw 69 0"),
-              (4000, "knob1 0.05"), (4300, "knob1 0.65"), (4500, "h-mark bang"), (6000, "notesRaw 69 100"),
+              (3900, "knob4 0.1"), (4000, "knob1 0.05"), (4300, "knob1 0.65"), (4500, "h-mark bang"), (6000, "notesRaw 69 100"),
               (6050, "notesRaw 69 0"), (6500, "knob4 0.9"), (6600, "h-mark bang"), (6700, "knob1 0.35"),
-              (6800, "h-mark bang"), (7500, "aux 1"), (7550, "aux 0"), (7600, "h-mark bang")], 9,
+              (7200, "h-mark bang"), (7500, "aux 1"), (7550, "aux 0"), (7600, "h-mark bang")], 9,
              prints=("ac-oledtop", "h-mark", "ac-sett0", "ac-sett1"))
 seg = log.split("h-mark: bang")
 grab = lambda t, pre: [l.split(pre, 1)[1].split()[0] for l in t.splitlines() if pre in l]

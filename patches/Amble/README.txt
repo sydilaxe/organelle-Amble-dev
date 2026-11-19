@@ -112,8 +112,8 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
       quick page (C: Writing still / moving at once); aux leaves
   A   tap: chord change now (to the next chord shown); hold: the CHORD
       page - knob 1 picks the next chord from the key's chords, knob 3 up:
-      the piece picks another, knob 4 On pick: next change / now (it
-      plays once knob 1 rests); aux leaves
+      the piece picks another, knob 4 On pick: now (the default: it
+      plays once knob 1 rests) / next change; aux leaves
   A#  RESOLVE: the tonic as open fifths, held - no modulation, no
       dissonant chords - until pressed again (a CC mapped to resolve
       holds it from a pedal)
