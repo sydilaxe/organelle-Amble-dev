@@ -14,8 +14,8 @@ IN = S.IN_IDX                    # (In always stays where it is)
 VERB = S.KNOBS.index("acrvtype")  # (a choice: switches at the start of a glide)
 L8 = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud"]
 
-GLOBALS = dict(acmph=0, acmt0=0, acmdur=0, acmtt=0, acmorphing=0, acancs=0, acbases=0, acchanged=0, acchd=0,
-               acmacrok=0, acdph=0, acsph=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
+GLOBALS = dict(**{f"acdph{x}": 0 for x in "dspbmtac"}, acdobp=0, acdobq=0, acdomp=0, acdomq=0, acmph=0, acmt0=0, acmdur=0, acmtt=0, acmorphing=0, acancs=0, acbases=0, acchanged=0, acchd=0,
+               acmacrok=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
                acjmi=-1, acjt=0, acjpadw=0, acjon=0, acjforce=0, acccnext=0, acccv=0, acchk=0, acslotcur=-1)
 ARRAYS = dict(acmfrom=NK, acmto=NK, acmtouch=NK, acanc=NK, acbase=NK, accur=NK, acancm=8, acbasem=8, accurm=8,
               acmtk=len(S.MTARGETS), acjpi=4, acjpt=12 * len(S.JPAD_SETS), acjpn=len(S.JPAD_SETS), acccl=16)
@@ -236,26 +236,35 @@ def perform():
     # GLINT: now and then (a few a minute at a little Sparkle, about six a second at all), a bell high on a chord
     # tone, one in three an octave more - while the drone or the pads sound
     proc(c, "ac-sparkupd", [SendL("ac-g-glint", ["acspark > 0.001", "300"])])
-    # DRIFT: every 100 ms the drone's / the sub's tone and two sound parameters (knobs 2-4 of its SHAPE page) wander
-    # slowly around where they are set: three slow sines at unrelated rates each (a smooth wander that never repeats
-    # audibly - no pulse; no random draws, so seeds replay), the tone by a quarter of the depth
+    # DRIFT (each layer's: its SHAPE page, then aux): every 100 ms the layer's two sound parameters (knobs 3-4 of its
+    # SHAPE page) and its tone wander slowly around where they are set, inside the engine - three slow sines at
+    # unrelated rates each (a smooth wander that never repeats audibly - no pulse; no random draws, so seeds replay),
+    # from 0 when it starts (no jump), each layer on its own phases. The bells and the motion read theirs at each note:
+    # their drift is an offset (acdo<x>p/q) the engines add.
     def wander(ph, r, o):
-        # (minus its value at phase 0: from 0, where drift starts, it begins at the setting - no jump)
         w0 = (math.sin(o) + math.sin(o + 1.3) + math.sin(o + 2.9)) / 2.2
         return (f"((sin({ph}*{r} + {o}) + sin({ph}*{r}*0.618 + {o} + 1.3) + sin({ph}*{r}*0.383 + {o} + 2.9))/2.2"
                 f" - {w0:.6f})")
 
-    def drift(x, depth, speed, ph, layer):
-        per = S._pick(speed, S.SDRIFT)
-        tone = f"min(1, max(0, acsh{x}t + {depth}*0.25*{wander(ph, 0.83, 4)}))"
-        return If(f"{depth} > 0.001 && acg{layer} > 0.01", [
+    gains = dict(d="drone", s="sub", p="pad", b="bell", m="motion", t="tex", a="atm", c="cloud")
+
+    def drift(i, x):
+        per, ph, amt, ton = S._pick(f"acdr{x}s", S.SDRIFT), f"acdph{x}", f"acdr{x}a", f"acdr{x}t"
+        tone = f"min(1, max(0, acsh{x}t + {ton}*0.5*{wander(ph, 0.83, 4 + i)}))"
+        if x in "bm":
+            sound = [V(f"acdo{x}{j}", f"{amt}*0.5*{wander(ph, r, o + i)}") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]
+        else:
+            sound = [SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {amt}*0.5*{wander(ph, r, o + i)}))"]
+                           + (["120"] if kind == "prm" else []))
+                     for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]
+        return If(f"({amt} > 0.001 || {ton} > 0.001) && acg{gains[x]} > 0.01", [
             V(ph, f"fmod({ph} + 0.6283185/({per}), 62831.85)"),
-            *[SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {depth}*0.5*{wander(ph, r, o)}))"] + (["120"] if kind == "prm" else []))
-              for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))],
-            SendL(f"ac-shp-{x}", [f"if({tone} < 0.5, 300*pow(66.67, {tone}*2), 20000)",
-                                  f"if({tone} > 0.5, 5*pow(400, {tone}*2 - 1), 5)", f"acsh{x}d", f"2*acsh{x}w"])])
+            If(f"{amt} > 0.001", sound),
+            If(f"{ton} > 0.001", [SendL(f"ac-shp-{x}", [f"if({tone} < 0.5, 300*pow(66.67, {tone}*2), 20000)",
+                                                       f"if({tone} > 0.5, 5*pow(400, {tone}*2 - 1), 5)",
+                                                       f"acsh{x}d", f"2*acsh{x}w"])])])
     proc(c, "ac-ptick", [
-        drift("d", "acdrd", "acdrs", "acdph", "drone"), drift("s", "acsud", "acsus", "acsph", "sub"),
+        *[drift(i, x) for i, x in enumerate(S.SHAPE_X)],
         If("acspark > 0.001 && acrun && (acgdrone > 0.01 || acgpad > 0.01) && "
            "random(0, 10000) < 1000*(0.05 + 5.95*acspark*acspark)", [
             SendL("ac-glint", ["min(108, acnew[int(random(0, 4))] + 12*(acsparko + 1) + 12*(random(0, 3) == 0))",

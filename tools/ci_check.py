@@ -2039,17 +2039,21 @@ check(not m0 and len(m1) >= 15 and not bad and against > len(dep) / 2,
       f"PAD LINES: {len(m1)} moves at 90 % (at 0: {len(m0)}), no voice onto or across another ({bad[:2]}), "
       f"departures against the motion {against} of {len(dep)}")
 
-# 92. DRIFT: the drone's and the sub's sound parameters wander around their settings (depth, speed), back when it is 0
-_dr = GS.SETUP_NAMES.index("DRIFT")
-log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "acsetup 1"), (1001, f"acsetpg {_dr}"),
-              (1010, "ac-setknob 0 0.8"), (1020, "ac-setknob 1 0.99"), (1030, "ac-setknob 2 0.8"), (1040, "ac-setknob 3 0.99"),
-              (30000, "ac-setknob 0 0"), (30010, "ac-setknob 2 0")], 31, prints=("ac-prm-dp", "ac-prm-sp"))
+# 92. DRIFT, each layer's (its SHAPE page - the layer key held - then aux): its sound parameters wander smoothly around
+#     their settings (no pulse, no jump), back when it is 0; a DRIFT page's knobs touch nothing else (GENERAL's)
+log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "notesRaw 72 100"), (1700, "notesRaw 72 0"),
+              (1800, "aux 1"), (1850, "aux 0"), (2000, "knob1 0.8"), (2010, "knob3 0.99"),
+              (2100, "acsetpg " + str(GS.DRIFT_PAGE0 + 1)), (2110, "knob1 0.8"), (2120, "knob3 0.99"),
+              (30000, "acsetpg " + str(GS.DRIFT_PAGE0)), (30005, "knob1 0"),
+              (30010, "acsetpg " + str(GS.DRIFT_PAGE0 + 1)), (30015, "knob1 0")], 31,
+             prints=("ac-prm-dp", "ac-prm-sp", "ac-sett0", "ac-toast"))
 dv = {n: [float(l.split()[1]) for l in log.splitlines() if l.startswith(n + ":")] for n in ("ac-prm-dp", "ac-prm-sp")}
-# (a smooth wander, not a pulse: no step between two 100 ms values over 0.03)
+pages = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-sett0")]
 check(all(len(v) > 200 and max(v) - min(v) > 0.3 and max(abs(a - b) for a, b in zip(v[:-1], v[1:-1])) < 0.03
-          and abs(v[-1] - 0.5) < 0.01 for v in dv.values()),
-      f"DRIFT 80 % fast: drone and sub wander smoothly {[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} "
-      f"around 0.5, back to {[v[-1] for v in dv.values() if v]} at 0")
+          and abs(v[-1] - 0.5) < 0.01 for v in dv.values()) and "DRONE drift" in " ".join(pages)
+      and "MIDI out" not in log and "clock" not in log.lower().replace("clockstop", ""),
+      f"DRIFT: top C held, aux - {[p for p in pages if 'drift' in p][:1]}; drone and sub wander smoothly "
+      f"{[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} around 0.5, back to {[v[-1] for v in dv.values() if v]} at 0")
 
 # 93. MOSAIC: aux + C# brings it in a layer a bar (bells, pads, sub, drone, textures) - the bells echo the pattern, the
 #     pads arpeggiate, the sub plays a bass line, the drone a pedal (calm), the textures gate; again: out, the levels
@@ -2079,6 +2083,16 @@ check(joined == ["bells", "pads", "sub", "drone", "textures"] and all(v > 3 for 
       and "ac-toast: list mosaic out" in L_ and lastv == ["1"] and lastt == ["1"]
       and any(l.startswith("ac-sett0: list LIVE MOSAIC") for l in L_),
       f"MOSAIC: joins {joined}, plays {during}, out with the levels back ({lastv}, {lastt}), held: its page")
+# (each layer at its own rate on one grid: the pads at 2x play about twice the pads at 1x)
+def padsteps(rate_knob):
+    log, _ = run([(50, "ac-setseed 7")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+                 (600, "acsetup 1"), (601, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC RATES')}"), (602, f"ac-setknob 1 {rate_knob}"),
+                 (603, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC')}"), (604, "ac-setknob 1 0.95"), (700, "acsetup 0"),
+                 (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0")], 40,
+                 extra=mosprobe)
+    return len([l for l in log.splitlines() if l.startswith("h-m-ac-v0-acc:") and float(l.split()[1]) > 25000])
+p1, p2 = padsteps(0.6), padsteps(0.95)
+check(p1 > 3 and 1.6 < p2 / p1 < 2.4, f"MOSAIC RATES: the pads at 2x step {p2} times, at 1x {p1} (every step, on one grid)")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

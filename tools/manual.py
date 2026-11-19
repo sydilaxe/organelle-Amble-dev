@@ -134,7 +134,9 @@ for _var, _name, _g in U.LAYER_KEYS:
         "silent, or take it out if it plays. The fade takes SETUP LIVE Key fade. Held half a second: its SHAPE "
         "page - knob 1 its sound, knob 2 Tone (50 % open; down darkens with a low-pass, up thins with a "
         "high-pass), knobs 3 and 4 the sound's own two parameters, named on the page for the sound playing (50 % as "
-        "designed; the overall stereo width is SETUP OUTPUT Width). The bells' and the motion's engines: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
+        "designed; the overall stereo width is SETUP OUTPUT Width). From the SHAPE page, aux: the layer's DRIFT page - "
+        "knob 1 Sound drift and knob 2 Tone drift (how far its two parameters and its tone wander, slowly and smoothly, "
+        "inside the engine - 0 = still), knob 3 Speed (about 25 s to 4 min); aux leaves. The bells' and the motion's engines: " + "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.ENGINE_PARAMS.items()) + ". The chip's Duty at 0 "
         "is the raw console square, its Arp off below 50 %. The pads too have their type's own two (while the voices "
         "play different types, Character and Movement, each type answering in its way): " +
         "; ".join(f"{k} {a} / {b}" for k, (a, b) in DT.PAD_PARAMS.items()) + ". The drone's designs: " +
@@ -308,28 +310,27 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
                 "droning piece - and your choices there are kept for moving again. moving: they act. Also low C held "
                 "(the WRITING page), and a CC mapped to writing (up: moving)."),
     "Pace@MOSAIC": (", ".join(S.SMPACE), "MOSAIC: the pattern's step - 16ths, 8ths or beats on the clock (an "
-                    "external MIDI clock too). The pattern is the motion's rhythm (its hits in its steps)."),
-    "Cascade": (", ".join(S.SMCAS), "MOSAIC: how many steps each layer plays the pattern after the one before it "
-                "(bells, pads, sub, drone, textures) - together, or as a canon across the ensemble."),
+                    "external MIDI clock too); each layer steps at its own rate of it (MOSAIC RATES)."),
+    "Hits": (", ".join(n for n, _, _ in S.SMHIT), "MOSAIC: its pattern - so many hits spread over so many steps, "
+             "its own (not the piece's density), or the motion's rhythm."),
+    "Cascade": (", ".join(S.SMCAS), "MOSAIC: how many of its steps each layer plays the pattern after the one before "
+                "it (bells, pads, sub, drone, textures) - together, or as a canon across the ensemble."),
     "Accent": ("0-100 %", "MOSAIC: how deep a layer's level dips on the pattern (pulse, arpeggio, gate)."),
-    "Bells@MOSAIC": (", ".join(S.SMBELL), "MOSAIC: the bells play the pattern - the chord tones in turn, two "
-                     "(echo) or three (high) octaves up. off: they play as the piece has them."),
-    "Drone@MOSAIC ROLES": (", ".join(S.SMDRONE), "MOSAIC: held - as it is; pulse - it re-articulates on the "
-                           "pattern; pedal - a 5th up and back, a bar each, the long note under the patterns; by "
-                           "energy - pedal while the section is calm, pulse when it is full."),
+    "Bells@MOSAIC ROLES": (", ".join(S.SMBELL), "MOSAIC: the bells play the pattern - the chord tones in turn, two "
+                           "(echo) or three (high) octaves up. off: they play as the piece has them."),
     "Pads@MOSAIC ROLES": (", ".join(S.SMPADS), "MOSAIC: held; pulse - all four voices re-articulate on the pattern; "
                           "arpeggio - one voice sounds out at a time, rising, the others dip; lines - a PAD LINES "
                           "move on each hit."),
     "Sub@MOSAIC ROLES": (", ".join(S.SMSUB), "MOSAIC: held; bass - a bass line on the pattern (root, root, 5th, "
                          "octave); pulse."),
-    "Textures@MOSAIC ROLES": (", ".join(S.SMTEX), "MOSAIC: held; gated - open on each hit, closing towards the next."),
-    "Drone drift": ("0-100 %", "DRIFT: the drone's timbre wanders slowly inside its engine - its two sound "
-                    "parameters (knobs 3 and 4 of its SHAPE page) and its tone drift around where you set them, by up "
-                    "to this much, smoothly and without repeating (no pulse). 0 = still."),
-    "Drone speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: the wander's time scale for the drone: about 240, 120, "
-                    "60 or 25 s."),
-    "Sub drift": ("0-100 %", "DRIFT: the sub's timbre wanders as the drone's."),
-    "Sub speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: the wander's time scale for the sub."),
+    "Drone@MOSAIC ROLES": (", ".join(S.SMDRONE), "MOSAIC: held - as it is; pulse - it re-articulates on the pattern; "
+                           "pedal - a 5th up and back, a bar each, the long note under the patterns; both."),
+    "Bells@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the bells' step - a quarter, half, once or "
+                           "twice the Pace (at most 16ths). All the rates share one grid, so the layers interlock."),
+    "Pads@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the pads' step, as the bells'."),
+    "Sub@MOSAIC RATES": (", ".join(n for n, _ in S.SMRATE), "MOSAIC: the sub's step, as the bells'."),
+    "Textures@MOSAIC RATES": ("held, " + ", ".join(n for n, _ in S.SMRATE), "MOSAIC: held - the textures as they "
+                              "are; else gated at this step: open on each hit, closing towards the next."),
     "Lines": ("0-100 %", "PAD LINES: how often a pad voice moves between the chord changes, as a line in counterpoint "
               "(0 = off: the pads hold each chord). A voice steps to the next note of the scale, away from its chord "
               "tone and back, against the motion's direction, never onto or across another voice; near the chord's "

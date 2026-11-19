@@ -26,12 +26,13 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acdrd=0, acdrs=1, acsud=0, acsus=1, acmpace=1, acmcas=1, acmacc=0.6, acmrb=1, acmrd=3, acmrp=2, acmrs=1, acmrt=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acmpace=1, acmhit=2, acmcas=1, acmacc=0.6, acmrb=1, acmrd=2, acmrp=2, acmrs=1, acmrtb=2, acmrtp=2, acmrts=2, acmrtt=3, acrcell=1, acarc=3, acbassm=1, acctr=1,
                acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5,
                **{f"acsh{x}{j}": 0.5 for x in "dsptac" for j in "pq"})
 ARRAYS = dict(acout=4, acarp=4)
 NP = len(PAGES)
 KNOBS = [n for p in PAGES for _, n, _ in p]
+GLOBALS.update({f"acdr{x}{k}": (1 if k == "s" else 0) for x in "dspbmtac" for k in "ats"})   # (each layer's DRIFT)
 SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "acfollow", "acnbr",
                                                   "acoutch", "accurve", "acmono", "acwidth", "acpanmot",
                                                   "actrange", "acmparts", "acarpoct", "acguard"] + KNOBS[FILE_KNOBS:SEND_KNOBS] + \
@@ -51,8 +52,9 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
             "acshbp", "acshbq", "acshmp", "acshmq"] + \
            [f"acsh{x}{j}" for x in "dsptac" for j in "pq"] + \
            ["acpln", "acplv", "acplm", "acplp"] + \
-           ["acdrd", "acdrs", "acsud", "acsus"] + \
-           ["acmpace", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrt"]   # (PAD LINES, DRIFT, MOSAIC)
+           [f"acdr{x}{k}" for x in "dspbmtac" for k in "ats"] + \
+           ["acmpace", "acmhit", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrtb", "acmrtp", "acmrts", "acmrtt"]
+           # (PAD LINES, each layer's DRIFT, MOSAIC)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
@@ -64,8 +66,8 @@ OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everyth
 # 1 turned: any page, back and forth; an aux tap: the next page). The header: the group, the page, its place in it
 SETUP_GROUPS = [("PIECE", ["GENERAL", "MUSIC", "FORM", "SECTIONS", "SECTION MIX"]),
                 ("WRITING", ["WRITING", "LINES", "PAD LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
-                ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "DRIFT", "JOURNEY"]),
-                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MOSAIC", "MOSAIC ROLES", "MACRO A", "MACRO B"]),
+                ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "JOURNEY"]),
+                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MOSAIC", "MOSAIC ROLES", "MOSAIC RATES", "MACRO A", "MACRO B"]),
                 ("SAVES", ["SAVES", "RECALL", "MEMORY"]),
                 ("MIDI", ["MIDI IN", "CC MAP", "NOTES OUT", "CC OUT"]),
                 ("SYSTEM", ["OUTPUT", "DISPLAY", "CPU"])]
@@ -179,9 +181,12 @@ QUICK_NAMES += ["GLIDE"]
 MIRRORS = [("COLOUR", 2), ("GROOVE", 3), ("FORM", 4), ("WRITING", 0), ("PHRASE", 1), ("DIALOGUE", 6), ("HARMONY", 8)]
 MIRROR0 = GLIDE_PAGE + 1
 QUICK_NAMES += [n for n, _ in MIRRORS]
+# each layer's DRIFT (its SHAPE page, then aux): its sound and its tone wander slowly inside the engine
+DRIFT_PAGE0 = MIRROR0 + len(MIRRORS)
+QUICK_NAMES += [n + " DRIFT" for n, *_ in LAYER_PAGES]
 NALL = NSET + len(QUICK_NAMES)
 # the SETUP page whose rows and knobs a page shows (a mirror shows its SETUP page's)
-SETPG_OF = ("if(acsetpg >= %d, " % MIRROR0 + "".join(f"if(acsetpg == {MIRROR0 + j}, {SETUP_NAMES.index(n)}, "
+SETPG_OF = (f"if(acsetpg >= {MIRROR0} && acsetpg < {MIRROR0 + len(MIRRORS)}, " + "".join(f"if(acsetpg == {MIRROR0 + j}, {SETUP_NAMES.index(n)}, "
                                                     for j, (n, _) in enumerate(MIRRORS)) + "0" + ")" * len(MIRRORS)
             + ", acsetpg)")
 SCHPICK = ["next change", "now"]
@@ -291,7 +296,7 @@ SAVE_MORE = [(n, GLOBALS[n]) for n in ("acmelm", "acmutp", "accanon", "accand", 
                                        "acwrite", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm",
                                        "acctr", "acshbp", "acshbq", "acshmp", "acshmq") +
              tuple(f"acsh{x}{j}" for x in "dsptac" for j in "pq") + ("acpln", "acplv", "acplm", "acplp")
-             + ("acdrd", "acdrs", "acsud", "acsus")]
+             + tuple(f"acdr{x}{k}" for x in "dspbmtac" for k in "ats")]
 SAVE_MORE_AT = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
 SAVE_LEN = SAVE_MORE_AT + len(SAVE_MORE)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -350,11 +355,13 @@ ARRAYS["acslotbuf"] = SAVE_LEN
 SDRIFT = [("very slow", 240), ("slow", 120), ("medium", 60), ("fast", 25)]   # DRIFT: the wander's time scale, s
 SMPACE = ["16ths", "8ths", "beat"]              # MOSAIC: the pattern's step
 SMCAS = ["together", "1 step", "2 steps", "3 steps"]      # between one layer and the next
+SMHIT = [("motion's", 0, 0), ("3 of 8", 3, 8), ("5 of 8", 5, 8), ("7 of 8", 7, 8), ("5 of 16", 5, 16),
+         ("every step", 1, 1)]                    # MOSAIC's own pattern (hits in steps), not the piece's density
+SMRATE = [("1/4x", 4), ("1/2x", 2), ("1x", 1), ("2x", 0.5)]   # a layer's step: the Pace's x this many
 SMBELL = ["off", "echo", "high"]
-SMDRONE = ["held", "pulse", "pedal", "by energy"]
+SMDRONE = ["held", "pulse", "pedal", "pulse+pedal"]
 SMPADS = ["held", "pulse", "arpeggio", "lines"]
 SMSUB = ["held", "bass", "pulse"]
-SMTEX = ["held", "gated"]
 SPLV = ["top", "top two", "all four"]           # PAD LINES: which voices move
 SPLM = ["neighbour", "passing", "free"]          # how: back to the chord tone, on to the next one, or leaps too
 SPLP = ["16ths", "8ths", "beat", "two beats"]    # how often one may
@@ -576,21 +583,21 @@ def _setup_pages():
         ]),
         ("MOSAIC", [
             ("list 1 Pace $1", [("s", "acmpace", SMPACE)]),
-            ("list 2 Cascade $1", [("s", "acmcas", SMCAS)]),
-            ("list 3 Accent $1%", [("f", "int(acmacc*100)")]),
-            ("list 4 Bells $1", [("s", "acmrb", SMBELL)]),
+            ("list 2 Hits $1", [("s", "acmhit", [n for n, _, _ in SMHIT])]),
+            ("list 3 Cascade $1", [("s", "acmcas", SMCAS)]),
+            ("list 4 Accent $1%", [("f", "int(acmacc*100)")]),
         ]),
         ("MOSAIC ROLES", [
-            ("list 1 Drone $1", [("s", "acmrd", SMDRONE)]),
+            ("list 1 Bells $1", [("s", "acmrb", SMBELL)]),
             ("list 2 Pads $1", [("s", "acmrp", SMPADS)]),
             ("list 3 Sub $1", [("s", "acmrs", SMSUB)]),
-            ("list 4 Textures $1", [("s", "acmrt", SMTEX)]),
+            ("list 4 Drone $1", [("s", "acmrd", SMDRONE)]),
         ]),
-        ("DRIFT", [
-            ("list 1 Drone drift $1%", [("f", "int(acdrd*100)")]),
-            ("list 2 Drone speed $1", [("s", "acdrs", [n for n, _ in SDRIFT])]),
-            ("list 3 Sub drift $1%", [("f", "int(acsud*100)")]),
-            ("list 4 Sub speed $1", [("s", "acsus", [n for n, _ in SDRIFT])]),
+        ("MOSAIC RATES", [
+            ("list 1 Bells $1", [("s", "acmrtb", [n for n, _ in SMRATE])]),
+            ("list 2 Pads $1", [("s", "acmrtp", [n for n, _ in SMRATE])]),
+            ("list 3 Sub $1", [("s", "acmrts", [n for n, _ in SMRATE])]),
+            ("list 4 Textures $1", [("s", "acmrtt", ["held"] + [n for n, _ in SMRATE])]),
         ]),
         ("PAD LINES", [
             ("list 1 Lines $1%", [("f", "int(acpln*100)")]),
@@ -680,6 +687,13 @@ def quick_pages():
     ]))
     setup = dict(setup_pages())
     pages += [(n, setup[n]) for n, _ in MIRRORS]
+    for (name, *_), x in zip(LAYER_PAGES, SHAPE_X):
+        pages.append((name + " DRIFT", [
+            ("list 1 Sound drift $1%", [("f", f"int(acdr{x}a*100)")]),
+            ("list 2 Tone drift $1%", [("f", f"int(acdr{x}t*100)")]),
+            ("list 3 Speed $1", [("s", f"acdr{x}s", [n for n, _ in SDRIFT])]),
+            ("list 4 -", None),
+        ]))
     assert [n for n, _ in pages] == QUICK_NAMES
     return pages
 
@@ -768,7 +782,15 @@ def quick_knobs(item):
     def knob(name):        # a knob page's value set from here (as a macro does: not shown as your hand)
         i = KNOBS.index(name)
         return [T("acparams", i, "acsv"), V("acmorphing", "1"), SendL("ac-param", [str(i), "acsv"]), V("acmorphing", "0")]
-    st = [
+    # a layer's DRIFT: back to 0 (both amounts), its sound and tone as its SHAPE page has them
+    drift = []
+    for j, x in enumerate(SHAPE_X):
+        back = [If(f"acdr{x}a <= 0.001 && acdr{x}t <= 0.001", [Call(f"ac-shpupd-{x}")]
+                   + ([X("0; 0", f"v acdo{x}p", f"v acdo{x}q")] if x in "bm" else []))]
+        drift += [If(at(DRIFT_PAGE0 + j, 1), [V(f"acdr{x}a", "acsv")] + back),
+                  If(at(DRIFT_PAGE0 + j, 2), [V(f"acdr{x}t", "acsv")] + back),
+                  If(at(DRIFT_PAGE0 + j, 3), [V(f"acdr{x}s", f"int(acsv*{len(SDRIFT) - 0.01})")])]
+    st = drift + [
         # CHORD: knob 1 the next chord, from the key's chords (and, with On pick now, at once); knob 3 fully up
         # another one picked by the piece (re-armed below 90 %)
         # (knob 1 picks when it moves to another chord - not when the piece's own next chord differs from it, which
@@ -987,23 +1009,22 @@ def setup():
         If(at("WRITING", 2), [V("acpadm", "acsv > 0.5")]),
         If(at("PAD LINES", 1), [V("acpln", "acsv")]),
         If(at("MOSAIC", 1), [V("acmpace", f"int(acsv*{len(SMPACE) - 0.01})")]),
-        If(at("MOSAIC", 2), [V("acmcas", f"int(acsv*{len(SMCAS) - 0.01})")]),
-        If(at("MOSAIC", 3), [V("acmacc", "acsv")]),
-        If(at("MOSAIC", 4), [V("acmrb", f"int(acsv*{len(SMBELL) - 0.01})")]),
+        If(at("MOSAIC", 2), [V("acmhit", f"int(acsv*{len(SMHIT) - 0.01})")]),
+        If(at("MOSAIC", 3), [V("acmcas", f"int(acsv*{len(SMCAS) - 0.01})")]),
+        If(at("MOSAIC", 4), [V("acmacc", "acsv")]),
+        If(at("MOSAIC ROLES", 1), [V("acmrb", f"int(acsv*{len(SMBELL) - 0.01})")]),
+        If(at("MOSAIC RATES", 1), [V("acmrtb", f"int(acsv*{len(SMRATE) - 0.01})")]),
+        If(at("MOSAIC RATES", 2), [V("acmrtp", f"int(acsv*{len(SMRATE) - 0.01})")]),
+        If(at("MOSAIC RATES", 3), [V("acmrts", f"int(acsv*{len(SMRATE) - 0.01})")]),
+        If(at("MOSAIC RATES", 4), [V("acsnew", f"int(acsv*{len(SMRATE) + 1 - 0.01})"), If("acsnew != acmrtt", [
+            V("acmrtt", "acsnew")] + __import__("gen_mosaic").reset(4))]),
         # (a role changed: that layer's levels and notes back first, then the new role takes them)
-        If(at("MOSAIC ROLES", 1), [V("acsnew", f"int(acsv*{len(SMDRONE) - 0.01})"), If("acsnew != acmrd", [
+        If(at("MOSAIC ROLES", 4), [V("acsnew", f"int(acsv*{len(SMDRONE) - 0.01})"), If("acsnew != acmrd", [
             V("acmrd", "acsnew")] + __import__("gen_mosaic").reset(3))]),
         If(at("MOSAIC ROLES", 2), [V("acsnew", f"int(acsv*{len(SMPADS) - 0.01})"), If("acsnew != acmrp", [
             V("acmrp", "acsnew")] + __import__("gen_mosaic").reset(1))]),
         If(at("MOSAIC ROLES", 3), [V("acsnew", f"int(acsv*{len(SMSUB) - 0.01})"), If("acsnew != acmrs", [
             V("acmrs", "acsnew")] + __import__("gen_mosaic").reset(2))]),
-        If(at("MOSAIC ROLES", 4), [V("acsnew", f"int(acsv*{len(SMTEX) - 0.01})"), If("acsnew != acmrt", [
-            V("acmrt", "acsnew")] + __import__("gen_mosaic").reset(4))]),
-        # (DRIFT back to 0: the sound's parameters back where its SHAPE page has them)
-        If(at("DRIFT", 1), [V("acdrd", "acsv"), If("acdrd <= 0.001", [Call("ac-shpupd-d")])]),
-        If(at("DRIFT", 2), [V("acdrs", f"int(acsv*{len(SDRIFT) - 0.01})")]),
-        If(at("DRIFT", 3), [V("acsud", "acsv"), If("acsud <= 0.001", [Call("ac-shpupd-s")])]),
-        If(at("DRIFT", 4), [V("acsus", f"int(acsv*{len(SDRIFT) - 0.01})")]),
         If(at("PAD LINES", 2), [V("acplv", f"int(acsv*{len(SPLV) - 0.01})")]),
         If(at("PAD LINES", 3), [V("acplm", f"int(acsv*{len(SPLM) - 0.01})")]),
         If(at("PAD LINES", 4), [V("acplp", f"int(acsv*{len(SPLP) - 0.01})")]),
@@ -1033,8 +1054,9 @@ def setup():
     # the header: SETUP n NAME; on a quick page its name (CHORD with the key and scale)
     proc(c, "ac-setl0", [If(f"acsetpg < {NSET}", [Send("ac-setl0s")], [
         If(f"acsetpg == {CHORD_PAGE}", [Send("ac-setl0c")], [
+            If(f"acsetpg >= {DRIFT_PAGE0}", [Send("ac-setl0d")], [
             If(f"acsetpg >= {MIRROR0}", [Send("ac-setl0m")], [If(f"acsetpg == {GLIDE_PAGE}", [Send("ac-setl0g")], [
-                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])])
+                If(f"acsetpg >= {SHAPE_PAGE0}", [Send("ac-setl0h")], [Send("ac-setl0q")])])])])])])])
     Line("ac-setl0s", "list $1 $2 $3/$4", [("s", "acsgrp[int(acsetpg)]", [g for g, _ in SETUP_GROUPS]),
                                             ("s", "acsetpg", SETUP_NAMES), ("f", "acspos[int(acsetpg)]"),
                                             ("f", "acscnt[int(acsetpg)]")], "ac-sett0")(c)
@@ -1045,6 +1067,7 @@ def setup():
     c.c(c.m(c.recv("ac-setl0g"), "list GLIDE  aux: back"), 0, c.obj("s ac-sett0"), 0)
     Line("ac-setl0m", "list $1  aux: back", [("s", f"acsetpg - {MIRROR0}", [n for n, _ in MIRRORS])], "ac-sett0")(c)
     Line("ac-setl0h", "list $1 shape", [("s", f"acsetpg - {SHAPE_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
+    Line("ac-setl0d", "list $1 drift", [("s", f"acsetpg - {DRIFT_PAGE0}", [n for n, *_ in LAYER_PAGES])], "ac-sett0")(c)
     # page-dependent rows: a Line per page and row, chosen by the page
     quick = quick_pages()
     for k, *rows in setup_rows():     # a subpatch per row, and per 8 pages (Pd connects a small window faster)

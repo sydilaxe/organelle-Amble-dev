@@ -128,7 +128,7 @@ def engine(layer, kind):
     # character (ENGINE_PARAMS: 50 % = as designed), Q its decay (x1/3 .. x3; 50 % = as designed) - for the chip,
     # its arpeggio instead
     x = "b" if layer == "bell" else "m"
-    P, Q = f"acsh{x}p", f"acsh{x}q"
+    P, Q = (f"min(1, max(0, acsh{x}{j} + acdo{x}{j}))" for j in "pq")     # (+ its DRIFT, gen_perform)
     kP = f"(2*{P})"
     if kind != "chip":
         slen = f"{slen}*pow(3, {Q}*2 - 1)"

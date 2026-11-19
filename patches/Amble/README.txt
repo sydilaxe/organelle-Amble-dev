@@ -124,7 +124,8 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
-        page (sound, tone, and the sound's own two); aux + tap: the
+        page (sound, tone, and the sound's own two; then aux: its DRIFT
+        page - sound drift, tone drift, speed); aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
         3 its level, 4 its reverb send; aux leaves. E (motion) or D#
         (bells) held + low keys: C random, C# the piece's own, D/D# rotate,
@@ -275,8 +276,6 @@ and let go, without knob 1, to leave and save)
     Sub        auto / pedal / root / both
   COLOUR: Pre-delay (0-200 ms), Era (70s / 80s / 90s / now),
   Sparkle (GLINT: small FM bells high on the chord tones), its octave
-  DRIFT: Drone drift (0-100 %: its two sound parameters sweep around
-  their settings), Drone speed, Sub drift, Sub speed
   JOURNEY: Speed, Pads (off / soft / bright / all), Drone,
   Bells (off / bells / motion / both) - they travel through their
   engines, slowly crossfaded. A sound you pick (SOUNDS, VOICES, a
@@ -293,10 +292,13 @@ and let go, without knob 1, to leave and save)
   GROOVE: Pump (off / 4 bars .. beat), Pump depth, Duck (the
   piece dips while you play), Duck release
   MOSAIC (aux + C#: in / out, held: this page): Pace (16ths / 8ths
-  / beat), Cascade (steps between layers), Accent, Bells (off / echo /
-  high) - the motion's rhythm carried across the layers, on the clock
-  MOSAIC ROLES: Drone (held, pulse, pedal, by energy), Pads (held,
-  pulse, arpeggio, lines), Sub (held, bass, pulse), Textures (gated)
+  / beat), Hits (its own pattern: 3, 5, 7 of 8, 5 of 16, every
+  step, or the motion's), Cascade (steps between layers), Accent
+  MOSAIC ROLES: Bells (off / echo / high), Pads (held, pulse,
+  arpeggio, lines), Sub (held, bass, pulse), Drone (held, pulse,
+  pedal, pulse+pedal)
+  MOSAIC RATES: Bells, Pads, Sub, Textures (held, or gated): each
+  layer's step, 1/4x .. 2x the Pace, all on one grid
   MACRO A / B: four macros (CC targets macro 1-4), each
   moving two knobs with a depth (-100..+100 %), offset or latch
   - SAVES -

@@ -24,11 +24,12 @@ Working memory for this project: read it first in a new session.
   once). Before, turning the pads' choice through the types left every one passed running for 4 s in all voices
   (3.4x the audio CPU: drop-outs); now a turn costs as much as one pick.
 - **MOSAIC** (`gen_mosaic.py`): `acmosn` layers joined (bells, pads, sub, drone, textures), one a bar via
-  `ac-mosbar` (from `ac-bar`); each plays the motion's Euclidean pattern `acmcas` mosaic steps after the one before, on
-  `ac-step` at Pace. Accents: `ac-v<k>-acc` (pad voices) and `ac-acc-d/s/t` (vline~ in `switched()`, 1 when idle);
+  `ac-mosbar` (from `ac-bar`); each plays its pattern (MOSAIC Hits, or the motion's) `acmcas` of its own steps after the one before, at
+  its rate (MOSAIC RATES: 1/4x..2x the Pace, one 16th grid). Accents: `ac-v<k>-acc` (pad voices) and `ac-acc-d/s/t` (vline~ in `switched()`, 1 when idle);
   the sub's bass via `ac-subp`, the drone's pedal via `ac-dronep`; leaving, `ac-bassupd` puts both back.
-- **DRIFT** (`gen_perform` ac-ptick): the drone's / sub's SHAPE knobs 3-4 sent every 100 ms as setting +
-  depth/2 x sin (two rates, 1 : 1.37); no random draws. Back to 0: `ac-shpupd-<x>` restores them.
+- **DRIFT** (each layer's quick page: its SHAPE page, then aux; `gen_perform` ac-ptick): sound and tone wander,
+  three slow sines each (from 0, no jump), per-layer phases; bells / motion through offsets `acdo<x>p/q` their
+  engines add. Back to 0: `ac-shpupd-<x>` restores. No random draws.
 - **PAD LINES** (`gen_brain.pad_lines`, on `ac-step`): one pad voice moves per pulse - by scale step from its chord
   tone (`acplh`) against the motion's last direction (`acmdir`), clear of the other voices' notes and chord tones,
   resolving back or passing on to the next chord tone, home again before the chord ends. A voice may move once

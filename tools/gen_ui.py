@@ -279,8 +279,10 @@ def keys():
     run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxlong", [V("acauxlong", "0"), If("acauxused == 0", [
         V("acsetup", "0"), Send("ac-save"), Call("ac-oledall"), Toast("settings saved")])], [
         If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [
-        # (a quick page: aux leaves it)
-        V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")], [
+        # (a quick page: aux leaves it - but from a layer's SHAPE page, aux turns to its DRIFT page)
+        If(f"acsetpg >= {_S.SHAPE_PAGE0} && acsetpg < {_S.SHAPE_PAGE0 + len(_S.LAYER_PAGES)}", [
+            V("acsetpg", f"acsetpg - {_S.SHAPE_PAGE0} + {_S.DRIFT_PAGE0}"), Call("ac-oledsetup")], [
+            V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")])], [
         V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")])], [
         V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])])
     f = c.ch(c.recv("fs"), "sel 0")
