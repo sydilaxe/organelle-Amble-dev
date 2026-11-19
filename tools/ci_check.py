@@ -1358,7 +1358,8 @@ check(calm and loud and all(-45 < col("rms", r) < -8 and col("pk", r) < 0 and co
 # logging switched on mid-piece: the meter's first block held all the sound thrown at it while it was off
 # (the device logged +32 dBFS and 126 samples cut on its first line), and its first read counted a quiet window
 d = build_tmp()
-run([(50, "ac-setseed 7"), (20000, "acguard 3"), (20010, "ac-logupd bang"), (36000, "ac-stop bang")], 38, d=d)
+run([(50, "ac-setseed 7"), (20000, "acguard 3"), (20010, "ac-logupd bang"), (36000, "ac-stop bang")], 47, d=d)
+# (at Stop the log is written once the fade is silent, 9 s on - an SD write on Pd's audio thread)
 pf = glob.glob(os.path.join(d, "logs", "perf-*.txt"))
 L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
 first = L[1] if len(L) > 1 else None
