@@ -23,7 +23,7 @@ python3 keymap.py OUT.pdf      the key map alone
 | `gen_perform.py` | performing: the morph engine, ANCHOR, COMPARE, the changed check, macros, SINK / SWELL / DUCK, PUMP, JOURNEY, CC OUT, GLINT's engine |
 | `gen_ui.py` | the Organelle keys, knobs (pickup), aux, footswitch, the text screen lines, the LED |
 | `gen_oled.py` | the OLED: the play view, the MIX view, the knob pop-up (SETUP draws its own page) |
-| `gen_setup.py` | SETUP: the 28 pages and the quick pages (`setup_pages()`), what each knob does (`setup()`), settings.txt, the CPU guard |
+| `gen_setup.py` | SETUP: the 30 pages in 7 groups and the quick pages (`setup_pages()`), what each knob does (`setup()`), settings.txt, the CPU guard |
 | `gen_saves.py` | SAVES: saves.txt, loading (through the morph), factory pieces (factory.txt) |
 | `gen_midi.py` | MIDI out (clock, notes) and MIDI clock in |
 | `gen_live.py` | MIDI in, the live voices, CC MAP and Mix CC targets, listening, audio analysis, memories, the 100 ms clock |
@@ -69,6 +69,26 @@ proc(c, "ac-anchorset", [
 `V` sets a value, `T` an array element, `X` several at once, `SendL` sends a list of expressions, `Line` builds a
 screen line from expressions and word lists, `Arm` / `Later` run something after a delay, `RNG` refreshes the
 piece's random numbers (`acr1..4`: seeded per piece, so a seed replays its piece).
+
+**Load time.** An `[expr]` costs about 30 times another box to create, and Pd checks each new connection against
+every one already in its window (quadratic per window). So the build keeps both down:
+- Stores are written inside `[expr]`: `V("acx", e)` becomes `[expr acx = (e)]`, `T` becomes `[expr tab[i] = (v)]`, and a
+  run of stores (with the condition of an `If` after it) shares one box. Pd's expr evaluates its expressions one
+  by one, right to left, so the order is the same as separate boxes. A store needs its `[value]` to exist:
+  `pdlib.fold_patch` declares the names that have no `[v]` elsewhere (`[pd values]`), and folds any hand-written
+  `[expr] -> [v]` / `[expr] -> [tabwrite]` the same way.
+- Each `proc`, `Line`, long step list (`CHUNK`) and big `If` branch (`BOX`) gets its own window, created at the
+  point its boxes would have been (same order). `window(c, name, src)` does the same for a hand-written block.
+  A step must not hold a box of the canvas it was written in (it may run in another window): `Canvas.c` stops the
+  build on a connection between two windows. Use a send instead. Check 87 keeps every window under 600 connections.
+
+**Ticks.** Pd runs a message and everything it triggers in one scheduler tick; a long one makes the audio drop out.
+- `ACopy(src, onset, n, dst, onset)` / `AZero(arr, onset, n)` copy or clear a block of an array in one go
+  (`[array get]` -> `[array set]`), not element by element in a `Loop` (saving and loading a slot use them).
+- SETUP's knob handlers are reached through one `[sel]` on the page and knob (`gen_setup._dispatch`), not by testing
+  every `If(at(...))` in turn; a SHAPE knob updates only its own layer (`ac-shpupd-<x>`; `ac-shpupd` = all).
+- A subpatch that resamples (`switch~ N 1 0.5`) still resamples its inlets and outlets while switched off: `switched()`
+  marks it (`.wrap`) and `pdlib._wrap_canvas` puts it in an outer `[switch~]` that goes off with it.
 
 ## Where things are
 

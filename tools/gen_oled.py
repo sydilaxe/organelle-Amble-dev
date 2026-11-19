@@ -365,10 +365,3 @@ def _print_bpm(c, src):
     c.c(src[0], src[1], mo, 0)
     _print_fmt(c, (mo, 0), "%dbpm", 97, 31)
     _print_fmt(c, (mo, 1), "%dbp", 97, 31)
-
-
-def _mmss(c, src):
-    t = c.obj("t f f")
-    c.c(src[0], src[1], t, 0)
-    _print_fmt(c, (c.to((t, 1), "expr min(99, int($f1/60))"), 0), "%2d:", 92, 9)
-    _print_fmt(c, (c.to((t, 0), "expr int($f1) % 60"), 0), "%02d", 110, 9)

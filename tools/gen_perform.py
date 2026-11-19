@@ -14,7 +14,7 @@ VERB = S.KNOBS.index("acrvtype")  # (a choice: switches at the start of a glide)
 L8 = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud"]
 
 GLOBALS = dict(acmph=0, acmt0=0, acmdur=0, acmtt=0, acmorphing=0, acancs=0, acbases=0, acchanged=0, acchd=0,
-               acmacrok=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acpb=0, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
+               acmacrok=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
                acjmi=-1, acjt=0, acjpadw=0, acjon=0, acccnext=0, acccv=0, acchk=0, acslotcur=-1)
 ARRAYS = dict(acmfrom=NK, acmto=NK, acmtouch=NK, acanc=NK, acbase=NK, accur=NK, acancm=8, acbasem=8, accurm=8,
               acmtk=len(S.MTARGETS), acjpi=4, acjpt=12 * len(S.JPAD_SETS), acjpn=len(S.JPAD_SETS), acccl=16)
@@ -23,7 +23,6 @@ DATA_TABLES = dict(acmtk=[-1] + S.MT_KNOBS,
                    acjpn=[max(1, len(names)) for _, names in S.JPAD_SETS],
                    acccl=[-1] * 16)
 
-MORPH_MS = S._pick("acmorph", S.SMORPH)
 ANCG_MS = S._pick("acancg", S.SANCG)
 DUCKR_MS = S._pick("acduckr", S.SDUCKR)
 JOUR_MS = S._pick("acjour", S.SJOUR)

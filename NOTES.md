@@ -12,6 +12,12 @@ Working memory for this project: read it first in a new session.
 - **Names:** values are `ac<word>` (no dash, so `[expr]` can read them). Sends and receives are
   `ac-<word>`. A `[value]` and a `[receive]` must never share a symbol: a float sent to that name would
   also set the value, and a list would give "no method" errors.
+- **Load time:** stores live inside `[expr]` (`acx = ...`, `tab[i] = ...`; Pd 0.53's expr has them), runs of stores
+  share one `[expr]`, and procs, long step lists and big If branches have their own windows (tools/README.md, "Load
+  time"). Load work on the dev machine (callgrind): 2.56 G instructions before, 1.40 G after.
+- **Ticks and CPU while playing** (tools/README.md, "Ticks"): about 96 % of the CPU while playing is audio, all of it
+  in switched subpatches except the master bus. Off, the half-rate reverbs and the vocoder no longer resample
+  (5.7 % less audio CPU). A SETUP knob step costs about a third of what it did; loading a slot about two thirds.
 - **Control logic** is written in `pdlib` steps. `proc(name, steps)` becomes `[r name] -> [t b b ...]`,
   and step i fires before step i+1. `X`/`V`/`T`/`SendL` are `[expr]` boxes. `If` is `[expr] -> [sel 0]`.
   `Loop` is `[until]`. `Arm(tick, ms)` re-arms a `[delay]` that bangs `tick`, which is how the change,

@@ -119,7 +119,9 @@ def _touches(box):
     if c in ("tabread", "tabread4") and args:
         return set(), {args[0]}, False
     if c.startswith("expr"):
-        return set(), set(re.findall(r"(?<![$\\\w])(ac\w+)", txt)), False
+        # (a store: [expr acx = ...] or [expr tab[i] = ...], not ==, <=, >=, !=)
+        stores = set(re.findall(r"(?<![$\\\w])(\w+)\s*(?:\[[^\]]*\])?\s*=(?!=)", txt))
+        return stores, set(re.findall(r"(?<![$\\\w])(ac\w+)", txt)), False
     return set(), set(), c in ACTIVE
 
 

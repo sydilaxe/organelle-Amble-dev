@@ -176,7 +176,6 @@ BLOOM_RATE = 23437.5
 BLOOM_CHAIN = [13, 83, 116, 239, 339, 481, 555, 823, 999, 1100, 1347, 1563, 1841, 2001, 2083]
 BLOOM_LEFT = [249, 48, 21]
 BLOOM_RIGHT = [147, 43, 55]
-BLOOM_PRE = 2000                       # Bloom 2's pre-delay (85 ms)
 HALL_MS = [43.7, 53.9, 61.3, 71.1, 83.9, 97.3, 109.7, 127.1]
 
 # ---- atmospheres, stereo scenes, preferences

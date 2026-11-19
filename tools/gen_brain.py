@@ -36,7 +36,7 @@ GLOBALS = dict(
     acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
-    acyon=0, acyoi=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
+    acyon=0, acyrn=0, acyq=0, acyqd=0, acyqb=99, acyj=0, acyt0=0,
     acbi=0, acbc=0, acdropi=0, acbright=0.5, acbp=0, acgdurv=300, acr1=0.5, acr2=0.5, acr3=0.5, acr4=0.5,
     acknown0=0, acknown1=0, acknown2=0, acknown3=0, acinprev=0, acghost=0,
     # form
@@ -128,9 +128,10 @@ def globals_():
     g.col()
     r = g.recv("ac-init")
     t = g.to(r, "t b b")
-    # defaults
-    for name, val in GLOBALS.items():
-        g.c(g.m((t, 1), str(val)), 0, g.obj("v " + name), 0)
+    # defaults: [expr acx = 1; acy = 0; ...] stores (the [v]s above declare the names), 50 to a box
+    items = list(GLOBALS.items())
+    for k in range(0, len(items), 50):
+        g.c(t, 1, g.obj("expr " + "; ".join(f"{n} = {v:.10g}" for n, v in items[k:k + 50])), 0)
     g.col()
     fam = []
     for _, typ, offs in FAMILIES:
@@ -605,7 +606,8 @@ def section():
                                       Call("ac-section")])])
     proc(c, "ac-rvback", [Send("ac-rvin", "1 5000")])
     # the end of a composition: fade out, then switch the layers off
-    fin_off = c.obj("delay")
+    # (ac-finarm N: switch the layers off N ms from now; a later one restarts the wait)
+    c.ch(c.recv("ac-finarm"), "delay", "s ac-finoff")
     # (SETUP WRITING Ending by phrase: the motion stops first, the bells 9 s later; the pads and drone fade last)
     proc(c, "ac-finbell", [V("acfinb", "1")])
     # (SETUP WRITING Ending by phrase: the chords stop and everything fades over 30 s, but the motion stops first, the
@@ -616,12 +618,11 @@ def section():
         V("acrun", "0"),
         Send("ac-master", "0 30000"),
         Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
-        X("30500*actime + 500", (fin_off, 0)),
+        SendL("ac-finarm", ["30500*actime + 500"]),
         Call("ac-scr"),
     ])])
     proc(c, "ac-fin2", [If("acrun", [
-        V("acrun", "0"), Call("ac-clockstop"), X("10500*actime + 500", (fin_off, 0)), Call("ac-scr")])])
-    c.c(fin_off, 0, c.obj("s ac-finoff"), 0)
+        V("acrun", "0"), Call("ac-clockstop"), SendL("ac-finarm", ["10500*actime + 500"]), Call("ac-scr")])])
     # Start / Stop (A#, or an incoming MIDI Start / Stop when following a clock): Stop fades out over 2.5 s and
     # freezes the piece where it is (section, chord, time left); Start fades back in and goes on from there.
     # After FIN, Start begins a new piece.
@@ -803,13 +804,17 @@ def verb():
     # the layers' SHAPE stages (gen_dsp.shaped): tone 0..1 (50 % open: below, a low-pass from 20 kHz down to 300 Hz;
     # above, a high-pass from 5 Hz up to 2 kHz), drive, width (x2)
     from gen_dsp import SHAPE_LAYERS
-    proc(c, "ac-shpupd", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
-                                                f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
-                                                f"acsh{x}d", f"2*acsh{x}w"]) for x in SHAPE_LAYERS]
-         + [SendL("ac-subt", ["acsubt"])]          # (and the sub's sound: its SHAPE page)
-         # (each layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
-         + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for x in "dsptac" for j in "pq"]
-         + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for x in "dsptac" for j in "pq"])
+    # one proc per layer (ac-shpupd-<x>): a SHAPE knob sends only its own layer's values - all of them reach some
+    # 700 receivers (each pad type in each voice has its own), a long tick to repeat at every knob step
+    for x in SHAPE_LAYERS:
+        proc(c, f"ac-shpupd-{x}", [SendL(f"ac-shp-{x}", [f"if(acsh{x}t < 0.5, 300*pow(66.67, acsh{x}t*2), 20000)",
+                                                       f"if(acsh{x}t > 0.5, 5*pow(400, acsh{x}t*2 - 1), 5)",
+                                                       f"acsh{x}d", f"2*acsh{x}w"])]
+             + ([SendL("ac-subt", ["acsubt"])] if x == "s" else [])      # (and the sub's sound: its SHAPE page)
+             # (the layer's two sound parameters, knobs 3 and 4 of its SHAPE page: as signals and as values)
+             + [SendL(f"ac-prm-{x}{j}", [f"acsh{x}{j}", "80"]) for j in "pq" if x in "dsptac"]
+             + [SendL(f"ac-prmc-{x}{j}", [f"acsh{x}{j}"]) for j in "pq" if x in "dsptac"])
+    proc(c, "ac-shpupd", [Call(f"ac-shpupd-{x}") for x in SHAPE_LAYERS])
     # (after the defaults: ac-init's other receivers set them, in no set order)
     c.c(c.to(c.recv("ac-init"), "delay 20"), 0, c.obj("s ac-shpupd"), 0)
     proc(c, "ac-sendupd", [SendL("ac-sg-" + n, [level(n), "acsgms"]) for n in SEND_BUS])
