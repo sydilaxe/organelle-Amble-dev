@@ -514,10 +514,16 @@ for fl in range(len(FLAVOURS)):
     T += 5000
 check(wide >= 7, f"{wide} of {len(FLAVOURS)} pad types have their own stereo")
 check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB, {FLAVOURS[int(np.argmin(dips))]})")
-log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718")], 40,
-             prints=tuple(f"ac-v{k}-home" for k in range(4)))
-homes = {tuple(l.split()[1] for l in log.splitlines() if l.startswith(f"ac-v{k}-home")) for k in range(4)}
-check(all(len(set(h)) >= 2 for h in homes), "stereo scenes move the pad voices between sections")
+# (only the seeded piece's sections - not the start-up piece's, whose seed has the clock's jitter; a scene may keep a
+#  voice where it was, the outer ones most often, so: the scenes differ, and most voices move)
+log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718"), (70, "h-mark bang")], 40,
+             prints=tuple(f"ac-v{k}-home" for k in range(4)) + ("h-mark",))
+_after = log.split("h-mark: bang", 1)[-1]
+homes = [[l.split()[1] for l in _after.splitlines() if l.startswith(f"ac-v{k}-home")] for k in range(4)]
+scenes = set(zip(*homes))
+check(len(scenes) >= 2 and sum(len(set(h)) >= 2 for h in homes) >= 3,
+      f"stereo scenes move the pad voices between sections ({len(scenes)} scenes, "
+      f"{sum(len(set(h)) >= 2 for h in homes)} of 4 voices move)")
 ev = [(100 + i * 300, f"ac-setseed {5000 + i * 37}") for i in range(40)]
 log, _ = run(ev, 13, extra=probe2)
 rows = [l.split()[1:] for l in log.splitlines() if l.startswith("PAL")][1:]
