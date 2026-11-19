@@ -135,7 +135,7 @@ def perflog():
                             X("0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0", *[f"v {n}" for n in (
                                 "aclgpk", "aclgdcs", "aclgmn", "aclgclip", "aclgq", "aclglate", "aclgrs", "aclgrn",
                                 "aclglo", "aclghi", "aclgsub")]),
-                            If("aclgl % 6 == 0", [Send("ac-logwrite")]),      # (every 30 s: little lost at a power-off)
+                            If("aclgl % 12 == 0", [Send("ac-logwrite")]),     # (every minute: few writes while it plays)
                             If("aclgl >= 120", [Send("ac-logwrite"), Call("ac-lognew")])])
     c.col()
     # the file: logs/perf-BBBBPP.txt; a new part every 120 lines (10 minutes)
