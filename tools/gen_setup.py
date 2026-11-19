@@ -26,7 +26,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acdrd=0, acdrs=1, acsud=0, acsus=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acdrd=0, acdrs=1, acsud=0, acsus=1, acmpace=1, acmcas=1, acmacc=0.6, acmrb=1, acmrd=3, acmrp=2, acmrs=1, acmrt=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
                acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5,
                **{f"acsh{x}{j}": 0.5 for x in "dsptac" for j in "pq"})
 ARRAYS = dict(acout=4, acarp=4)
@@ -51,7 +51,8 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
             "acshbp", "acshbq", "acshmp", "acshmq"] + \
            [f"acsh{x}{j}" for x in "dsptac" for j in "pq"] + \
            ["acpln", "acplv", "acplm", "acplp"] + \
-           ["acdrd", "acdrs", "acsud", "acsus"]                     # (PAD LINES, DRIFT)
+           ["acdrd", "acdrs", "acsud", "acsus"] + \
+           ["acmpace", "acmcas", "acmacc", "acmrb", "acmrd", "acmrp", "acmrs", "acmrt"]   # (PAD LINES, DRIFT, MOSAIC)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
@@ -64,7 +65,7 @@ OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everyth
 SETUP_GROUPS = [("PIECE", ["GENERAL", "MUSIC", "FORM", "SECTIONS", "SECTION MIX"]),
                 ("WRITING", ["WRITING", "LINES", "PAD LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
                 ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "DRIFT", "JOURNEY"]),
-                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MACRO A", "MACRO B"]),
+                ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MOSAIC", "MOSAIC ROLES", "MACRO A", "MACRO B"]),
                 ("SAVES", ["SAVES", "RECALL", "MEMORY"]),
                 ("MIDI", ["MIDI IN", "CC MAP", "NOTES OUT", "CC OUT"]),
                 ("SYSTEM", ["OUTPUT", "DISPLAY", "CPU"])]
@@ -346,10 +347,17 @@ ARRAYS["acsavebuf"] = SAVE_LEN
 ARRAYS.update({n: k for n, k in SAVE_TAIL})
 ARRAYS["acsetbuf"] = len(SETTINGS) - 12
 ARRAYS["acslotbuf"] = SAVE_LEN
-SDRIFT = [("very slow", 120), ("slow", 60), ("medium", 25), ("fast", 8)]   # DRIFT: one sweep, s
+SDRIFT = [("very slow", 240), ("slow", 120), ("medium", 60), ("fast", 25)]   # DRIFT: the wander's time scale, s
+SMPACE = ["16ths", "8ths", "beat"]              # MOSAIC: the pattern's step
+SMCAS = ["together", "1 step", "2 steps", "3 steps"]      # between one layer and the next
+SMBELL = ["off", "echo", "high"]
+SMDRONE = ["held", "pulse", "pedal", "by energy"]
+SMPADS = ["held", "pulse", "arpeggio", "lines"]
+SMSUB = ["held", "bass", "pulse"]
+SMTEX = ["held", "gated"]
 SPLV = ["top", "top two", "all four"]           # PAD LINES: which voices move
 SPLM = ["neighbour", "passing", "free"]          # how: back to the chord tone, on to the next one, or leaps too
-SPLP = ["half beat", "beat", "two beats"]        # how often one may
+SPLP = ["16ths", "8ths", "beat", "two beats"]    # how often one may
 GLIDE_X = "if(acglide == 0, 0, if(acglide == 1, 0.05, if(acglide == 2, 0.15, if(acglide == 3, 0.3, if(acglide == 4, 0.6, 1)))))"
 
 
@@ -565,6 +573,18 @@ def _setup_pages():
             ("list 2 Mutate $1", [("s", "acmutp", [n for n, _ in SMUTP])]),
             ("list 3 Canon $1", [("s", "accanon", SCANON)]),
             ("list 4 Canon delay $1", [("s", "accand", [n for n, _ in SCAND])]),
+        ]),
+        ("MOSAIC", [
+            ("list 1 Pace $1", [("s", "acmpace", SMPACE)]),
+            ("list 2 Cascade $1", [("s", "acmcas", SMCAS)]),
+            ("list 3 Accent $1%", [("f", "int(acmacc*100)")]),
+            ("list 4 Bells $1", [("s", "acmrb", SMBELL)]),
+        ]),
+        ("MOSAIC ROLES", [
+            ("list 1 Drone $1", [("s", "acmrd", SMDRONE)]),
+            ("list 2 Pads $1", [("s", "acmrp", SMPADS)]),
+            ("list 3 Sub $1", [("s", "acmrs", SMSUB)]),
+            ("list 4 Textures $1", [("s", "acmrt", SMTEX)]),
         ]),
         ("DRIFT", [
             ("list 1 Drone drift $1%", [("f", "int(acdrd*100)")]),
@@ -966,6 +986,19 @@ def setup():
                                                        If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])])]),
         If(at("WRITING", 2), [V("acpadm", "acsv > 0.5")]),
         If(at("PAD LINES", 1), [V("acpln", "acsv")]),
+        If(at("MOSAIC", 1), [V("acmpace", f"int(acsv*{len(SMPACE) - 0.01})")]),
+        If(at("MOSAIC", 2), [V("acmcas", f"int(acsv*{len(SMCAS) - 0.01})")]),
+        If(at("MOSAIC", 3), [V("acmacc", "acsv")]),
+        If(at("MOSAIC", 4), [V("acmrb", f"int(acsv*{len(SMBELL) - 0.01})")]),
+        # (a role changed: that layer's levels and notes back first, then the new role takes them)
+        If(at("MOSAIC ROLES", 1), [V("acsnew", f"int(acsv*{len(SMDRONE) - 0.01})"), If("acsnew != acmrd", [
+            V("acmrd", "acsnew")] + __import__("gen_mosaic").reset(3))]),
+        If(at("MOSAIC ROLES", 2), [V("acsnew", f"int(acsv*{len(SMPADS) - 0.01})"), If("acsnew != acmrp", [
+            V("acmrp", "acsnew")] + __import__("gen_mosaic").reset(1))]),
+        If(at("MOSAIC ROLES", 3), [V("acsnew", f"int(acsv*{len(SMSUB) - 0.01})"), If("acsnew != acmrs", [
+            V("acmrs", "acsnew")] + __import__("gen_mosaic").reset(2))]),
+        If(at("MOSAIC ROLES", 4), [V("acsnew", f"int(acsv*{len(SMTEX) - 0.01})"), If("acsnew != acmrt", [
+            V("acmrt", "acsnew")] + __import__("gen_mosaic").reset(4))]),
         # (DRIFT back to 0: the sound's parameters back where its SHAPE page has them)
         If(at("DRIFT", 1), [V("acdrd", "acsv"), If("acdrd <= 0.001", [Call("ac-shpupd-d")])]),
         If(at("DRIFT", 2), [V("acdrs", f"int(acsv*{len(SDRIFT) - 0.01})")]),

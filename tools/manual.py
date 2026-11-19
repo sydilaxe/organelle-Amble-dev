@@ -92,7 +92,8 @@ FKEY_DESC = {
     "PIECE page": "Knobs: Len, Weird, Mot, Rhy. Held half a second: the FORM page as a quick page (form, tempo, "
                   "meter, atmosphere - SETUP FORM's rows); aux leaves.",
     "MIX 1 page": "Knobs: the levels of drone, sub, pads, bells. The screen shows the MIX view. Held half a second: "
-                  "the PHRASE page as a quick page (phrases, voicing, key plan, breath); aux leaves.",
+                  "the PHRASE page as a quick page (phrases, voicing, key plan, breath); aux leaves. aux + C#: MOSAIC in "
+                  "or out (a layer a bar); aux + C# held half a second: the MOSAIC page.",
     "MIX 2 page": "Knobs: the levels of motion, textures, cloud, atmosphere. The screen shows the MIX view. Held "
                   "half a second: the GROOVE page as a quick page (pump, duck - SETUP GROOVE's rows); aux leaves.",
     "SENDS 1 page": "Knobs: the reverb sends of drone, pads, bells, motion (MIX view). Held half a second: the "
@@ -306,11 +307,29 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
     "Writing": (", ".join(S.SWRITE), "still: none of LINES, HARMONY, PHRASE, DIALOGUE or WRITING act - the static, "
                 "droning piece - and your choices there are kept for moving again. moving: they act. Also low C held "
                 "(the WRITING page), and a CC mapped to writing (up: moving)."),
-    "Drone drift": ("0-100 %", "DRIFT: the drone's two sound parameters (knobs 3 and 4 of its SHAPE page) sweep "
-                    "slowly around where you set them, by up to this much - its timbre keeps moving. 0 = still."),
-    "Drone speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: one sweep of the drone's drift: 120, 60, 25 or 8 s."),
-    "Sub drift": ("0-100 %", "DRIFT: the sub's two sound parameters sweep around their settings, as the drone's."),
-    "Sub speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: one sweep of the sub's drift."),
+    "Pace@MOSAIC": (", ".join(S.SMPACE), "MOSAIC: the pattern's step - 16ths, 8ths or beats on the clock (an "
+                    "external MIDI clock too). The pattern is the motion's rhythm (its hits in its steps)."),
+    "Cascade": (", ".join(S.SMCAS), "MOSAIC: how many steps each layer plays the pattern after the one before it "
+                "(bells, pads, sub, drone, textures) - together, or as a canon across the ensemble."),
+    "Accent": ("0-100 %", "MOSAIC: how deep a layer's level dips on the pattern (pulse, arpeggio, gate)."),
+    "Bells@MOSAIC": (", ".join(S.SMBELL), "MOSAIC: the bells play the pattern - the chord tones in turn, two "
+                     "(echo) or three (high) octaves up. off: they play as the piece has them."),
+    "Drone@MOSAIC ROLES": (", ".join(S.SMDRONE), "MOSAIC: held - as it is; pulse - it re-articulates on the "
+                           "pattern; pedal - a 5th up and back, a bar each, the long note under the patterns; by "
+                           "energy - pedal while the section is calm, pulse when it is full."),
+    "Pads@MOSAIC ROLES": (", ".join(S.SMPADS), "MOSAIC: held; pulse - all four voices re-articulate on the pattern; "
+                          "arpeggio - one voice sounds out at a time, rising, the others dip; lines - a PAD LINES "
+                          "move on each hit."),
+    "Sub@MOSAIC ROLES": (", ".join(S.SMSUB), "MOSAIC: held; bass - a bass line on the pattern (root, root, 5th, "
+                         "octave); pulse."),
+    "Textures@MOSAIC ROLES": (", ".join(S.SMTEX), "MOSAIC: held; gated - open on each hit, closing towards the next."),
+    "Drone drift": ("0-100 %", "DRIFT: the drone's timbre wanders slowly inside its engine - its two sound "
+                    "parameters (knobs 3 and 4 of its SHAPE page) and its tone drift around where you set them, by up "
+                    "to this much, smoothly and without repeating (no pulse). 0 = still."),
+    "Drone speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: the wander's time scale for the drone: about 240, 120, "
+                    "60 or 25 s."),
+    "Sub drift": ("0-100 %", "DRIFT: the sub's timbre wanders as the drone's."),
+    "Sub speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: the wander's time scale for the sub."),
     "Lines": ("0-100 %", "PAD LINES: how often a pad voice moves between the chord changes, as a line in counterpoint "
               "(0 = off: the pads hold each chord). A voice steps to the next note of the scale, away from its chord "
               "tone and back, against the motion's direction, never onto or across another voice; near the chord's "
@@ -318,7 +337,8 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
     "Voices": (", ".join(S.SPLV), "PAD LINES: which pad voices move - the top one, the top two, or all four."),
     "Moves@PAD LINES": (", ".join(S.SPLM), "PAD LINES: neighbour - a step away and back; passing - or on to the "
                         "next chord tone; free - and the top voice may also leap to the next chord tone."),
-    "Pace": (", ".join(S.SPLP), "PAD LINES: how often a voice may move - every half beat, beat or two beats."),
+    "Pace": (", ".join(S.SPLP), "PAD LINES: how often a voice may move - every 16th, 8th, beat or two beats, on "
+                                "the clock (an external MIDI clock too)."),
     "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
                    "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
                    "through it - the motif, very slowly, under the active bells and motion."),

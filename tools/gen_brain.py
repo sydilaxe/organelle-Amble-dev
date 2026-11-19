@@ -32,7 +32,7 @@ GLOBALS = dict(
     acmgi=-1, acmgn=1, acvc=0, acvd0=0, acvd1=0, acvd2=0, accp=0, acpsd=0, acphc=-1, acphn=0, acphd=4, acphs=3, acsfit=1,
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
-    acmdg=0, acbdir=0, acbpl=0, acmdir=0, acmlp=0, acplk=-1, acplt=0, acpldr=0, acplup=0, acpldn=0, acplf=0, acplq=0, acplb=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
+    acmdg=0, acbdir=0, acbpl=0, acmdir=0, acmlp=0, acplk=-1, acplt=0, acpldr=0, acplup=0, acpldn=0, acplf=0, acplq=0, acplb=0, acplforce=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
     acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
@@ -68,7 +68,8 @@ import gen_oled as _O
 import gen_setup as _S
 import gen_perform as _P
 import gen_log as _LG
-for _m in (_L, _O, _S, _P, _LG):
+import gen_mosaic as _MO
+for _m in (_L, _O, _S, _P, _LG, _MO):
     # every value is declared once: two modules declaring one name share it, and one's private counter silently
     # becomes the other's state (the profile's step counter was the live input's acpst; a macro's knob, the rhythm's acmk)
     _same = set(GLOBALS) & set(_m.GLOBALS)
@@ -866,7 +867,7 @@ def rhythm():
         V("acgbp", "(actonic + 12*floor((acmotif0[int(acgbi)])/acn) + acscale[(int(acmotif0[int(acgbi)]) % int(acn) + int(acn)) % int(acn)])"),
         V("acgbp", "acgbp - 12*ceil(max(0, acgbp - 43)/12) + 12*ceil(max(0, 28 - acgbp)/12)"),
         SendL("ac-subp", ["mtof(acgbp)", "250"])])])
-    proc(c, "ac-bar", [Call("ac-ground"), SendL("ac-dpulse", [f"60000/{BPMH}*acmeter"]), If("acgdlock && acgcloud > 0", [Send("ac-cloud-on")]),
+    proc(c, "ac-bar", [Call("ac-ground"), Call("ac-mosbar"), SendL("ac-dpulse", [f"60000/{BPMH}*acmeter"]), If("acgdlock && acgcloud > 0", [Send("ac-cloud-on")]),
                        # SETUP DIALOGUE Answer motion: the motion plays 2 bars, then the bells 2
                        If("(acans*acwrite) == 1 && ((acphr*acwrite) > 0) == 0", [V("acbarn", "acbarn + 1"), V("acansm", "int(acbarn/2) % 2 == 0"),
                                                                                  Call("ac-ansturn")]),
@@ -1140,13 +1141,7 @@ def change():
     steps = [V("acsubx", "if(acssub > 0, acssub - 1, acsubm)")]
     steps += [SendL(f"ac-band{k}", [f"mtof(min(120, acnew[{k % 4}] + {12 * (k // 4) + 12}))", "3000"]) for k in range(8)]
     steps += [
-        # (Notes to drone: the drone stays on your note while you hold it)
-        If("acroute != 2 || acheld == 0", [
-            # (under a secondary dominant the drone and the sub's pedal stay on the key's tonic)
-            # (ARC Bass pedal: before a return, the home key's dominant; ground: the sub plays its own line, by bar)
-            SendL("ac-dronep", ["if(acpedal, acpedp, if(acsdnow, acsdt, actonic))", "if(acfirst, 0, if(acmodflag || acpedal, 9000, 200))"]),
-            If("((acbassm*acwrite) >= 2) == 0", [SendL("ac-subp", ["mtof(if(acpedal, acpedp - 12, if(acsubx==0 || (acsubx==2 && int(acsec) % 2 == 0), if(acsdnow, acsdt, actonic) - 12, "
-                              "acnew[0] - 12*ceil((acnew[0] - 42)/12))))", "if(acfirst, 0, if(acmodflag, 9000, 1800))"])])]),
+        Call("ac-bassupd"),          # (the drone's and the sub's notes for this chord; MOSAIC restores them so)
         SendL("ac-ringf", ["mtof(acnew[1] + 12)", "3000"]),
         SendL("ac-radio", ["mtof(min(115, acnew[2] + 36))", "4000"]),
     ] + [SendL(f"ac-atmf{k}", [f"mtof(min(112, acnew[{k % 4}] + {24 + 12 * (k // 4)}))", "6000"]) for k in range(6)] + [
@@ -1165,6 +1160,15 @@ def change():
         SendL("ac-chgarm", ["acchsec*1000*actime"]),
         Later("ac-scr2", 37), Later("ac-scr3", 43), Send("ac-flash"), Call("ac-outchord"),
     ]
+    proc(c, "ac-bassupd", [
+        # (Notes to drone: the drone stays on your note while you hold it)
+        If("acroute != 2 || acheld == 0", [
+            # (under a secondary dominant the drone and the sub's pedal stay on the key's tonic)
+            # (ARC Bass pedal: before a return, the home key's dominant; ground: the sub plays its own line, by bar)
+            SendL("ac-dronep", ["if(acpedal, acpedp, if(acsdnow, acsdt, actonic))", "if(acfirst, 0, if(acmodflag || acpedal, 9000, 200))"]),
+            If("((acbassm*acwrite) >= 2) == 0", [SendL("ac-subp", ["mtof(if(acpedal, acpedp - 12, if(acsubx==0 || (acsubx==2 && int(acsec) % 2 == 0), if(acsdnow, acsdt, actonic) - 12, "
+                              "acnew[0] - 12*ceil((acnew[0] - 42)/12))))", "if(acfirst, 0, if(acmodflag, 9000, 1800))"])])])
+    ])
     proc(c, "ac-change2", [If("acrun", steps)])
     # the next change: ac-chgarm N (ms from now; a new one restarts it), ac-chgstop cancels it
     dl = c.to(c.recv("ac-chgarm"), "delay")
@@ -1423,9 +1427,11 @@ def pad_lines(c):
                 If("acplq > 0", [V("acplt", "acplq")])])]
         moves += [If(f"acplk == {k}", step + [If(_fits(k), send[k:k + 1] + (
             [If(_chord_tone("acplt"), [T("acplh", 3, "acplt")])] if k == 3 else []))])]
+    # (ac-plgo: one pulse of the lines; on the Pace here, or on MOSAIC's pattern with acplforce: a move each hit)
     proc(c, "ac-step", shared=True, steps=[If(
-        "(acpln*acwrite) > 0 && acrun && acgpad > 0.01 && acres == 0 && (acroute != 1 || acheld == 0) && acfirst == 0 && "
-        "int(acstep) % if(acplp == 0, 2, if(acplp == 1, 4, 8)) == 0", [
+        "(acpln*acwrite) > 0 && int(acstep) % if(acplp == 0, 1, if(acplp == 1, 2, if(acplp == 2, 4, 8))) == 0",
+        [V("acplforce", "0"), Call("ac-plgo")])])
+    proc(c, "ac-plgo", [If("acrun && acgpad > 0.01 && acres == 0 && (acroute != 1 || acheld == 0) && acfirst == 0", [
             V("acplf", "(acnow - acchgt)/max(1, acchsec*1000*actime)"),
             If("acplf < 0.97", [
                 RNG,
@@ -1438,7 +1444,7 @@ def pad_lines(c):
                 If("acplk >= 0 && (acr3 < 0.6 || acplf > 0.85)", resolve + [
                     If(_chord_tone("acplt"), [If(f"acplk == {k}", [T("acplh", k, "acplt")]) for k in range(4)]),
                     *send],
-                   [If(f"acr1 < acpln*0.8 && acplf < 0.85", [
+                   [If(f"(acr1 < acpln*0.8 || acplforce) && acplf < 0.85", [
                        V("acplk", f"4 - {nv} + int(acr2*{nv})"),
                        If("(acplk != 3 || acsusp == 0) && acnow >= acpls[int(acplk)] + 300 && "
                           "acplc[int(acplk)] == acplh[int(acplk)]", moves)])])])])])

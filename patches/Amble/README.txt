@@ -98,7 +98,9 @@ THE COMPOSER LISTENS
 THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   Low octave
   (the white keys C-F: the playing pages; the black keys: the levels)
-  C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells)
+  C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells);
+                          aux + C#: MOSAIC in / out (a layer a bar),
+                          held: the MOSAIC page
   D   SPACE page      D#  MIX 2 page (motion, textures, cloud, atmos)
   E   PIECE page
   F   PERFORM page    F#  SENDS 1 page (drone, pads, bells, motion)
@@ -290,6 +292,11 @@ and let go, without knob 1, to leave and save)
     Entry fade 2-40 s: a section's layer coming in or going out
   GROOVE: Pump (off / 4 bars .. beat), Pump depth, Duck (the
   piece dips while you play), Duck release
+  MOSAIC (aux + C#: in / out, held: this page): Pace (16ths / 8ths
+  / beat), Cascade (steps between layers), Accent, Bells (off / echo /
+  high) - the motion's rhythm carried across the layers, on the clock
+  MOSAIC ROLES: Drone (held, pulse, pedal, by energy), Pads (held,
+  pulse, arpeggio, lines), Sub (held, bass, pulse), Textures (gated)
   MACRO A / B: four macros (CC targets macro 1-4), each
   moving two knobs with a depth (-100..+100 %), offset or latch
   - SAVES -

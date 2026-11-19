@@ -7,6 +7,7 @@ layers; and from TrimFX: the macros (one control moving two settings, offset or 
 Nothing of their code is used here."""
 from pdlib import Canvas, proc, X, V, T, Send, Call, SendL, If, Loop, Toast, Later, Line
 from data import NK, DRONES, STRIKES, FLAVOURS
+import math
 import gen_setup as S
 
 IN = S.IN_IDX                    # (In always stays where it is)
@@ -235,14 +236,24 @@ def perform():
     # GLINT: now and then (a few a minute at a little Sparkle, about six a second at all), a bell high on a chord
     # tone, one in three an octave more - while the drone or the pads sound
     proc(c, "ac-sparkupd", [SendL("ac-g-glint", ["acspark > 0.001", "300"])])
-    # DRIFT: every 100 ms the drone's / the sub's two sound parameters (knobs 3 and 4 of its SHAPE page) a little off
-    # where they are set, on two slow sines at unrelated rates (no repeat you'd hear; no random draws: seeds replay)
+    # DRIFT: every 100 ms the drone's / the sub's tone and two sound parameters (knobs 2-4 of its SHAPE page) wander
+    # slowly around where they are set: three slow sines at unrelated rates each (a smooth wander that never repeats
+    # audibly - no pulse; no random draws, so seeds replay), the tone by a quarter of the depth
+    def wander(ph, r, o):
+        # (minus its value at phase 0: from 0, where drift starts, it begins at the setting - no jump)
+        w0 = (math.sin(o) + math.sin(o + 1.3) + math.sin(o + 2.9)) / 2.2
+        return (f"((sin({ph}*{r} + {o}) + sin({ph}*{r}*0.618 + {o} + 1.3) + sin({ph}*{r}*0.383 + {o} + 2.9))/2.2"
+                f" - {w0:.6f})")
+
     def drift(x, depth, speed, ph, layer):
         per = S._pick(speed, S.SDRIFT)
+        tone = f"min(1, max(0, acsh{x}t + {depth}*0.25*{wander(ph, 0.83, 4)}))"
         return If(f"{depth} > 0.001 && acg{layer} > 0.01", [
-            V(ph, f"fmod({ph} + 0.6283185/({per}), 6283.185)"),
-            *[SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {depth}*0.5*sin({ph}*{r} + {o})))"] + (["120"] if kind == "prm" else []))
-              for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]])
+            V(ph, f"fmod({ph} + 0.6283185/({per}), 62831.85)"),
+            *[SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {depth}*0.5*{wander(ph, r, o)}))"] + (["120"] if kind == "prm" else []))
+              for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))],
+            SendL(f"ac-shp-{x}", [f"if({tone} < 0.5, 300*pow(66.67, {tone}*2), 20000)",
+                                  f"if({tone} > 0.5, 5*pow(400, {tone}*2 - 1), 5)", f"acsh{x}d", f"2*acsh{x}w"])])
     proc(c, "ac-ptick", [
         drift("d", "acdrd", "acdrs", "acdph", "drone"), drift("s", "acsud", "acsus", "acsph", "sub"),
         If("acspark > 0.001 && acrun && (acgdrone > 0.01 || acgpad > 0.01) && "

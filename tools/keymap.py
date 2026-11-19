@@ -43,6 +43,8 @@ def page_key(key):
     kind = "level" if PAGE_NAMES[p].startswith(("MIX", "SENDS")) else "play"
     hold = ["hold: GLIDE page"] if key == U.GLIDE_KEY - 60 else \
         [f"hold: {n} page" for n, k in S.MIRRORS if k == key]
+    if key == 1:      # (aux + C#: MOSAIC)
+        hold += ["aux: MOSAIC in / out", "aux + hold: MOSAIC page"]
     return (PAGE_NAMES[p], ["knobs: " + knobs(p)] + hold, kind)
 
 

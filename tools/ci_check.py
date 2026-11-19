@@ -266,7 +266,8 @@ L_ = log.splitlines()
 check("ac-fkey: 69" in L_ and "ac-toast: list chord change" in L_ and not any(l.startswith("ac-lvon: 0 69") for l in L_),
       "an Organelle key is a function and plays no note")
 check("ac-txt4: list Mix 45 Verb auto" in L_, "aux tap: next page")
-check("ac-sett0: list WRITING WRITING 1/6" in L_, "aux + low D: the WRITING group's first page")
+check(f"ac-sett0: list WRITING WRITING 1/{len(dict(GS.SETUP_GROUPS)['WRITING'])}" in L_,
+      "aux + low D: the WRITING group's first page")
 check("ac-toast: list key from you E" in L_, "a note held 6 s becomes the key")
 
 # 12. audio: pitch tracking and the input class
@@ -670,7 +671,7 @@ log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (5
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
 #  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC and the engines' SHAPE parameters joined)
-check(len(vals) == len(GS.SETTINGS) == 163 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+check(len(vals) == len(GS.SETTINGS) and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -2038,15 +2039,46 @@ check(not m0 and len(m1) >= 15 and not bad and against > len(dep) / 2,
       f"PAD LINES: {len(m1)} moves at 90 % (at 0: {len(m0)}), no voice onto or across another ({bad[:2]}), "
       f"departures against the motion {against} of {len(dep)}")
 
-# 92. DRIFT: the drone's and the sub's sound parameters sweep around their settings (depth, speed), back when it is 0
+# 92. DRIFT: the drone's and the sub's sound parameters wander around their settings (depth, speed), back when it is 0
 _dr = GS.SETUP_NAMES.index("DRIFT")
 log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "acsetup 1"), (1001, f"acsetpg {_dr}"),
               (1010, "ac-setknob 0 0.8"), (1020, "ac-setknob 1 0.99"), (1030, "ac-setknob 2 0.8"), (1040, "ac-setknob 3 0.99"),
-              (13000, "ac-setknob 0 0"), (13010, "ac-setknob 2 0")], 14, prints=("ac-prm-dp", "ac-prm-sp"))
+              (30000, "ac-setknob 0 0"), (30010, "ac-setknob 2 0")], 31, prints=("ac-prm-dp", "ac-prm-sp"))
 dv = {n: [float(l.split()[1]) for l in log.splitlines() if l.startswith(n + ":")] for n in ("ac-prm-dp", "ac-prm-sp")}
-check(all(len(v) > 80 and min(v) < 0.2 and max(v) > 0.8 and abs(v[-1] - 0.5) < 0.01 for v in dv.values()),
-      f"DRIFT 80 % fast: drone and sub sweep {[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} "
+# (a smooth wander, not a pulse: no step between two 100 ms values over 0.03)
+check(all(len(v) > 200 and max(v) - min(v) > 0.3 and max(abs(a - b) for a, b in zip(v[:-1], v[1:-1])) < 0.03
+          and abs(v[-1] - 0.5) < 0.01 for v in dv.values()),
+      f"DRIFT 80 % fast: drone and sub wander smoothly {[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} "
       f"around 0.5, back to {[v[-1] for v in dv.values() if v]} at 0")
+
+# 93. MOSAIC: aux + C# brings it in a layer a bar (bells, pads, sub, drone, textures) - the bells echo the pattern, the
+#     pads arpeggiate, the sub plays a bass line, the drone a pedal (calm), the textures gate; again: out, the levels
+#     back at 1; held: the MOSAIC page
+def mosprobe(c):
+    for i, n in enumerate(["ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t"]):
+        r = c.obj(f"r {n}", 1400 + i * 120, 20)
+        e = c.obj("expr int(acnow)", 1400 + i * 120, 50)
+        c.c(r, 0, e, 0)
+        c.c(e, 0, c.obj(f"print h-m-{n}", 1400 + i * 120, 80), 0)
+
+
+_ml = [f"{v} 2" for v in ("acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex")]
+log, _ = run([(50, "ac-setseed 7")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+             (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0"),
+             (62000, "aux 1"), (62050, "notesRaw 61 100"), (62150, "notesRaw 61 0"), (62300, "aux 0"),
+             (100000, "aux 1"), (100050, "notesRaw 61 100"), (100800, "notesRaw 61 0"), (101000, "aux 0")], 102,
+             extra=mosprobe, prints=("ac-v0-acc", "ac-acc-t", "ac-sett0"))
+L_ = log.splitlines()
+mt = {n: [int(float(l.split()[1])) for l in L_ if l.startswith(f"h-m-{n}:")]
+      for n in ("ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t")}
+joined = [l.split("mosaic + ")[1] for l in L_ if l.startswith("ac-toast: list mosaic + ")]
+during = {n: len([t for t in v if 4000 < t < 62000]) for n, v in mt.items()}
+lastv = [l.split()[1] for l in L_ if l.startswith("ac-v0-acc:")][-1:]
+lastt = [l.split()[1] for l in L_ if l.startswith("ac-acc-t:")][-1:]
+check(joined == ["bells", "pads", "sub", "drone", "textures"] and all(v > 3 for v in during.values())
+      and "ac-toast: list mosaic out" in L_ and lastv == ["1"] and lastt == ["1"]
+      and any(l.startswith("ac-sett0: list LIVE MOSAIC") for l in L_),
+      f"MOSAIC: joins {joined}, plays {during}, out with the levels back ({lastv}, {lastt}), held: its page")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

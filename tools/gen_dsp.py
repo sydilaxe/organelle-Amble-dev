@@ -33,6 +33,12 @@ def switched(name, gain, block=None, hook=None):
     tl = s.to(fp, "t l l")
     ln = s.to((tl, 1), "line~")
     s.c(ln, 0, snap, 0)
+    gl = ln
+    if s.layer in ("d", "s", "t"):      # (MOSAIC's accents on this layer: a vline~ at 1 unless it plays)
+        acc = s.obj("vline~")
+        s.c(s.m(s.obj("loadbang"), "1"), 0, acc, 0)
+        s.c(s.recv(f"ac-acc-{s.layer}"), 0, acc, 0)
+        ln = mul(s, gl, acc)
     up = s.to((tl, 0), "unpack f f")
     d = s.obj("delay")
     s.c(s.to((up, 1), "+ 100"), 0, d, 1)
@@ -413,6 +419,10 @@ def voice():
     breath = v.ch((lu, 0), "osc~", "*~ 0.5", "+~ 0.5", "*~ -0.4")
     ctl(v, breath, "ac-motion", "-0.75*(0.25+0.75*$f1)")
     amp = v.to(breath, "+~ 1")
+    vacc = v.obj("vline~")             # (MOSAIC: this voice's accent, 1 unless it plays)
+    v.c(v.m(v.obj("loadbang"), "1"), 0, vacc, 0)
+    v.c(v.recv("ac-v$1-acc"), 0, vacc, 0)
+    amp = mul(v, amp, vacc)
     for i, n in ((1, "$0-ld"), (2, "$0-la"), (3, "$0-lb")):
         v.c(lu, i, v.obj("s " + n), 0)
     v.col()
