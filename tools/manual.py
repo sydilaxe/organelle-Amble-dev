@@ -306,6 +306,19 @@ SETUP_DESC = {   # label as it appears on the screen -> (choices, what it does);
     "Writing": (", ".join(S.SWRITE), "still: none of LINES, HARMONY, PHRASE, DIALOGUE or WRITING act - the static, "
                 "droning piece - and your choices there are kept for moving again. moving: they act. Also low C held "
                 "(the WRITING page), and a CC mapped to writing (up: moving)."),
+    "Drone drift": ("0-100 %", "DRIFT: the drone's two sound parameters (knobs 3 and 4 of its SHAPE page) sweep "
+                    "slowly around where you set them, by up to this much - its timbre keeps moving. 0 = still."),
+    "Drone speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: one sweep of the drone's drift: 120, 60, 25 or 8 s."),
+    "Sub drift": ("0-100 %", "DRIFT: the sub's two sound parameters sweep around their settings, as the drone's."),
+    "Sub speed": (", ".join(n for n, _ in S.SDRIFT), "DRIFT: one sweep of the sub's drift."),
+    "Lines": ("0-100 %", "PAD LINES: how often a pad voice moves between the chord changes, as a line in counterpoint "
+              "(0 = off: the pads hold each chord). A voice steps to the next note of the scale, away from its chord "
+              "tone and back, against the motion's direction, never onto or across another voice; near the chord's "
+              "end every voice is home again, so the next change voice-leads as before."),
+    "Voices": (", ".join(S.SPLV), "PAD LINES: which pad voices move - the top one, the top two, or all four."),
+    "Moves@PAD LINES": (", ".join(S.SPLM), "PAD LINES: neighbour - a step away and back; passing - or on to the "
+                        "next chord tone; free - and the top voice may also leap to the next chord tone."),
+    "Pace": (", ".join(S.SPLP), "PAD LINES: how often a voice may move - every half beat, beat or two beats."),
     "Pads carry": (", ".join(S.SPADM), "motif: the pads stay held, but at a chord change their top voice may take the "
                    "motif's next note (when it is a step or two from its chord tone), resolving into the chord halfway "
                    "through it - the motif, very slowly, under the active bells and motion."),

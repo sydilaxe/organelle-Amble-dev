@@ -37,7 +37,7 @@ def main_patch():
     m.c(m.m(m.obj("loadbang", 400, 40), "0"), 0, m.obj("s midiOutGate", 400, 90), 0)
     m.comment("control", 20, 200)
     for i, sub in enumerate((B.globals_(), B.rng(), B.seed(), B.piece(), B.section(), B.change(), B.layers(),
-                             B.players(), B.later(), B.capture(), B.verb(), B.stereo(), B.rhythm(), L.midi_in(), L.cc_map(), L.live(), L.memories(), L.tables(),
+                             B.players(), B.padlines(), B.later(), B.capture(), B.verb(), B.stereo(), B.rhythm(), L.midi_in(), L.cc_map(), L.live(), L.memories(), L.tables(),
                              O.oled(), P.perform(), LG.perflog(), LG.audiometer(), S.settings(), S.setup(), SV.saves(), MI.midi_out(), MI.clock_in(), S.cpu_guard(),
                              U.knobs(), U.keys(), U.screen())):
         m.sub(sub, 20 + (i % 4) * 110, 225 + (i // 4) * 30)

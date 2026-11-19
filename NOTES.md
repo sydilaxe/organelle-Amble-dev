@@ -23,6 +23,12 @@ Working memory for this project: read it first in a new session.
   restarted. A sound picked by a knob acts once the knob rests 150 ms (`type_act`, `ac-pick-<var>`; the screen at
   once). Before, turning the pads' choice through the types left every one passed running for 4 s in all voices
   (3.4x the audio CPU: drop-outs); now a turn costs as much as one pick.
+- **DRIFT** (`gen_perform` ac-ptick): the drone's / sub's SHAPE knobs 3-4 sent every 100 ms as setting +
+  depth/2 x sin (two rates, 1 : 1.37); no random draws. Back to 0: `ac-shpupd-<x>` restores them.
+- **PAD LINES** (`gen_brain.pad_lines`, on `ac-step`): one pad voice moves per pulse - by scale step from its chord
+  tone (`acplh`) against the motion's last direction (`acmdir`), clear of the other voices' notes and chord tones,
+  resolving back or passing on to the next chord tone, home again before the chord ends. A voice may move once
+  60 % of its change glide is done (`acpls`). RNG only while Lines > 0.
 - **Settled choices:** a SETUP choice whose effect is heavy (`gen_setup.settle`: Mode, MUSIC key / scale / chords,
   MIDI IN routing, JOURNEY, SECTIONS / SECTION MIX, WRITING, ARC centre, the CHORD page's pick) shows at once and
   acts once the knob rests 150 ms (`ac-act-<name>`).

@@ -32,7 +32,7 @@ GLOBALS = dict(
     acmgi=-1, acmgn=1, acvc=0, acvd0=0, acvd1=0, acvd2=0, accp=0, acpsd=0, acphc=-1, acphn=0, acphd=4, acphs=3, acsfit=1,
     acsdt=36, acsds=0, acsdg=-1, acsdret=0, acsdnow=0, acmvr=0, acmvq=0, acmvo=0, acvb=0, acvbd=0, acki=0, acmdvt=0,
     acansm=1, acbarn=0, acanst=-1e+06, acant=60, acrestb=0, acrestl=0, acrestp=0,
-    acmdg=0, acbdir=0, acbpl=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
+    acmdg=0, acbdir=0, acbpl=0, acmdir=0, acmlp=0, acplk=-1, acplt=0, acpldr=0, acplup=0, acpldn=0, acplf=0, acplq=0, acplb=0, acpmi=0, acpmp=0, acsusp=0, acbrq=0, acfinm=0, acfinb=0,
     acphpos=-1, acsecdue=0, acsecwait=0, acsecalm=0, acblt=-1e+06,
     acrcn=8, acrcs=0, acdyn=1, acten=0, acpedal=0, acpedp=43, acgbi=0, acgbp=0, acsgi=0, acsgr=0,
     acmdgl=0, acmpl=0, acmivl=-1, acmbpl=0, acbim=0, acbis=0, acansmp=1, acphsc=-1, acphrs=0, acltx=-1,
@@ -50,7 +50,7 @@ for page in PAGES:
     for _, name, d in page:
         GLOBALS[name] = d
 
-ARRAYS = dict(acsroles=12, acslens=12, acssp=12, acsst=96, acslv=96, acscale=16, acfamt=NF * 5, acch=4, acnew=4, acplan=16, acpdur=16, acmotif=8, acmotif0=8,
+ARRAYS = dict(acplh=4, acplc=4, acpls=4, acsroles=12, acslens=12, acssp=12, acsst=96, acslv=96, acscale=16, acfamt=NF * 5, acch=4, acnew=4, acplan=16, acpdur=16, acmotif=8, acmotif0=8,
               acmrhy=8, acmrhya=8, acbrhyt=5 * len(BELL_RHYTHMS), acmoves=12, acmods=12, acmovp=12, acmodp=12, acplfam=len(PLEASING_FAMS), acplsc=len(PLEASING_SCALES), acgrt=12, acfmrt=8, acpartt=24, acbellt=12, acdintt=5, acrhyt=5,
               acparams=4 * len(PAGES), acraw=4, acflav=4, acroles=16, acflpick=40, acbelpk=40, acmotpk=40, acfmrpick=40, acpapick=40, acscn=50,
               acscrole=24, acatmrole=8, ackeyp=16, acprog=8, acrmask=48, acrtide=8,
@@ -934,6 +934,8 @@ def rhythm():
               "min(0.97, max(0.03, acscn[int(acscene)*10 + 6] + acscn[int(acscene)*10 + 7]*(acmai/3 - 0.5)"
               " + (acr4 - 0.5)*0.12))", "v acmv", "v acmdl", "v acmpan"),
             SendL("ac-mnote", ["acmp", "acmv*acdyn", "acmdl", "acmpan"]),
+            X("acmp; (acmp > acmlp) - (acmp < acmlp)", "v acmlp", "v acmdir"),     # (its direction - first, right to left -
+                                                                                    #  then the note: the pads move against it)
             # SETUP DIALOGUE Phasing: the same note again on the other side, later by a delay that grows a little
             # every step, around the whole pattern (then they meet in unison again)
             If("(acphase*acwrite) > 0", [
@@ -1029,7 +1031,12 @@ def change():
                                            # voice's delay (off: all at once)
                                            f"if(acfirst, 0, ({_S.GLIDE_X})*max(1500, (0.25+0.5*acr1)*acchsec*1000*actime))",
                                            "if(acfirst || acglide == 0, 0, acr2*0.35*acchsec*1000*actime)"]),
-                  T("acch", k, f"acnew[{k}]")]
+                  T("acch", k, f"acnew[{k}]"), T("acplh", k, f"acnew[{k}]"),
+                  # (when this voice is nearly there: its delay + 60 % of its glide, the same values as just sent -
+                  #  PAD LINES may move it from then; with the slow glides it would otherwise hardly ever be still)
+                  T("acpls", k, f"acnow + if(acfirst || acglide == 0, 0, acr2*0.35*acchsec*1000*actime) + "
+                                f"if(acfirst, 0, 0.6*({_S.GLIDE_X})*max(1500, (0.25+0.5*acr1)*acchsec*1000*actime))"),
+                  T("acplc", k, f"if(acsusp, acpmp, acnew[3])" if k == 3 else f"acnew[{k}]")]
         steps += [SendL(f"ac-res{k}", [f"1000/mtof(43 + fmod(acnew[{k}]-43, 24))", "2500"])]
     # the chord's name now, and the next chord picked and named (the screen shows both)
     steps += [V("acchgt", "acnow"), X("actonic; acdeg; acres", "v acqt", "v acqd", "v acqr"), Call("ac-chordname"),
@@ -1357,4 +1364,88 @@ def capture():
     ])
     proc(c, "ac-capdone", [X("0; 1", "v accapt", "v acfreeze"), Call("ac-freezeupd"), Call("ac-inputupd"),
                            Toast("captured - frozen")])
+    return c
+
+
+# ---- PAD LINES: the pad voices move between the chord changes, one at a time, as lines in counterpoint
+def _chord_tone(q):
+    """q's pitch class is one of the chord's"""
+    return "(" + " || ".join(f"((int({q} - acnew[{j}]) % 12 + 12) % 12 == 0)" for j in range(4)) + ")"
+
+
+def _neighbours(p):
+    """acplup / acpldn: the scale's notes just above and below pitch p"""
+    return [X("200; -1", "v acplup", "v acpldn"),
+            V("acplb", f"int(acn)*floor(({p} - actonic)/12) - int(acn)"),
+            Loop("3*acn", "aci", [V("acplq", deg2p("acplb + aci")),
+                                  If(f"acplq > {p} + 0.5 && acplq < acplup", [V("acplup", "acplq")]),
+                                  If(f"acplq < {p} - 0.5 && acplq > acpldn", [V("acpldn", "acplq")])])]
+
+
+def _fits(k):
+    """acplt is free for voice acplk: no other voice there, no crossing, within 7 semitones of its home"""
+    # (clear of the other voices where they are and where they belong - their chord tones - so a voice coming home
+    #  never lands on another)
+    return (f"acplt > 0 && acplt < 200 && abs(acplt - acplh[{k}]) <= 7"
+            + "".join(f" && acplt != acplc[{j}] && acplt != acplh[{j}]" for j in range(4) if j != k)
+            + (f" && acplt > max(acplc[{k - 1}], acplh[{k - 1}])" if k > 0 else "")
+            + (f" && acplt < min(acplc[{k + 1}], acplh[{k + 1}])" if k < 3 else ""))
+
+
+def pad_lines(c):
+    """On the pulse (Pace), between a chord's settling and its end, one pad voice moves by step: a voice off its
+    chord tone resolves - back (a neighbour note) or on to the next chord tone (a passing note: that is its home
+    then) - and near the chord's end it must; otherwise, by chance (Lines), a voice on its chord tone steps away,
+    against the motion's last direction (contrary motion: no parallels with it), never onto or across another
+    voice, within a fifth of its home; with Moves free the top voice may leap to the next chord tone. The voices
+    are the top one, the top two or all four (Voices). Off with Lines 0, Writing still, Resolve, while the top voice
+    holds a suspension (Pads carry), and while you play the chord (MIDI IN Notes to chords)."""
+    nv = "if(acplv == 0, 1, if(acplv == 1, 2, 4))"
+    glide = "if(acglide == 0, 30, 15000/acbpm)"
+    send = [If(f"acplk == {k}", [SendL(f"ac-v{k}-pitch", ["acplt", glide, "0"]), T("acplc", k, "acplt")]) for k in range(4)]
+    # (the voice off its chord tone: back home, or on through to the next chord tone)
+    resolve = [V("acpldr", "(acplc[int(acplk)] > acplh[int(acplk)]) - (acplc[int(acplk)] < acplh[int(acplk)])"),
+               V("acplt", "acplh[int(acplk)]"),
+               If("acplm >= 1 && acr2 < 0.5", _neighbours("acplc[int(acplk)]") + [
+                   V("acplq", "if(acpldr > 0, acplup, acpldn)"),
+                   If(_chord_tone("acplq") + " && abs(acplq - acplh[int(acplk)]) <= 7", [
+                       V("acplt", "acplq"),
+                       *[If(f"acplk == {k} && ({_fits(k)}) == 0", [V("acplt", f"acplh[{k}]")]) for k in range(4)]])])]
+    moves = []
+    for k in range(4):
+        step = _neighbours(f"acplc[{k}]") + [
+            V("acpldr", "if(acmdir != 0 && acgmotion > 0.01, -acmdir, if(acr3 < 0.5, 1, -1))"),
+            V("acplt", "if(acpldr > 0, acplup, acpldn)"),
+            If(f"({_fits(k)}) == 0", [V("acplt", "if(acpldr > 0, acpldn, acplup)")])]
+        if k == 3:   # (free: the top voice may leap to the next chord tone instead)
+            step += [If("acplm == 2 && acr4 < 0.3", [V("acplq", "0"), Loop("9", "aci", [
+                If(f"acplq == 0 && {_chord_tone('acplc[3] + acpldr*(aci + 1)')}", [V("acplq", "acplc[3] + acpldr*(aci + 1)")])]),
+                If("acplq > 0", [V("acplt", "acplq")])])]
+        moves += [If(f"acplk == {k}", step + [If(_fits(k), send[k:k + 1] + (
+            [If(_chord_tone("acplt"), [T("acplh", 3, "acplt")])] if k == 3 else []))])]
+    proc(c, "ac-step", shared=True, steps=[If(
+        "(acpln*acwrite) > 0 && acrun && acgpad > 0.01 && acres == 0 && (acroute != 1 || acheld == 0) && acfirst == 0 && "
+        "int(acstep) % if(acplp == 0, 2, if(acplp == 1, 4, 8)) == 0", [
+            V("acplf", "(acnow - acchgt)/max(1, acchsec*1000*actime)"),
+            If("acplf < 0.97", [
+                RNG,
+                V("acplk", "-1"),
+                Loop("4", "aci", [If(f"aci >= 4 - {nv} && (aci != 3 || acsusp == 0) && acplc[int(aci)] != acplh[int(aci)] "
+                                     "&& acnow >= acpls[int(aci)]",
+                                     [V("acplk", "aci")])]),
+                # (a voice away resolves - or, by chance, holds while another voice starts a line: two can then
+                #  move in turn; a new line only from a voice that is home)
+                If("acplk >= 0 && (acr3 < 0.6 || acplf > 0.85)", resolve + [
+                    If(_chord_tone("acplt"), [If(f"acplk == {k}", [T("acplh", k, "acplt")]) for k in range(4)]),
+                    *send],
+                   [If(f"acr1 < acpln*0.8 && acplf < 0.85", [
+                       V("acplk", f"4 - {nv} + int(acr2*{nv})"),
+                       If("(acplk != 3 || acsusp == 0) && acnow >= acpls[int(acplk)] + 300 && "
+                          "acplc[int(acplk)] == acplh[int(acplk)]", moves)])])])])])
+
+
+def padlines():
+    c = Canvas("pad-lines", w=3000)
+    c.comment("PAD LINES: the pad voices move between the changes, as lines in counterpoint (SETUP PAD LINES)")
+    pad_lines(c)
     return c

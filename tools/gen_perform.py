@@ -14,7 +14,7 @@ VERB = S.KNOBS.index("acrvtype")  # (a choice: switches at the start of a glide)
 L8 = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm", "acmcloud"]
 
 GLOBALS = dict(acmph=0, acmt0=0, acmdur=0, acmtt=0, acmorphing=0, acancs=0, acbases=0, acchanged=0, acchd=0,
-               acmacrok=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
+               acmacrok=0, acdph=0, acsph=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
                acjmi=-1, acjt=0, acjpadw=0, acjon=0, acjforce=0, acccnext=0, acccv=0, acchk=0, acslotcur=-1)
 ARRAYS = dict(acmfrom=NK, acmto=NK, acmtouch=NK, acanc=NK, acbase=NK, accur=NK, acancm=8, acbasem=8, accurm=8,
               acmtk=len(S.MTARGETS), acjpi=4, acjpt=12 * len(S.JPAD_SETS), acjpn=len(S.JPAD_SETS), acccl=16)
@@ -235,7 +235,16 @@ def perform():
     # GLINT: now and then (a few a minute at a little Sparkle, about six a second at all), a bell high on a chord
     # tone, one in three an octave more - while the drone or the pads sound
     proc(c, "ac-sparkupd", [SendL("ac-g-glint", ["acspark > 0.001", "300"])])
+    # DRIFT: every 100 ms the drone's / the sub's two sound parameters (knobs 3 and 4 of its SHAPE page) a little off
+    # where they are set, on two slow sines at unrelated rates (no repeat you'd hear; no random draws: seeds replay)
+    def drift(x, depth, speed, ph, layer):
+        per = S._pick(speed, S.SDRIFT)
+        return If(f"{depth} > 0.001 && acg{layer} > 0.01", [
+            V(ph, f"fmod({ph} + 0.6283185/({per}), 6283.185)"),
+            *[SendL(f"ac-{kind}-{x}{j}", [f"min(1, max(0, acsh{x}{j} + {depth}*0.5*sin({ph}*{r} + {o})))"] + (["120"] if kind == "prm" else []))
+              for kind in ("prm", "prmc") for j, r, o in (("p", 1, 0), ("q", 1.37, 2))]])
     proc(c, "ac-ptick", [
+        drift("d", "acdrd", "acdrs", "acdph", "drone"), drift("s", "acsud", "acsus", "acsph", "sub"),
         If("acspark > 0.001 && acrun && (acgdrone > 0.01 || acgpad > 0.01) && "
            "random(0, 10000) < 1000*(0.05 + 5.95*acspark*acspark)", [
             SendL("ac-glint", ["min(108, acnew[int(random(0, 4))] + 12*(acsparko + 1) + 12*(random(0, 3) == 0))",

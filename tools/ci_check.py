@@ -2007,5 +2007,46 @@ rs = [[int(float(v)) for v in l.split()[1:]] for l in log.splitlines() if l.star
 check(len(rs) == 2 and rs[0] == [1, 0] and rs[1][0] == 0 and rs[1][1] != 0 and "resolve released" in log,
       f"Resolve on holds the tonic ({rs[:1]}); a CHORD page pick releases it and plays ({rs[1:]})")
 
+# 91. PAD LINES: with Lines up the pad voices move between the changes (none at 0), never onto or across another voice,
+#     departures mostly against the motion's direction
+def plprobe(c):
+    for k in range(4):
+        e = c.obj(f"expr int(acnow); {k}; $f1; acplc[0]; acplc[1]; acplc[2]; acplc[3]; acplh[{k}]; acmdir", 1400 + k * 150, 50)
+        c.c(c.obj(f"r ac-v{k}-pitch", 1400 + k * 150, 20), 0, e, 0)
+        p = c.obj("pack f f f f f f f f f", 1400 + k * 150, 80)
+        for i in range(9):
+            c.c(e, i, p, i)
+        c.c(p, 0, c.obj("print h-pl", 1400 + k * 150, 110), 0)
+
+
+def plrun(lines):
+    _pl = GS.SETUP_NAMES.index("PAD LINES")
+    log, _ = run([(50, "ac-setseed 11"), (1000, "ac-laytog2 bang"), (1100, "ac-laytog4 bang"), (1500, "acsetup 1"),
+                  (1501, f"acsetpg {_pl}"), (1502, f"ac-setknob 0 {lines}"), (1503, "ac-setknob 1 0.95"),
+                  (1504, "ac-setknob 3 0.1"), (1600, "acsetup 0")], 45, extra=lambda c: (plprobe(c), chgtimes(c)))
+    rows = [[float(x) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("h-pl")]
+    chg = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+    return [r for r in rows if r[0] > 3000 and all(abs(r[0] - t) > 400 for t in chg)]
+
+
+m0, m1 = plrun(0), plrun(0.9)
+bad = [r[:3] for r in m1 if r[2] in [r[3 + j] for j in range(4) if j != int(r[1])]
+       or (int(r[1]) > 0 and r[2] <= r[2 + int(r[1])]) or (int(r[1]) < 3 and r[2] >= r[4 + int(r[1])])]
+dep = [r for r in m1 if r[3 + int(r[1])] == r[7] and r[8] != 0 and r[2] != r[7]]
+against = sum(((r[2] > r[7]) - (r[2] < r[7])) == -r[8] for r in dep)
+check(not m0 and len(m1) >= 15 and not bad and against > len(dep) / 2,
+      f"PAD LINES: {len(m1)} moves at 90 % (at 0: {len(m0)}), no voice onto or across another ({bad[:2]}), "
+      f"departures against the motion {against} of {len(dep)}")
+
+# 92. DRIFT: the drone's and the sub's sound parameters sweep around their settings (depth, speed), back when it is 0
+_dr = GS.SETUP_NAMES.index("DRIFT")
+log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "acsetup 1"), (1001, f"acsetpg {_dr}"),
+              (1010, "ac-setknob 0 0.8"), (1020, "ac-setknob 1 0.99"), (1030, "ac-setknob 2 0.8"), (1040, "ac-setknob 3 0.99"),
+              (13000, "ac-setknob 0 0"), (13010, "ac-setknob 2 0")], 14, prints=("ac-prm-dp", "ac-prm-sp"))
+dv = {n: [float(l.split()[1]) for l in log.splitlines() if l.startswith(n + ":")] for n in ("ac-prm-dp", "ac-prm-sp")}
+check(all(len(v) > 80 and min(v) < 0.2 and max(v) > 0.8 and abs(v[-1] - 0.5) < 0.01 for v in dv.values()),
+      f"DRIFT 80 % fast: drone and sub sweep {[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} "
+      f"around 0.5, back to {[v[-1] for v in dv.values() if v]} at 0")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

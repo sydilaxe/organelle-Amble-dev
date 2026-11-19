@@ -26,7 +26,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
                acphr=1, acvlead=1, ackplan=0, acrests=1, acmdev=1, acans=1, acphase=0, acreg=1,
-               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
+               acwrite=1, acpadm=1, acdrsub=1, acendp=1, acpln=0.3, acplv=1, acplm=1, acplp=1, acdrd=0, acdrs=1, acsud=0, acsus=1, acrcell=1, acarc=3, acbassm=1, acctr=1,
                acshbp=0.5, acshbq=0.5, acshmp=0.5, acshmq=0.5,
                **{f"acsh{x}{j}": 0.5 for x in "dsptac" for j in "pq"})
 ARRAYS = dict(acout=4, acarp=4)
@@ -49,7 +49,9 @@ SETTINGS = KNOBS[:FILE_KNOBS] + ["acmout", "acsync", "acforce", "acvintage", "ac
             "acwrite", "acpadm", "acdrsub", "acendp",                                         # WRITING,
             "acrcell", "acarc", "acbassm", "acctr",                                           # ARC,
             "acshbp", "acshbq", "acshmp", "acshmq"] + \
-           [f"acsh{x}{j}" for x in "dsptac" for j in "pq"]   # (every layer's sound parameters, its SHAPE page)
+           [f"acsh{x}{j}" for x in "dsptac" for j in "pq"] + \
+           ["acpln", "acplv", "acplm", "acplp"] + \
+           ["acdrd", "acdrs", "acsud", "acsus"]                     # (PAD LINES, DRIFT)
 # (append new settings here, at the end)
 IN_IDX = [n for p in PAGES for _, n, _ in p].index("acinput")     # the In knob's slot in acparams
 MOUT = ["off", "tempo only", "tempo+note", "notes only"]
@@ -60,8 +62,8 @@ OUTPUTS = ["stereo wide", "mono", "split"]   # split: pads + drone left, everyth
 # the SETUP pages in seven groups (aux + a white low key: the group's first page - C D E F G A B; aux held and knob
 # 1 turned: any page, back and forth; an aux tap: the next page). The header: the group, the page, its place in it
 SETUP_GROUPS = [("PIECE", ["GENERAL", "MUSIC", "FORM", "SECTIONS", "SECTION MIX"]),
-                ("WRITING", ["WRITING", "LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
-                ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "JOURNEY"]),
+                ("WRITING", ["WRITING", "LINES", "PAD LINES", "HARMONY", "PHRASE", "DIALOGUE", "ARC"]),
+                ("SOUND", ["SOUNDS", "VOICES", "COLOUR", "DRIFT", "JOURNEY"]),
                 ("LIVE", ["PLAYING", "LIVE", "GROOVE", "MACRO A", "MACRO B"]),
                 ("SAVES", ["SAVES", "RECALL", "MEMORY"]),
                 ("MIDI", ["MIDI IN", "CC MAP", "NOTES OUT", "CC OUT"]),
@@ -287,7 +289,8 @@ SAVE_MORE = [(n, GLOBALS[n]) for n in ("acmelm", "acmutp", "accanon", "accand", 
                                        "acphr", "acvlead", "ackplan", "acrests", "acmdev", "acans", "acphase", "acreg",
                                        "acwrite", "acpadm", "acdrsub", "acendp", "acrcell", "acarc", "acbassm",
                                        "acctr", "acshbp", "acshbq", "acshmp", "acshmq") +
-             tuple(f"acsh{x}{j}" for x in "dsptac" for j in "pq")]
+             tuple(f"acsh{x}{j}" for x in "dsptac" for j in "pq") + ("acpln", "acplv", "acplm", "acplp")
+             + ("acdrd", "acdrs", "acsud", "acsus")]
 SAVE_MORE_AT = SAVE_TAIL_AT + sum(n for _, n in SAVE_TAIL)
 SAVE_LEN = SAVE_MORE_AT + len(SAVE_MORE)
 # what a recall of "sound only" brings: the knobs, the sounds, the layers - not the seed, the music or the form
@@ -343,6 +346,10 @@ ARRAYS["acsavebuf"] = SAVE_LEN
 ARRAYS.update({n: k for n, k in SAVE_TAIL})
 ARRAYS["acsetbuf"] = len(SETTINGS) - 12
 ARRAYS["acslotbuf"] = SAVE_LEN
+SDRIFT = [("very slow", 120), ("slow", 60), ("medium", 25), ("fast", 8)]   # DRIFT: one sweep, s
+SPLV = ["top", "top two", "all four"]           # PAD LINES: which voices move
+SPLM = ["neighbour", "passing", "free"]          # how: back to the chord tone, on to the next one, or leaps too
+SPLP = ["half beat", "beat", "two beats"]        # how often one may
 GLIDE_X = "if(acglide == 0, 0, if(acglide == 1, 0.05, if(acglide == 2, 0.15, if(acglide == 3, 0.3, if(acglide == 4, 0.6, 1)))))"
 
 
@@ -558,6 +565,18 @@ def _setup_pages():
             ("list 2 Mutate $1", [("s", "acmutp", [n for n, _ in SMUTP])]),
             ("list 3 Canon $1", [("s", "accanon", SCANON)]),
             ("list 4 Canon delay $1", [("s", "accand", [n for n, _ in SCAND])]),
+        ]),
+        ("DRIFT", [
+            ("list 1 Drone drift $1%", [("f", "int(acdrd*100)")]),
+            ("list 2 Drone speed $1", [("s", "acdrs", [n for n, _ in SDRIFT])]),
+            ("list 3 Sub drift $1%", [("f", "int(acsud*100)")]),
+            ("list 4 Sub speed $1", [("s", "acsus", [n for n, _ in SDRIFT])]),
+        ]),
+        ("PAD LINES", [
+            ("list 1 Lines $1%", [("f", "int(acpln*100)")]),
+            ("list 2 Voices $1", [("s", "acplv", SPLV)]),
+            ("list 3 Moves $1", [("s", "acplm", SPLM)]),
+            ("list 4 Pace $1", [("s", "acplp", SPLP)]),
         ]),
         ("HARMONY", [
             ("list 1 Moves $1", [("s", "acmovm", SMOVM)]),
@@ -946,6 +965,15 @@ def setup():
             V("acwrite", "acsnew"), settle("writing", [X("0; 0; 1500", "v acrestb", "v acrestp", "v acfade"), Call("ac-layers"),
                                                        If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])])]),
         If(at("WRITING", 2), [V("acpadm", "acsv > 0.5")]),
+        If(at("PAD LINES", 1), [V("acpln", "acsv")]),
+        # (DRIFT back to 0: the sound's parameters back where its SHAPE page has them)
+        If(at("DRIFT", 1), [V("acdrd", "acsv"), If("acdrd <= 0.001", [Call("ac-shpupd-d")])]),
+        If(at("DRIFT", 2), [V("acdrs", f"int(acsv*{len(SDRIFT) - 0.01})")]),
+        If(at("DRIFT", 3), [V("acsud", "acsv"), If("acsud <= 0.001", [Call("ac-shpupd-s")])]),
+        If(at("DRIFT", 4), [V("acsus", f"int(acsv*{len(SDRIFT) - 0.01})")]),
+        If(at("PAD LINES", 2), [V("acplv", f"int(acsv*{len(SPLV) - 0.01})")]),
+        If(at("PAD LINES", 3), [V("acplm", f"int(acsv*{len(SPLM) - 0.01})")]),
+        If(at("PAD LINES", 4), [V("acplp", f"int(acsv*{len(SPLP) - 0.01})")]),
         If(at("WRITING", 3), [V("acdrsub", "acsv > 0.5"), settle("drsub", [V("acfade", "1500"), Call("ac-layers")])]),
         If(at("WRITING", 4), [V("acendp", "acsv > 0.5")]),
         If(at("ARC", 1), [V("acrcell", "acsv > 0.5")]),

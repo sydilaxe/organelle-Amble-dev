@@ -237,6 +237,9 @@ and let go, without knob 1, to leave and save)
   Pads carry (the motif), Drone level (subtle), Ending (by phrase)
   LINES: Melody (arp, 1/f, grow, mutate, motif), Mutate,
   Canon (8va, 5th, 15ma, or by the motion), Canon delay
+  PAD LINES: Lines (0-100 %: the pad voices move between the chords,
+  in counterpoint; 0 = held), Voices (top / top two / all four),
+  Moves (neighbour, passing, free), Pace (half beat, beat, two beats)
   HARMONY: Moves (mediants, tonnetz), How often, Dominants
   (secondary), New types (a piece's picks take the later types too)
   PHRASE: Phrases (4 / 8 chords, open then closed), Voicing
@@ -272,6 +275,8 @@ and let go, without knob 1, to leave and save)
     Sub        auto / pedal / root / both
   COLOUR: Pre-delay (0-200 ms), Era (70s / 80s / 90s / now),
   Sparkle (GLINT: small FM bells high on the chord tones), its octave
+  DRIFT: Drone drift (0-100 %: its two sound parameters sweep around
+  their settings), Drone speed, Sub drift, Sub speed
   JOURNEY: Speed, Pads (off / soft / bright / all), Drone,
   Bells (off / bells / motion / both) - they travel through their
   engines, slowly crossfaded. A sound you pick (SOUNDS, VOICES, a
