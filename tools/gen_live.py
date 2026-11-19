@@ -21,6 +21,9 @@ GLOBALS = dict(
 ARRAYS = dict(acyh=NV, actim=17, aclev=17, aclsus=NV, acbrch=17, aclvn=NV, aclvc=NV, aclva=NV, acbendt=17, achpc=12, acmemp=4, acmcp=8)
 
 
+_SN = __import__("gen_setup").SETUP_NAMES
+_LIVE_PAGES = f"acsetpg == {_SN.index('MIDI IN')} || acsetpg == {_SN.index('CC MAP')}"
+
 def midi_in():
     c = Canvas("midi-in", w=2400)
     c.comment("External MIDI -> ac-livenote 'ch note vel', ac-livebend 'ch semitones', ac-livebreath 'ch 0..1'. "
@@ -170,8 +173,11 @@ def live():
                             If("acrun && acsecc", [V("acsecqn", "min(3, int(4*acsecel/max(1, acsecdur*actime)))"),
                                                    If("acsecqn != acsecq", [V("acsecq", "acsecqn"), Call("ac-secovr"),
                                                                             V("acfade", __import__("gen_setup").SFADE), Call("ac-layers")])]),
-                            # SETUP MIDI IN shows the breath level as it comes in
-                            If("acsetup && acsetpg >= 6 && int(acnow) % 300 == 0", [Call("ac-oledsetup")])])
+                            # SETUP MIDI IN and CC MAP show what comes in (every 300 ms); the other pages from LINES on
+                            # are refreshed each second, for what the piece changes on them (a whole screen each time:
+                            # on the Organelle it costs its display, so not more often than it needs)
+                            If(f"acsetup && acsetpg >= 6 && int(acnow) % if({_LIVE_PAGES}, 300, 1000) == 0",
+                               [Call("ac-oledsetup")])])
     # ---- notes
     up = c.to(c.recv("ac-livenote"), "unpack f f f")
     for i, n in ((2, "aclvel"), (1, "aclnote")):
