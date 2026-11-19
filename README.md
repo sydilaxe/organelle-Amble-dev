@@ -267,8 +267,9 @@ The Organelle-M runs Amble on one core, so a few things keep it from crackling:
   play live. Edit the number in `patches/Amble/pd-opts.txt` (on the Organelle: `Patches/Amble/pd-opts.txt`) to
   trade one for the other.
 - **CPU guard.** Amble measures its own load each second (CPU time over logical time). Above 78 % it gets
-  lighter in steps: 1, cloud and atmosphere off; 2, textures and the pad character off; 3, the automatic
-  vocoder off. Below 50 % for 20 s it steps back. The pads, drone, sub, bells, motion and reverb never change.
+  lighter in steps, the spare layers first: 1, textures, cloud, the pad character and the automatic vocoder off;
+  2, bells off; 3, motion off; 4, atmosphere off. Below 50 % for 20 s it steps back, one step at a time. The pads,
+  drone, sub and reverb, which carry the sound, never change.
   SETUP CPU shows the load and the guard's level, and can turn the guard off.
 - **Performance logs.** Set the CPU guard to *on + log* and play: every 5 s a line goes into `logs/perf-NNNNPP.txt` in
   the patch folder (the load, its worst 100 ms, what was on, and the sound: level, peak, bands, DC, samples

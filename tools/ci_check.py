@@ -596,12 +596,24 @@ def lite_at(ev, secs, at):
                                            (t + 30, "acsetup 0"))]
     log, _ = run(ev, secs, prints=("ac-sett1",))
     return [int(l.split("lite")[1]) for l in log.splitlines() if l.startswith("ac-sett1") and "lite" in l], log
-lv, log = lite_at([(40, "acdens 1"), (50, "ac-setseed 7"), (5000, "acloadtest 0.9"), (24000, "acloadtest 0")], 92,
-                  [22000, 90000])
-check(len(lv) >= 2 and lv[0] == 3 and lv[-1] == 0 and log.count("ac-toast: list CPU high - lighter") == 3,
-      f"CPU guard: 3 steps lighter under overload, all back after it ({lv})")
+lv, log = lite_at([(40, "acdens 1"), (50, "ac-setseed 7"), (5000, "acloadtest 0.9"), (26000, "acloadtest 0")], 118,
+                  [25000, 116000])
+check(len(lv) >= 2 and lv[0] == 4 and lv[-1] == 0 and log.count("ac-toast: list CPU high - lighter") == 4,
+      f"CPU guard: 4 steps lighter under overload, all back after it ({lv})")
 lv, log = lite_at([(40, "acguard 0"), (50, "ac-setseed 7"), (5000, "acloadtest 0.9")], 15, [14000])
 check(lv and lv[-1] == 0 and "CPU high" not in log, "CPU guard off: never sheds")
+# (what it sheds, from the perf log's layers: textures, cloud, bells, motion, atmosphere - never pads, drone, sub)
+d = build_tmp()
+run([(40, "acdens 1"), (50, "ac-setseed 7"), (100, "acguard 3"), (110, "ac-logupd bang"), (20000, "acloadtest 0.9"),
+     (55000, "ac-stop bang")], 66, d=d)
+pf = sorted(glob.glob(os.path.join(d, "logs", "perf-*.txt")))
+L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
+gi, li = L[0].index("guard"), L[0].index("layers")
+lay = [(int(r[gi]), int(r[li])) for r in L[1:] if float(r[0]) <= 50]
+early = [x for g, x in lay if g == 0]
+late = [x for g, x in lay if g == 4]
+check(early and late and all(x & (8 | 16) for x in early[-2:]) and all(x & (8 | 16 | 32 | 64 | 128) == 0 and x & 7 == 7 for x in late),
+      f"CPU guard sheds in order: layers before {early[-2:]}, at level 4 {late} (pads, drone, sub = 7 stay)")
 
 # 25. Start / Stop (top A#), the cloud key (top G; aux = auto), Freeze (top A), MIDI Start / Stop when following
 # (Stop fades out over 8 s: silent from 16 s)

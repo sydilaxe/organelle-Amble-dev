@@ -47,6 +47,8 @@ Working memory for this project: read it first in a new session.
   change it does, and the screen snapped back to the piece's choice. On pick defaults to now. A pick releases Resolve (it would hold the tonic).
 - **Tide** acts on the playing chord: `ac-tideupd` rescales its length (new pace over `actidec`, the one it began
   with) and re-arms the next change (`ac-chgarm`, the one [delay] that schedules it) for what is left.
+- **CPU guard order** (the user's): 1 textures, cloud, pad character, auto-vocoder; 2 bells; 3 motion; 4 atmosphere.
+  Pads, drone and sub (continuous) and the reverb are never shed. (`acshed` < n in `layers()`.)
 - **Logs:** a perf log part is written every minute (and at Stop only once the fade is silent: an SD write runs on
   Pd's audio thread) and never empty; a profile is written after every part and says
   `stopped-after N` when stopped (perf_report.py tells).

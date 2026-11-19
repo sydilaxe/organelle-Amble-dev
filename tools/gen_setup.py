@@ -1110,7 +1110,7 @@ def setup():
 def cpu_guard():
     c = Canvas("cpu-guard", w=1800)
     c.comment("CPU guard: Pd's load = CPU time / logical time, each second. Above 78 % the piece gets lighter "
-              "(1: cloud and atmosphere off, 2: textures and pad character off, 3: auto-vocoder off); below 50 % "
+              "(1: textures, cloud, pad character and auto-vocoder off, 2: bells off, 3: motion off, 4: atmosphere off; the pads, drone and sub never); below 50 % "
               "for 20 s it steps back. SETUP CPU can turn the guard off. In a batch (offline) run the load reads near 0. acloadtest overrides "
               "it for tests.")
     met = c.obj("metro 1000")
@@ -1130,7 +1130,7 @@ def cpu_guard():
     run_steps(c, (up, 0), [V("acload", "max(acloadtest, 0.6*acload + 0.4*acldraw)"), Call("ac-cpucheck")])
     c.col()
     proc(c, "ac-cpucheck", [
-        If("acguard % 2 && acload > 0.78 && acshed < 3 && acnow - acshedt > 4000", [
+        If("acguard % 2 && acload > 0.78 && acshed < 4 && acnow - acshedt > 4000", [
             X("acshed + 1; acnow", "v acshed", "v acshedt"), Call("ac-layers"), Call("ac-inputupd"),
             Toast("CPU high - lighter"),
         ]),
