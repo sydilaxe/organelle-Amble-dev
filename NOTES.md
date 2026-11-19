@@ -18,6 +18,21 @@ Working memory for this project: read it first in a new session.
 - **Ticks and CPU while playing** (tools/README.md, "Ticks"): about 96 % of the CPU while playing is audio, all of it
   in switched subpatches except the master bus. Off, the half-rate reverbs and the vocoder no longer resample
   (5.7 % less audio CPU). A SETUP knob step costs about a third of what it did; loading a slot about two thirds.
+- **Crossfades and picks:** a fade to 0 in `switched()` runs at the slope of a whole fade (time x gain now / gain it
+  went to), so a sound just brought in and taken out again stops at once, and a fade already running isn't
+  restarted. A sound picked by a knob acts once the knob rests 150 ms (`type_act`, `ac-pick-<var>`; the screen at
+  once). Before, turning the pads' choice through the types left every one passed running for 4 s in all voices
+  (3.4x the audio CPU: drop-outs); now a turn costs as much as one pick.
+- **Settled choices:** a SETUP choice whose effect is heavy (`gen_setup.settle`: Mode, MUSIC key / scale / chords,
+  MIDI IN routing, JOURNEY, SECTIONS / SECTION MIX, WRITING, ARC centre, the CHORD page's pick) shows at once and
+  acts once the knob rests 150 ms (`ac-act-<name>`).
+- **CHORD page:** knob 1 picks when the knob moves to another chord (`acxk`, its own last pick; the first value
+  after the page opens only notes where it is), not when the piece's next chord differs from the knob - after each
+  change it does, and the screen snapped back to the piece's choice. On pick defaults to now. A pick releases Resolve (it would hold the tonic).
+- **Tide** acts on the playing chord: `ac-tideupd` rescales its length (new pace over `actidec`, the one it began
+  with) and re-arms the next change (`ac-chgarm`, the one [delay] that schedules it) for what is left.
+- **Logs:** a perf log part is written every 30 s and never empty; a profile is written after every part and says
+  `stopped-after N` when stopped (perf_report.py tells).
 - **JOURNEY and picks:** a sound picked by hand (`gen_setup.type_act`) wins over JOURNEY (`ac-jpick-*`): the journey's
   index jumps to the pick and restarts its turn, so it moves on from there.
 - **Control logic** is written in `pdlib` steps. `proc(name, steps)` becomes `[r name] -> [t b b ...]`,

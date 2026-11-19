@@ -87,6 +87,9 @@ every one already in its window (quadratic per window). So the build keeps both 
   (`[array get]` -> `[array set]`), not element by element in a `Loop` (saving and loading a slot use them).
 - SETUP's knob handlers are reached through one `[sel]` on the page and knob (`gen_setup._dispatch`), not by testing
   every `If(at(...))` in turn; a SHAPE knob updates only its own layer (`ac-shpupd-<x>`; `ac-shpupd` = all).
+- A switched subpatch's fade to 0 keeps the slope of a whole fade (`switched()`: a [snapshot~] of its gain), and a
+  sound picked by a knob acts once the knob rests (`gen_setup.PICK_MS`): turning through the choices starts only
+  the last one.
 - A subpatch that resamples (`switch~ N 1 0.5`) still resamples its inlets and outlets while switched off: `switched()`
   marks it (`.wrap`) and `pdlib._wrap_canvas` puts it in an outer `[switch~]` that goes off with it.
 

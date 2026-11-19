@@ -1010,10 +1010,11 @@ D = [x for i, x in enumerate(L) if i == 0 or x != L[i - 1]]
 #  e.g. when the key plan moves the key at a section)
 bad = [(a, b) for a, b in zip(D[1:], D[2:]) if a.split(" > ")[0] != b.split(" > ")[0] and a.split(" > ")[1] != b.split(" > ")[0]]
 check(len(D) > 8 and not bad, f"chord line: each next chord is the one that plays ({len(D)} lines, {bad[:2]})")
+# (On pick: next change first - "now" is the default; a pick plays once knob 1 rests, 150 ms)
 log, _ = run([(50, "ac-setseed 7"), (2900, "h-mark bang"), (3000, "notesRaw 69 100"), (3700, "notesRaw 69 0"),
-              (4000, "knob1 0.05"), (4300, "knob1 0.65"), (4500, "h-mark bang"), (6000, "notesRaw 69 100"),
+              (3900, "knob4 0.1"), (4000, "knob1 0.05"), (4300, "knob1 0.65"), (4500, "h-mark bang"), (6000, "notesRaw 69 100"),
               (6050, "notesRaw 69 0"), (6500, "knob4 0.9"), (6600, "h-mark bang"), (6700, "knob1 0.35"),
-              (6800, "h-mark bang"), (7500, "aux 1"), (7550, "aux 0"), (7600, "h-mark bang")], 9,
+              (7200, "h-mark bang"), (7500, "aux 1"), (7550, "aux 0"), (7600, "h-mark bang")], 9,
              prints=("ac-oledtop", "h-mark", "ac-sett0", "ac-sett1"))
 seg = log.split("h-mark: bang")
 grab = lambda t, pre: [l.split(pre, 1)[1].split()[0] for l in t.splitlines() if pre in l]
@@ -1970,6 +1971,41 @@ check(ok and jr[3][5] == (_be + 1) % len(STRIKES) and jr[3][6] == (_mo + 1) % le
       and any(f != _pad for f in jr[3][:4]),
       f"then the journey goes on from the pick (bells {STRIKES[_be]} -> {STRIKES[jr[3][5]] if ok else '?'}, motion "
       f"{STRIKES[_mo]} -> {STRIKES[jr[3][6]] if ok else '?'}, pads {[FLAVOURS[f] for f in jr[3][:4]] if ok else '?'})")
+
+# 89. Tide acts on the playing chord (turned down mid-chord, the change comes within a second, not when the long chord
+#     ends); a heavy SETUP choice turned quickly acts once, for the last (MUSIC Key: one key change, to the key it rests on)
+def chgtimes(c):
+    e = c.obj("expr int(acnow)", 1400, 50)
+    c.c(c.obj("r ac-change2", 1400, 20), 0, e, 0)
+    c.c(e, 0, c.obj("print h-chg", 1400, 80), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (20000, "knob2 0.3"), (20100, "knob2 0.1"), (20200, "knob2 0.0")], 26, extra=chgtimes)
+ct = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+check(any(20200 <= t <= 21500 for t in ct), f"Tide down at 20 s: the chord changes within a second (changes at {ct} ms)")
+_mu = GS.SETUP_NAMES.index("MUSIC")
+ev = [(50, "ac-setseed 7"), (3000, "acsetup 1"), (3001, f"acsetpg {_mu}")] + \
+     [(3010 + 25 * i, f"ac-setknob 0 {0.05 + 0.06 * i}") for i in range(12)] + [(4500, "h-q bang")]
+log, _ = run(ev, 5, extra=lambda c: (chgtimes(c), jprobe(c)), prints=("ac-keytoast",))
+ct = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+check(len([t for t in ct if t > 3000]) == 1, f"MUSIC Key turned through 12 steps: one chord change once it rests ({ct})")
+
+# 90. a chord picked on the CHORD page wins over Resolve: Resolve (low A#) on holds the tonic; a pick releases it and plays
+def resprobe(c):
+    e = c.obj("expr acres; acdeg", 1400, 50)
+    c.c(c.obj("r h-q", 1400, 20), 0, e, 0)
+    p = c.obj("pack f f", 1400, 80)
+    c.c(e, 0, p, 0)
+    c.c(e, 1, p, 1)
+    c.c(p, 0, c.obj("print h-rs", 1400, 110), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (2000, "notesRaw 70 100"), (2100, "notesRaw 70 0"), (3000, "h-q bang"),
+              (3500, "notesRaw 69 100"), (4300, "notesRaw 69 0"), (4500, "knob1 0.1"), (4600, "knob1 0.6"),
+              (5200, "h-q bang")], 6, extra=resprobe, prints=("ac-toast",))
+rs = [[int(float(v)) for v in l.split()[1:]] for l in log.splitlines() if l.startswith("h-rs")]
+check(len(rs) == 2 and rs[0] == [1, 0] and rs[1][0] == 0 and rs[1][1] != 0 and "resolve released" in log,
+      f"Resolve on holds the tonic ({rs[:1]}); a CHORD page pick releases it and plays ({rs[1:]})")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

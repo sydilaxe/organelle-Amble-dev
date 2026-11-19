@@ -18,7 +18,7 @@ EUCLID_N = f"if(acnewt, {len(EUCLID)}, {EUCLID_AUTO})"
 GLOBALS = dict(
     acfamc=0, acflxf=4000,
     acxt=48, acxscf=0, acxsci=0, acxdeg=0, acqt=0, acqd=0, acqr=0, acqn=0, acqi=0, acq3=0, acq4=0, acq6=0, acq7=0,
-    acq8=0, acchn=0, acnxn=0, acchgt=0,
+    acq8=0, acchn=0, acnxn=0, acchgt=0, actidec=-1,
     acseed=1, account=0, actonic=38, acsci=0, acn=7, acfamA=0, acfamB=1, acfam=0, acdeg=0, acpend=-1, acxpick=0,
     acmode=1, acrun=1, acended=0, acstopped=0, acready=0, acsecrem=0, acsec=0, acnsec=8, acenergy=0.5, acdeff=0.5, acsecdur=60000, acchsec=20,
     acpage=0, acinmode=0, acfreeze=0, accapt=0, acvfreeze=0,
@@ -963,7 +963,7 @@ def change():
               "opening progression in a return section), voice-lead the 4 pad voices, retune everything")
     steps = [
         RNG,
-        V("acchsec", "(6 + 84*pow(actide, 2)) * actidef * (0.75+acr3*0.5)"),
+        V("acchsec", "(6 + 84*pow(actide, 2)) * actidef * (0.75+acr3*0.5)"), V("actidec", "actide"),
         V("acfamc", f"if(fmod(acr4*5.3, 1) < acharmx*0.5, int(fmod(acr4*3.7, 1)*{NF}), acfam)"),
         # the chord was picked at the last change (ac-chordnext), so the screen shows it coming; a piece's first
         # chord is picked now
@@ -1155,10 +1155,19 @@ def change():
     ] + [SendL(f"ac-harp{k}", [f"1000/(mtof(acnew[{k}]) / pow(2, max(0, ceil(log(mtof(acnew[{k}])/600)/log(2)))))",
                                "1500"]) for k in range(3)] + [
         X("acchg + 1; 0", "v acchg", "v acfirst"),
-        Arm("ac-change", "acchsec*1000*actime", stop="ac-chgstop"),
+        SendL("ac-chgarm", ["acchsec*1000*actime"]),
         Later("ac-scr2", 37), Later("ac-scr3", 43), Send("ac-flash"), Call("ac-outchord"),
     ]
     proc(c, "ac-change2", [If("acrun", steps)])
+    # the next change: ac-chgarm N (ms from now; a new one restarts it), ac-chgstop cancels it
+    dl = c.to(c.recv("ac-chgarm"), "delay")
+    c.c(dl, 0, c.obj("s ac-change"), 0)
+    c.c(c.m(c.recv("ac-chgstop"), "stop"), 0, dl, 0)
+    # Tide turned: the playing chord's length follows at once (scaled by the new pace over the one it began with),
+    # what is left of it from now - turned down, the change comes sooner (at least 0.5 s on)
+    proc(c, "ac-tideupd", [If("acrun && acfirst == 0 && actidec >= 0", [
+        V("acchsec", "acchsec * (6 + 84*pow(actide, 2)) / (6 + 84*pow(actidec, 2))"), V("actidec", "actide"),
+        SendL("ac-chgarm", ["max(500, acchgt + acchsec*1000*actime - acnow)"]), Later("ac-scr2", 37)])])
     proc(c, "ac-padres", [If("acrun", [SendL("ac-v3-pitch", ["acnew[3]", "acchsec*250*actime", "0"])])])
     # a closed phrase's last chord: halfway into it, the bells and the motion breathe (1 bar, or 2), the pads hold
     proc(c, "ac-breathgo", [If("(acrests*acwrite) > 0 && acrun", [X("1 + ((acrests*acwrite) == 2); 3", "v acrestb", "v acrestl")])])

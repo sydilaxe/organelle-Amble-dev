@@ -62,6 +62,8 @@ def read_profile(paths):
     out = {}
     for p in sorted(paths):
         for w in read_lines(p)[1:]:
+            if w[0] == "stopped-after":
+                print(f"(profile {os.path.basename(p)} was stopped after {w[1]} parts: the rest weren't measured)")
             if len(w) >= 3:
                 out.setdefault(w[0], []).append((float(w[1]), float(w[2])))
     # several profiles: the average of each part

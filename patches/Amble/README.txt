@@ -62,7 +62,7 @@ REVERB (page SPACE)
   change makes the reverb bloom up.
 
 KNOBS (low C..F# open the pages, aux cycles them; knobs pick up smoothly)
-  SHAPE  1 Dens  how much plays     2 Tide  time between chord changes
+  SHAPE  1 Dens  how much plays     2 Tide  time between chord changes (now)
          3 Colr  brightness         4 In    external audio amount
   SPACE  1 Mix   reverb mix         2 Verb  Auto/Bloom1/Bloom2/Hall/Shimmer
          3 Time  1.5-30 s           4 Tone  damping
@@ -112,10 +112,11 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
       quick page (C: Writing still / moving at once); aux leaves
   A   tap: chord change now (to the next chord shown); hold: the CHORD
       page - knob 1 picks the next chord from the key's chords, knob 3 up:
-      the piece picks another, knob 4 On pick: next change / now; aux leaves
+      the piece picks another, knob 4 On pick: now (the default: it
+      plays once knob 1 rests) / next change; aux leaves
   A#  RESOLVE: the tonic as open fifths, held - no modulation, no
-      dissonant chords - until pressed again (a CC mapped to resolve
-      holds it from a pedal)
+      dissonant chords - until pressed again, or a chord is picked on
+      the CHORD page (a CC mapped to resolve holds it from a pedal)
   B   tap: next section; hold: hold section (stays past its length;
       hold again: moves on)
   Top octave

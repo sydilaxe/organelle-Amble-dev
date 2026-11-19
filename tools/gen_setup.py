@@ -21,7 +21,7 @@ GLOBALS = dict(acmout=1, acsync=0, acvintage=0, acoutch=1, accurve=1.2, acsk=0, 
                acmap0=2, acmap1=1, acmap2=1, acmap3=1, acmap4=6, acmap5=0, acmap6=3, acsbell=0, acsmot=0, acglide=5, acmodesel=0, acssub=0, acsform=0, acstempo=0, acsmeter=0, acsatm=0, acnsx=0, acchx=0, acslot=0, acslotfull=0, acsvp49=1, acsvp50=1, acsvpp=1, acsetpgl=-1, acmixcc=0, acpgm=0, aclfd=1, acsfd=2,
                acmorph=0, acrecall=0, acancg=2, accmp=0, acpump=0, acpumpd=0.5, acduck=0, acduckr=2, acmcsel=0, acmcn=0, acmcin=0,
                acmc0mode=0, acmc0ta=0, acmc0da=0.75, acmc0tb=0, acmc0db=0.75, acmc0v=0, acmc0p=0, acmc1mode=0, acmc1ta=0, acmc1da=0.75, acmc1tb=0, acmc1db=0.75, acmc1v=0, acmc1p=0, acmc2mode=0, acmc2ta=0, acmc2da=0.75, acmc2tb=0, acmc2db=0.75, acmc2v=0, acmc2p=0, acmc3mode=0, acmc3ta=0, acmc3da=0.75, acmc3tb=0, acmc3db=0.75, acmc3v=0, acmc3p=0,
-               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=0, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0,
+               acsname=0, acstonic=-1, acsscale=0, acspark=0, acsparko=1, acslnm=0, acslkey=-1, acslsc=0, acjour=0, acjpad=0, acjdrone=0, acjstrike=0, acrvpre=0, acrvera=3, acccout=0, acccch=1, acccbase=0, acccrate=1, acchpick=1, acxk=-2, acchsurp=1, acmemon=0, acmemg=2, acsvpm3=1, acsvpm4=1, acmsi=0, acmemk=0,
                acauxlong=0, acscrk=0,
                achints=1, acscope=0, acscopeg=2, acledm=0, achk=-1, acmirk=0, acledin=0, aclbavg=0, aclbnew=0, aclbon=0,
                acmelm=4, acmutp=1, accanon=0, accand=1, acmovm=0, achmvp=1, acsecd=1, acnewt=0,
@@ -645,23 +645,46 @@ def quick_pages():
     return pages
 
 
-def type_act(var):
-    """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes"""
-    opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
-                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+PICK_MS = 150        # a sound picked by a knob acts once the knob has rested this long (see type_act)
+
+
+def _pick_actions(var):
+    """what picking a layer's sound does (after the knob rests: type_act)"""
     # (a pick by hand wins over JOURNEY, which carries on from it: gen_perform ac-jpick-*)
     jpick = dict(acspad="ac-jpick-pad", acsdrone="ac-jpick-drone", acsbell="ac-jpick-bell", acsmot="ac-jpick-mot")
     if var in ("acspad", "acsdrone", "acstex", "acschar"):
-        then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + (
+        return ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + (
             [Call(jpick[var])] if var in jpick else []) + [Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
-    elif var in ("acsbell", "acsmot"):
-        then = [V(var, "acsnew"), Call(jpick[var]), V("acfade", "600"), Call("ac-layers")]
-    elif var == "acssub":
-        then = [V(var, "acsnew")]
-    elif var == "acsubt":
-        then = [V(var, "acsnew"), SendL("ac-subt", ["acsubt"])]
-    else:     # the atmosphere: from now (auto: the next section picks)
-        then = [V(var, "acsnew"), If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
+    if var in ("acsbell", "acsmot"):
+        return [Call(jpick[var]), V("acfade", "600"), Call("ac-layers")]
+    if var == "acsubt":
+        return [SendL("ac-subt", ["acsubt"])]
+    if var == "acsatm":       # the atmosphere: from now (auto: the next section picks)
+        return [If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
+    return []
+
+
+PICKED = set()       # the sounds type_act was used for: setup() builds their ac-pick-<var>
+SETTLE = {}          # settle(): name -> the steps that wait for the knob to rest (setup() builds ac-act-<name>)
+
+
+def settle(name, act):
+    """a choice whose effect is heavy (a chord change, a new plan, the layers): the screen shows it at once, act runs
+    once the knob has rested PICK_MS (ac-act-<name>) - a turn through the choices acts once, for the last"""
+    SETTLE[name] = act
+    return Later(f"ac-act-{name}", PICK_MS)
+
+
+def type_act(var):
+    """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes. The
+    choice shows at once; the sound follows once the knob has rested PICK_MS (ac-pick-<var>), so turning through the
+    choices crossfades only to the last one - every one passed would otherwise start (CPU, audio drop-outs)"""
+    opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
+                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+    then = [V(var, "acsnew")]
+    if _pick_actions(var):
+        PICKED.add(var)
+        then.append(Later(f"ac-pick-{var}", PICK_MS))
     return [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", then)]
 
 
@@ -709,9 +732,15 @@ def quick_knobs(item):
     st = [
         # CHORD: knob 1 the next chord, from the key's chords (and, with On pick now, at once); knob 3 fully up
         # another one picked by the piece (re-armed below 90 %)
-        If(at(CHORD_PAGE, 1), [V("acsnew", "int(acsv*(acn - 0.01))"), If("acsnew != acxdeg || acxt != actonic", [
-            X("acsnew; actonic; 0; 1", "v acxdeg", "v acxt", "v acxscf", "v acxpick"), Call("ac-chordshow"),
-            If("acchpick", [Call("ac-chordnow")])])]),
+        # (knob 1 picks when it moves to another chord - not when the piece's own next chord differs from it, which
+        #  after every change it does: the first value after the page opens only notes where the knob is)
+        If(at(CHORD_PAGE, 1), [V("acsnew", "int(acsv*(acn - 0.01))"), If("acxk == -2", [V("acxk", "acsnew")], [
+            If("acsnew != acxk", [
+                X("acsnew; acsnew; actonic; 0; 1", "v acxk", "v acxdeg", "v acxt", "v acxscf", "v acxpick"),
+                Call("ac-chordshow"),
+                # (a chord picked by hand wins over Resolve, which would hold the tonic: released)
+                settle("chordpick", [If("acres", [V("acres", "0"), Toast("resolve released")]),
+                                     If("acchpick && acxpick", [Call("ac-chordnow")])])])])]),
         If(at(CHORD_PAGE, 3), [If("acsv > 0.9 && acchsurp <= 0.9", [Call("ac-chordnext")]), V("acchsurp", "acsv")]),
         If(at(CHORD_PAGE, 4), [V("acchpick", "acsv > 0.5")]),
     ]
@@ -763,12 +792,13 @@ def setup():
         """the condition: knob `row` (1-4) turned on SETUP page `page` (its name)"""
         return f"{item} == {SETUP_NAMES.index(page) * 4 + row - 1}"
     run_steps(c, (tb, 0), _dispatch(item, [
-        If("acsetpg != acsetpgl", [X("1; 1; 1; 1; 1; 1; acsetpg", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsvpm3", "v acsvpm4", "v acsetpgl")]),
+        If("acsetpg != acsetpgl", [X("1; 1; 1; 1; 1; 1; acsetpg; -2", "v acsvp49", "v acsvp50", "v acsvpp", "v acchsurp", "v acsvpm3", "v acsvpm4", "v acsetpgl", "v acxk")]),
         If(at("GENERAL", 1), [V("acmout", "int(acsv*3.99)"), If("acmout == 0 || acmout == 3", [Call("ac-clockstop")],
                                                                [Call("ac-clockstart")]),
                             If("acmout < 2", [Call("ac-notesoff")], [Call("ac-outchord")])]),
         If(at("GENERAL", 2), [V("acsync", "acsv > 0.5"), SendL("ac-bpm", ["acbpm"])]),
-        If(at("GENERAL", 3), [If("(acsv > 0.5) != acmodesel", [Call("ac-modetoggle")])]),
+        If(at("GENERAL", 3), [V("acmodesel", "acsv > 0.5"),
+                              settle("mode", [If("acmodesel != 1 - acmode", [Call("ac-modetoggle")])])]),
         If(at("GENERAL", 4), [V("acvintage", "acsv > 0.5"), SendL("ac-vintage", ["acvintage"])]),
         If(at("PLAYING", 1), [V("acfollow", "acsv")]),
         If(at("PLAYING", 2), [V("acnbr", "if(acsv < 0.25, 12, if(acsv < 0.5, 24, if(acsv < 0.75, 48, 96)))")]),
@@ -790,18 +820,18 @@ def setup():
     ] + [
         # MUSIC: a choice applies at the next chord, which comes now
         If(at("MUSIC", 1), [V("acsnew", f"int(acsv*{len(SKEYS) - 0.01})"), If("acsnew != ackeyc", [
-            V("ackeyc", "acsnew"), If("ackeyc > 0", [V("acpend", "ackeyc - 1"), V("achome", "35 + ackeyc"),
-                                                     Call("ac-change")])])]),
+            V("ackeyc", "acsnew"), settle("key", [If("ackeyc > 0", [V("acpend", "ackeyc - 1"), V("achome", "35 + ackeyc"),
+                                                                  Call("ac-change")])])])]),
         If(at("MUSIC", 2), [V("acsnew", f"int(acsv*{len(SSCALES) - 0.01})"), If("acsnew != acsclc", [
-            V("acsclc", "acsnew"), If("acsclc > 0", [V("acsci", "acsclc - 1"), Call("ac-loadscale"),
-                                                     Call("ac-change")])])]),
+            V("acsclc", "acsnew"), settle("scale", [If("acsclc > 0", [V("acsci", "acsclc - 1"), Call("ac-loadscale"),
+                                                                    Call("ac-change")])])])]),
         If(at("MUSIC", 3), [V("acsnew", f"int(acsv*{len(SCHORDS) - 0.01})"), If("acsnew != acchdc", [
-            V("acchdc", "acsnew"), If("acchdc > 0", [V("acfam", "acchdc - 1"), Call("ac-change")])])]),
+            V("acchdc", "acsnew"), settle("chords", [If("acchdc > 0", [V("acfam", "acchdc - 1"), Call("ac-change")])])])]),
         If(at("MUSIC", 4), [V("acpulc", f"int(acsv*{len(PULSES) - 0.01})"), Call("ac-pulseupd")]),
         # MIDI IN
         If(at("MIDI IN", 1), [V("acsnew", f"int(acsv*{len(ROUTES) - 0.01})"), If("acsnew != acroute", [
-            Call("ac-allnotesoff"), V("acroute", "acsnew"), Call("ac-routehome"), V("acfade", "1500"),
-            Call("ac-layers")])]),
+            V("acroute", "acsnew"), settle("route", [Call("ac-allnotesoff"), Call("ac-routehome"), V("acfade", "1500"),
+                                                     Call("ac-layers")])])]),
         If(at("MIDI IN", 2), [V("acsnew", f"int(acsv*{len(BRTOS) - 0.01})"), If("acsnew != acbrto", [
             V("acbrto", "acsnew"), Call("ac-brfxoff")])]),
         If(at("MIDI IN", 3), [V("acpressto", f"int(acsv*{len(TARGETS) - 0.01})")]),
@@ -833,14 +863,14 @@ def setup():
         If(at("SECTIONS", 1) + " || " + at("SECTION MIX", 1), [V("acsnew", "int(acsv*12.99)"), V("acsecfol", "acsnew == 0"),
                                              V("acsecsel", "if(acsnew == 0, min(11, acsec), acsnew - 1)")]),
         If(at("SECTION MIX", 2), [V("acslay", "int(acsv*7.99)")]),
-    ] + [If(it, [Call("ac-customcopy"), V("acsform", "6"), act, Call("ac-customapply"),
-                                Call("ac-secovr"), V("acfade", "1000"), Call("ac-layers")] + extra)
-         for it, act, extra in (
+    ] + [If(it, [Call("ac-customcopy"), V("acsform", "6"), act,
+                 settle(name, [Call("ac-customapply"), Call("ac-secovr"), V("acfade", "1000"), Call("ac-layers")] + extra)])
+         for name, (it, act, extra) in zip(("sroles", "slens", "spad", "splay", "slevel"), (
              (at("SECTIONS", 2), T("acsroles", "acsecsel", f"int(acsv*{len(SROLES) - 0.01})"), []),
              (at("SECTIONS", 3), T("acslens", "acsecsel", f"int(acsv*{len(SLENS) - 0.01})"), []),
              (at("SECTIONS", 4), T("acssp", "acsecsel", f"int(acsv*{len(SPADS) - 0.01})"), [If("acsecsel == acsec", [Call("ac-padpick")])]),
              (at("SECTION MIX", 3), T("acsst", "acsecsel*8 + acslay", f"int(acsv*{len(SPLAY) - 0.01})"), []),
-             (at("SECTION MIX", 4), T("acslv", "acsecsel*8 + acslay", "2*acsv"), []))
+             (at("SECTION MIX", 4), T("acslv", "acsecsel*8 + acslay", "2*acsv"), [])))
     ] + [
         # SAVES: knob 1 the slot, knob 2 up past 90 % saves, knob 3 loads (each re-arms below 90 %; a page change
         # re-arms only after the knob has gone down, so arriving with a knob up does nothing)
@@ -871,10 +901,10 @@ def setup():
         If(at("MACRO B", 3), [If("acmcsel == 0", [V("acmc0db", "acsv")]), If("acmcsel == 1", [V("acmc1db", "acsv")]), If("acmcsel == 2", [V("acmc2db", "acsv")]), If("acmcsel == 3", [V("acmc3db", "acsv")])]),
         If(at("MACRO B", 4), [V("acmcn", "acmcsel"), V("acmcin", "acsv"), Call("ac-macro")]),
         # JOURNEY
-        If(at("JOURNEY", 1), [V("acjour", f"int(acsv*{len(SJOUR) - 0.01})"), Call("ac-jourupd")]),
-        If(at("JOURNEY", 2), [V("acjpad", f"int(acsv*{len(JPAD_SETS) - 0.01})"), Call("ac-jourupd")]),
-        If(at("JOURNEY", 3), [V("acjdrone", "acsv > 0.5"), Call("ac-jourupd")]),
-        If(at("JOURNEY", 4), [V("acjstrike", "int(acsv*3.99)"), Call("ac-jourupd")]),
+        If(at("JOURNEY", 1), [V("acjour", f"int(acsv*{len(SJOUR) - 0.01})"), settle("journey1", [Call("ac-jourupd")])]),
+        If(at("JOURNEY", 2), [V("acjpad", f"int(acsv*{len(JPAD_SETS) - 0.01})"), settle("journey2", [Call("ac-jourupd")])]),
+        If(at("JOURNEY", 3), [V("acjdrone", "acsv > 0.5"), settle("journey3", [Call("ac-jourupd")])]),
+        If(at("JOURNEY", 4), [V("acjstrike", "int(acsv*3.99)"), settle("journey4", [Call("ac-jourupd")])]),
         # COLOUR (the reverbs; GLINT below)
         If(at("COLOUR", 1), [V("acrvpre", f"int(acsv*{len(SPRE) - 0.01})"), Call("ac-rvcolour")]),
         If(at("COLOUR", 2), [V("acrvera", "int(acsv*3.99)"), Call("ac-rvcolour")]),
@@ -913,15 +943,15 @@ def setup():
         If(at("DIALOGUE", 3), [V("acphase", f"int(acsv*{len(SPHASE) - 0.01})"), V("acpsd", "0")]),
         If(at("DIALOGUE", 4), [V("acreg", f"int(acsv*{len(SREG) - 0.01})")]),
         If(at("WRITING", 1), [V("acsnew", "acsv > 0.5"), If("acsnew != acwrite", [
-            X("acsnew; 0; 0; 1500", "v acwrite", "v acrestb", "v acrestp", "v acfade"), Call("ac-layers"),
-            If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])]),
+            V("acwrite", "acsnew"), settle("writing", [X("0; 0; 1500", "v acrestb", "v acrestp", "v acfade"), Call("ac-layers"),
+                                                       If("acwrite", [Toast("writing: moving")], [Toast("writing: still")])])])]),
         If(at("WRITING", 2), [V("acpadm", "acsv > 0.5")]),
-        If(at("WRITING", 3), [V("acdrsub", "acsv > 0.5"), V("acfade", "1500"), Call("ac-layers")]),
+        If(at("WRITING", 3), [V("acdrsub", "acsv > 0.5"), settle("drsub", [V("acfade", "1500"), Call("ac-layers")])]),
         If(at("WRITING", 4), [V("acendp", "acsv > 0.5")]),
         If(at("ARC", 1), [V("acrcell", "acsv > 0.5")]),
         If(at("ARC", 2), [V("acarc", f"int(acsv*{len(SARC) - 0.01})"), Call("ac-brightupd")]),
         If(at("ARC", 3), [V("acbassm", f"int(acsv*{len(SBASSM) - 0.01})")]),
-        If(at("ARC", 4), [V("acctr", "acsv > 0.5"), V("acfade", "2000"), Call("ac-layers")]),
+        If(at("ARC", 4), [V("acctr", "acsv > 0.5"), settle("ctr", [V("acfade", "2000"), Call("ac-layers")])]),
         If(at("CC OUT", 1), [V("acccout", "acsv > 0.5")]),
         If(at("CC OUT", 2), [V("acccch", "1 + int(acsv*15.99)")]),
         If(at("CC OUT", 3), [V("acccbase", "int(acsv*3.99)")]),
@@ -930,6 +960,10 @@ def setup():
         Call("ac-oledsetup"), Send("ac-dirty"),
     ]))
     c.col()
+    for var in sorted(PICKED):
+        proc(c, f"ac-pick-{var}", _pick_actions(var))
+    for name in sorted(SETTLE):
+        proc(c, f"ac-act-{name}", SETTLE[name])
     proc(c, "ac-oledsetup", [
         Fill(0, 0, 128, 64, 0),
         Call("ac-setl0"), Call("ac-setl1"), Call("ac-setl2"), Call("ac-setl3"), Call("ac-setl4"),
