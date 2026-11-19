@@ -18,6 +18,11 @@ Working memory for this project: read it first in a new session.
 - **Ticks and CPU while playing** (tools/README.md, "Ticks"): about 96 % of the CPU while playing is audio, all of it
   in switched subpatches except the master bus. Off, the half-rate reverbs and the vocoder no longer resample
   (5.7 % less audio CPU). A SETUP knob step costs about a third of what it did; loading a slot about two thirds.
+- **Crossfades and picks:** a fade to 0 in `switched()` runs at the slope of a whole fade (time x gain now / gain it
+  went to), so a sound just brought in and taken out again stops at once, and a fade already running isn't
+  restarted. A sound picked by a knob acts once the knob rests 150 ms (`type_act`, `ac-pick-<var>`; the screen at
+  once). Before, turning the pads' choice through the types left every one passed running for 4 s in all voices
+  (3.4x the audio CPU: drop-outs); now a turn costs as much as one pick.
 - **JOURNEY and picks:** a sound picked by hand (`gen_setup.type_act`) wins over JOURNEY (`ac-jpick-*`): the journey's
   index jumps to the pick and restarts its turn, so it moves on from there.
 - **Control logic** is written in `pdlib` steps. `proc(name, steps)` becomes `[r name] -> [t b b ...]`,

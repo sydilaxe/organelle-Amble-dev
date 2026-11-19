@@ -645,23 +645,38 @@ def quick_pages():
     return pages
 
 
-def type_act(var):
-    """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes"""
-    opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
-                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+PICK_MS = 150        # a sound picked by a knob acts once the knob has rested this long (see type_act)
+
+
+def _pick_actions(var):
+    """what picking a layer's sound does (after the knob rests: type_act)"""
     # (a pick by hand wins over JOURNEY, which carries on from it: gen_perform ac-jpick-*)
     jpick = dict(acspad="ac-jpick-pad", acsdrone="ac-jpick-drone", acsbell="ac-jpick-bell", acsmot="ac-jpick-mot")
     if var in ("acspad", "acsdrone", "acstex", "acschar"):
-        then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + (
+        return ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + (
             [Call(jpick[var])] if var in jpick else []) + [Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
-    elif var in ("acsbell", "acsmot"):
-        then = [V(var, "acsnew"), Call(jpick[var]), V("acfade", "600"), Call("ac-layers")]
-    elif var == "acssub":
-        then = [V(var, "acsnew")]
-    elif var == "acsubt":
-        then = [V(var, "acsnew"), SendL("ac-subt", ["acsubt"])]
-    else:     # the atmosphere: from now (auto: the next section picks)
-        then = [V(var, "acsnew"), If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
+    if var in ("acsbell", "acsmot"):
+        return [Call(jpick[var]), V("acfade", "600"), Call("ac-layers")]
+    if var == "acsubt":
+        return [SendL("ac-subt", ["acsubt"])]
+    if var == "acsatm":       # the atmosphere: from now (auto: the next section picks)
+        return [If("acsatm > 0", [V("acatmcur", "acsatm - 1"), V("acfade", "3000"), Call("ac-layers")])]
+    return []
+
+
+PICKED = set()       # the sounds type_act was used for: setup() builds their ac-pick-<var>
+
+
+def type_act(var):
+    """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes. The
+    choice shows at once; the sound follows once the knob has rested PICK_MS (ac-pick-<var>), so turning through the
+    choices crossfades only to the last one - every one passed would otherwise start (CPU, audio drop-outs)"""
+    opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
+                acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+    then = [V(var, "acsnew")]
+    if _pick_actions(var):
+        PICKED.add(var)
+        then.append(Later(f"ac-pick-{var}", PICK_MS))
     return [V("acsnew", f"int(acsv*{len(opts) - 0.01})"), If(f"acsnew != {var}", then)]
 
 
@@ -930,6 +945,8 @@ def setup():
         Call("ac-oledsetup"), Send("ac-dirty"),
     ]))
     c.col()
+    for var in sorted(PICKED):
+        proc(c, f"ac-pick-{var}", _pick_actions(var))
     proc(c, "ac-oledsetup", [
         Fill(0, 0, 128, 64, 0),
         Call("ac-setl0"), Call("ac-setl1"), Call("ac-setl2"), Call("ac-setl3"), Call("ac-setl4"),
