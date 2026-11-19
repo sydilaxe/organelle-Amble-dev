@@ -49,6 +49,9 @@ Working memory for this project: read it first in a new session.
   with) and re-arms the next change (`ac-chgarm`, the one [delay] that schedules it) for what is left.
 - **CPU guard order** (the user's): 1 textures, cloud, pad character, auto-vocoder; 2 bells; 3 motion; 4 atmosphere.
   Pads, drone and sub (continuous) and the reverb are never shed. (`acshed` < n in `layers()`.)
+- **SETUP redraws:** a whole SETUP screen is sent every 300 ms only on MIDI IN and CC MAP (they show what comes
+  in); other pages from LINES on once a second, and the CHORD page when its next chord changes. (It was every
+  300 ms on every page from LINES on - on the Organelle each redraw costs the display.)
 - **Logs:** a perf log part is written every minute (and at Stop only once the fade is silent: an SD write runs on
   Pd's audio thread) and never empty; a profile is written after every part and says
   `stopped-after N` when stopped (perf_report.py tells).

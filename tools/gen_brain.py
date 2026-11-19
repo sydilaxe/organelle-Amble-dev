@@ -1128,7 +1128,8 @@ def change():
     ])
     # the next chord's name, on the play screen (and the CHORD page, low A held, picks it: gen_setup)
     proc(c, "ac-chordshow", [X("acxt; acxdeg; acres", "v acqt", "v acqd", "v acqr"), Call("ac-chordname"),
-                             V("acnxn", "acqn"), Send("ac-scr2")])
+                             V("acnxn", "acqn"), Send("ac-scr2"),
+                             If(f"acsetup && acsetpg == {_S.CHORD_PAGE}", [Call("ac-oledsetup")])])
     # a chord's name (an index into CHORD_NAMES): its root, and its 3rd and 5th found in the scale
     proc(c, "ac-chordname", [
         X("0; 0; 0; 0; 0", "v acq3", "v acq4", "v acq6", "v acq7", "v acq8"),
