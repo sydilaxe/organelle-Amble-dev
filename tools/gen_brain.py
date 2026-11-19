@@ -632,9 +632,13 @@ def section():
         X("1; 0; max(1000, acsecdur*actime - acsecel)", "v acstopped", "v acrun", "v acsecrem"),
         Send("ac-master", "0 8000"),            # a long fade: the sound and its reverb die away slowly
         Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
-        Toast("stopped - A# to start"), Call("ac-scr"), Send("ac-led"), If("aclogon", [Send("ac-logwrite")]),
+        Toast("stopped - A# to start"), Call("ac-scr"), Send("ac-led"),
+        # (the log is written once the fade is over and the output silent - an SD write on Pd's audio thread
+        #  during the fade could make it crackle - unless it has started again by then)
+        If("aclogon", [Later("ac-logquiet", 9000)]),
         Arm("ac-sleep", "12000", stop="ac-wake"),
     ])])
+    proc(c, "ac-logquiet", [If("acstopped", [Send("ac-logwrite")])])
     proc(c, "ac-start", [If("acstopped", [
         If("acready", [Toast("start - playing")], [Toast("playing again")]),
         Call("ac-wakeup"),

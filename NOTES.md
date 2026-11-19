@@ -47,7 +47,8 @@ Working memory for this project: read it first in a new session.
   change it does, and the screen snapped back to the piece's choice. On pick defaults to now. A pick releases Resolve (it would hold the tonic).
 - **Tide** acts on the playing chord: `ac-tideupd` rescales its length (new pace over `actidec`, the one it began
   with) and re-arms the next change (`ac-chgarm`, the one [delay] that schedules it) for what is left.
-- **Logs:** a perf log part is written every 30 s and never empty; a profile is written after every part and says
+- **Logs:** a perf log part is written every minute (and at Stop only once the fade is silent: an SD write runs on
+  Pd's audio thread) and never empty; a profile is written after every part and says
   `stopped-after N` when stopped (perf_report.py tells).
 - **JOURNEY and picks:** a sound picked by hand (`gen_setup.type_act`) wins over JOURNEY (`ac-jpick-*`): the journey's
   index jumps to the pick and restarts its turn, so it moves on from there.
