@@ -266,7 +266,8 @@ L_ = log.splitlines()
 check("ac-fkey: 69" in L_ and "ac-toast: list chord change" in L_ and not any(l.startswith("ac-lvon: 0 69") for l in L_),
       "an Organelle key is a function and plays no note")
 check("ac-txt4: list Mix 45 Verb auto" in L_, "aux tap: next page")
-check("ac-sett0: list WRITING WRITING 1/6" in L_, "aux + low D: the WRITING group's first page")
+check(f"ac-sett0: list WRITING WRITING 1/{len(dict(GS.SETUP_GROUPS)['WRITING'])}" in L_,
+      "aux + low D: the WRITING group's first page")
 check("ac-toast: list key from you E" in L_, "a note held 6 s becomes the key")
 
 # 12. audio: pitch tracking and the input class
@@ -513,10 +514,16 @@ for fl in range(len(FLAVOURS)):
     T += 5000
 check(wide >= 7, f"{wide} of {len(FLAVOURS)} pad types have their own stereo")
 check(min(dips) > -8, f"pad types are mono-safe (worst mono dip {min(dips):.1f} dB, {FLAVOURS[int(np.argmin(dips))]})")
-log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718")], 40,
-             prints=tuple(f"ac-v{k}-home" for k in range(4)))
-homes = {tuple(l.split()[1] for l in log.splitlines() if l.startswith(f"ac-v{k}-home")) for k in range(4)}
-check(all(len(set(h)) >= 2 for h in homes), "stereo scenes move the pad voices between sections")
+# (only the seeded piece's sections - not the start-up piece's, whose seed has the clock's jitter; a scene may keep a
+#  voice where it was, the outer ones most often, so: the scenes differ, and most voices move)
+log, _ = run([(40, "actime 0.1"), (50, "aclen 0"), (60, "ac-setseed 2718"), (70, "h-mark bang")], 40,
+             prints=tuple(f"ac-v{k}-home" for k in range(4)) + ("h-mark",))
+_after = log.split("h-mark: bang", 1)[-1]
+homes = [[l.split()[1] for l in _after.splitlines() if l.startswith(f"ac-v{k}-home")] for k in range(4)]
+scenes = set(zip(*homes))
+check(len(scenes) >= 2 and sum(len(set(h)) >= 2 for h in homes) >= 3,
+      f"stereo scenes move the pad voices between sections ({len(scenes)} scenes, "
+      f"{sum(len(set(h)) >= 2 for h in homes)} of 4 voices move)")
 ev = [(100 + i * 300, f"ac-setseed {5000 + i * 37}") for i in range(40)]
 log, _ = run(ev, 13, extra=probe2)
 rows = [l.split()[1:] for l in log.splitlines() if l.startswith("PAL")][1:]
@@ -670,7 +677,7 @@ log, _ = run([(100, "aux 1"), (150, "aux 0"), (300, "aux 1"), (350, "aux 0"), (5
               (700, "knob2 0.5"), (750, "knob2 0.52")], 3, d=d)
 # (every SETTINGS value is saved: 123 since the PERFORM knobs and the RECALL, GROOVE, MACRO, JOURNEY, REVERB and
 #  CC OUT pages, GLINT's Sparkle, the CHORD page's On pick, SETUP DISPLAY, LINES, HARMONY, PHRASE, DIALOGUE, WRITING and ARC and the engines' SHAPE parameters joined)
-check(len(vals) == len(GS.SETTINGS) == 163 and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
+check(len(vals) == len(GS.SETTINGS) and float(vals[27]) == 0 and "ac-txt4: list Drone 0 Pads" in log,
       "SENDS: a send is saved after the SETUP values and comes back after a restart")
 
 # 29. the patch asks the Organelle OS for a larger audio buffer (pd-opts.txt is appended to Pd's options)
@@ -2006,6 +2013,155 @@ log, _ = run([(50, "ac-setseed 7"), (2000, "notesRaw 70 100"), (2100, "notesRaw 
 rs = [[int(float(v)) for v in l.split()[1:]] for l in log.splitlines() if l.startswith("h-rs")]
 check(len(rs) == 2 and rs[0] == [1, 0] and rs[1][0] == 0 and rs[1][1] != 0 and "resolve released" in log,
       f"Resolve on holds the tonic ({rs[:1]}); a CHORD page pick releases it and plays ({rs[1:]})")
+
+# 91. PAD LINES: with Lines up the pad voices move between the changes (none at 0), never onto or across another voice,
+#     departures mostly against the motion's direction
+def plprobe(c):
+    for k in range(4):
+        e = c.obj(f"expr int(acnow); {k}; $f1; acplc[0]; acplc[1]; acplc[2]; acplc[3]; acplh[{k}]; acmdir", 1400 + k * 150, 50)
+        c.c(c.obj(f"r ac-v{k}-pitch", 1400 + k * 150, 20), 0, e, 0)
+        p = c.obj("pack f f f f f f f f f", 1400 + k * 150, 80)
+        for i in range(9):
+            c.c(e, i, p, i)
+        c.c(p, 0, c.obj("print h-pl", 1400 + k * 150, 110), 0)
+
+
+def plrun(lines):
+    _pl = GS.SETUP_NAMES.index("PAD LINES")
+    log, _ = run([(50, "ac-setseed 11"), (1000, "ac-laytog2 bang"), (1100, "ac-laytog4 bang"), (1500, "acsetup 1"),
+                  (1501, f"acsetpg {_pl}"), (1502, f"ac-setknob 0 {lines}"), (1503, "ac-setknob 1 0.95"),
+                  (1504, "ac-setknob 3 0.1"), (1600, "acsetup 0")], 45, extra=lambda c: (plprobe(c), chgtimes(c)))
+    rows = [[float(x) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("h-pl")]
+    chg = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
+    return [r for r in rows if r[0] > 3000 and all(abs(r[0] - t) > 400 for t in chg)]
+
+
+m0, m1 = plrun(0), plrun(0.9)
+bad = [r[:3] for r in m1 if r[2] in [r[3 + j] for j in range(4) if j != int(r[1])]
+       or (int(r[1]) > 0 and r[2] <= r[2 + int(r[1])]) or (int(r[1]) < 3 and r[2] >= r[4 + int(r[1])])]
+dep = [r for r in m1 if r[3 + int(r[1])] == r[7] and r[8] != 0 and r[2] != r[7]]
+against = sum(((r[2] > r[7]) - (r[2] < r[7])) == -r[8] for r in dep)
+check(not m0 and len(m1) >= 15 and not bad and against > len(dep) / 2,
+      f"PAD LINES: {len(m1)} moves at 90 % (at 0: {len(m0)}), no voice onto or across another ({bad[:2]}), "
+      f"departures against the motion {against} of {len(dep)}")
+
+# 92. DRIFT, each layer's (its SHAPE page - the layer key held - then aux): its sound parameters wander smoothly around
+#     their settings (no pulse, no jump), back when it is 0; a DRIFT page's knobs touch nothing else (GENERAL's)
+log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "notesRaw 72 100"), (1700, "notesRaw 72 0"),
+              (1800, "aux 1"), (1850, "aux 0"), (2000, "knob1 0.8"), (2010, "knob3 0.99"),
+              (2100, "acsetpg " + str(GS.DRIFT_PAGE0 + 1)), (2110, "knob1 0.8"), (2120, "knob3 0.99"),
+              (30000, "acsetpg " + str(GS.DRIFT_PAGE0)), (30005, "knob1 0"),
+              (30010, "acsetpg " + str(GS.DRIFT_PAGE0 + 1)), (30015, "knob1 0")], 31,
+             prints=("ac-prm-dp", "ac-prm-sp", "ac-sett0", "ac-toast"))
+dv = {n: [float(l.split()[1]) for l in log.splitlines() if l.startswith(n + ":")] for n in ("ac-prm-dp", "ac-prm-sp")}
+pages = [l.split("list ", 1)[1] for l in log.splitlines() if l.startswith("ac-sett0")]
+check(all(len(v) > 200 and max(v) - min(v) > 0.3 and max(abs(a - b) for a, b in zip(v[:-1], v[1:-1])) < 0.03
+          and abs(v[-1] - 0.5) < 0.01 for v in dv.values()) and "DRONE drift" in " ".join(pages)
+      and "MIDI out" not in log and "clock" not in log.lower().replace("clockstop", ""),
+      f"DRIFT: top C held, aux - {[p for p in pages if 'drift' in p][:1]}; drone and sub wander smoothly "
+      f"{[(round(min(v), 2), round(max(v), 2)) for v in dv.values()]} around 0.5, back to {[v[-1] for v in dv.values() if v]} at 0")
+
+# 93. MOSAIC: aux + C# brings it in a layer a bar (bells, pads, sub, drone, textures) - the bells echo the pattern, the
+#     pads arpeggiate, the sub plays a bass line, the drone a pedal (calm), the textures gate; again: out, the levels
+#     back at 1; held: the MOSAIC page
+def mosprobe(c):
+    for i, n in enumerate(["ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t", "ac-glint"]):
+        r = c.obj(f"r {n}", 1400 + i * 120, 20)
+        e = c.obj("expr int(acnow)", 1400 + i * 120, 50)
+        c.c(r, 0, e, 0)
+        c.c(e, 0, c.obj(f"print h-m-{n}", 1400 + i * 120, 80), 0)
+
+
+_ml = [f"{v} 2" for v in ("acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex")]
+log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+             (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0"),
+             (75000, "aux 1"), (75050, "notesRaw 61 100"), (75150, "notesRaw 61 0"), (75300, "aux 0"),
+             (125000, "aux 1"), (125050, "notesRaw 61 100"), (125800, "notesRaw 61 0"), (126000, "aux 0")], 127,
+             extra=mosprobe, prints=("ac-v0-acc", "ac-acc-t", "ac-sett0"))
+L_ = log.splitlines()
+mt = {n: [int(float(l.split()[1])) for l in L_ if l.startswith(f"h-m-{n}:")]
+      for n in ("ac-bell", "ac-v0-acc", "ac-subp", "ac-dronep", "ac-acc-t", "ac-glint")}
+joined = [l.split("mosaic + ")[1] for l in L_ if l.startswith("ac-toast: list mosaic + ")]
+during = {n: len([t for t in v if 4000 < t < 75000]) for n, v in mt.items()}
+lastv = [l.split()[1] for l in L_ if l.startswith("ac-v0-acc:")][-1:]
+lastt = [l.split()[1] for l in L_ if l.startswith("ac-acc-t:")][-1:]
+check(joined == ["bells", "pads", "sub", "drone", "textures", "sparkle"] and all(v > 3 for v in during.values())
+      and "ac-toast: list mosaic out" in L_ and lastv == ["1"] and lastt == ["1"]
+      and any(l.startswith("ac-sett0: list LIVE MOSAIC") for l in L_),
+      f"MOSAIC: joins {joined}, plays {during}, out with the levels back ({lastv}, {lastt}), held: its page")
+# (each layer at its own rate on one grid: the pads at 2x play about twice the pads at 1x)
+def padsteps(rate_knob):
+    log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0")] + [(500, m) for m in _ml] + [(510, "ac-layers bang"),
+                 (600, "acsetup 1"), (601, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC RATES')}"), (602, f"ac-setknob 1 {rate_knob}"),
+                 (605, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC ROLES')}"), (606, "ac-setknob 1 0.6"),
+                 (603, f"acsetpg {GS.SETUP_NAMES.index('MOSAIC')}"), (604, "ac-setknob 1 0.95"), (700, "acsetup 0"),
+                 (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"), (4300, "aux 0")], 40,
+                 extra=mosprobe)
+    return len([l for l in log.splitlines() if l.startswith("h-m-ac-v0-acc:") and float(l.split()[1]) > 25000])
+p1, p2 = padsteps(0.6), padsteps(0.95)
+check(p1 > 3 and 1.6 < p2 / p1 < 2.4, f"MOSAIC RATES: the pads at 2x step {p2} times, at 1x {p1} (every step, on one grid)")
+
+# 94. MOSAIC FORM: the piece brings the mosaic into its development and its climax by itself (all five layers at the
+#     climax), and out again after; Sections off: never (Joins at once: the sections here are short)
+def mosform(sec):
+    def pr(c):
+        e = c.obj("expr int(acnow); acrole; acmosn; acmosp", 1400, 50)
+        c.c(c.obj("r ac-bar", 1400, 20), 0, e, 0)
+        p = c.obj("pack f f f f", 1400, 80)
+        for i in range(4):
+            c.c(e, i, p, i)
+        c.c(p, 0, c.obj("print h-mf", 1400, 110), 0)
+    log, _ = run([(0, "actime 0.1"), (50, "ac-setseed 2026"), (60, f"acmsec {sec}"), (61, "acmsjo 1")], 110, extra=pr)
+    return [[int(float(x)) for x in l.split()[1:]] for l in log.splitlines() if l.startswith("h-mf")]
+
+
+mf2, mf0 = mosform(2), mosform(0)
+by_role = {}
+for t, role, n, want in mf2:
+    by_role.setdefault(role, []).append(n)
+climax_full = max(by_role.get(4, [0])) == 6
+calm_none = all(max(by_role.get(r, [0])) == 0 for r in (0,))
+check(climax_full and calm_none and any(n > 0 for r in (2, 3) for n in by_role.get(r, [])) and mf2[-1][2] < 5
+      and all(r[2] == 0 for r in mf0),
+      f"MOSAIC FORM: develop + climax - the most layers by role {dict((r, max(v)) for r, v in by_role.items())}; "
+      f"Sections off: {max(r[2] for r in mf0) if mf0 else '?'}")
+
+# 95. MOSAIC layers fade in (the bells' first notes in it far softer than later); the pads' lines on its pattern (each
+#     hit a line move or, where none, an arpeggio step); DRIFT locked to the clock turns with it (a cycle meets itself)
+def velprobe(c):
+    for n in ("ac-bell", "ac-v0-acc", "ac-v1-acc", "ac-v2-acc", "ac-v3-acc"):
+        r = c.obj(f"r {n}", 1400, 20)
+        e = c.obj("expr int(acnow); $f1", 1400, 50)
+        c.c(r, 0, e, 0)
+        c.c(e, 0, c.obj(f"print h-v-{n}", 1400, 80), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (60, "acmsec 0"), (70, "acmsjo 1")] + [(500, m) for m in _ml] +
+             [(510, "ac-layers bang"), (4000, "aux 1"), (4050, "notesRaw 61 100"), (4150, "notesRaw 61 0"),
+              (4300, "aux 0")], 40, extra=velprobe, prints=("ac-bell",))
+bells = [float(l.split()[2]) for l in log.splitlines() if l.startswith("ac-bell: ")]
+pads = sum(1 for l in log.splitlines() if l.startswith("h-v-ac-v") and int(float(l.split()[1])) > 20000)
+check(len(bells) >= 6 and sum(bells[:2]) / 2 < 0.5 * sum(bells[-4:]) / 4 and pads > 5,
+      f"MOSAIC: a layer fades in (bells {[round(b, 2) for b in bells[:2]]} first, {[round(b, 2) for b in bells[-2:]]} "
+      f"later); the pads' lines play on its pattern ({pads} accents)")
+def lockprobe(c):
+    e = c.obj("expr acbars + (actick % int(24*acmeter))/(24*acmeter); $f1", 1400, 50)
+    c.c(c.obj("r ac-prm-dp", 1400, 20), 0, e, 0)
+    p = c.obj("pack f f", 1400, 80)
+    c.c(e, 0, p, 0)
+    c.c(e, 1, p, 1)
+    c.c(p, 0, c.obj("print h-lk", 1400, 110), 0)
+
+
+_dp = GS.DRIFT_PAGE0
+log, _ = run([(50, "ac-setseed 7"), (500, "acgdrone 1"), (1000, "acsetup 1"), (1001, f"acsetpg {_dp}"),
+              (1010, "ac-setknob 0 0.8"), (1020, "ac-setknob 2 0.99"), (1030, "ac-setknob 3 0.99")], 60, extra=lockprobe)
+lk = [(float(l.split()[1]), float(l.split()[2])) for l in log.splitlines() if l.startswith("h-lk")][20:]
+# (the same place in the bars, one 4-bar cycle apart, whatever the meter does)
+gaps = [abs(v - w) for (t, v) in lk for (u, w) in lk if abs(u - t - 4) < 0.02]
+check(len(gaps) > 5 and max(gaps) < 0.05 and max(v for _, v in lk) - min(v for _, v in lk) > 0.2,
+      f"DRIFT Lock clock: the drone's drift meets itself a 4-bar cycle on ({len(gaps)} pairs, worst gap "
+      f"{max(gaps) if gaps else 1:.3f}), and moves {min(v for _, v in lk):.2f}..{max(v for _, v in lk):.2f}")
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

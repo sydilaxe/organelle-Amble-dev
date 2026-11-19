@@ -179,6 +179,8 @@ def keys():
                                               X("0; 0", "v acanp", "v acanheld")]),
          # low F let go: (a hold already opened the GLIDE page)
          If(f"ackn == {GLIDE_KEY}", [Send("ac-glstop")]),
+         If("ackn == 61 && acmoskh >= 0", [Send("ac-mosstop"), If("acmoskh == 0", [Call("ac-mostoggle")]),
+                                          V("acmoskh", "-1")]),
          If(" || ".join(f"ackn == {60 + k}" for _, k in _S.MIRRORS), [Send("ac-mhstop")]),
          # low A let go: a tap changes to the next chord now; a hold already opened the CHORD page
          If(f"ackn == {CHORD_KEY}", [Send("ac-rrstop"), If("acrr == 0", [Call("ac-chordnow")]), V("acrr", "-1")]),
@@ -238,7 +240,9 @@ def keys():
         run_steps(kc, (b, 0), [If("acrkey == 1", pick + [Call("ac-mop")], [
             If("acrkey == 2", pick + [Call("ac-bop")], [If("acauxheld", [
                 V("acsetup", "1"), V("acsetpg", str(GROUP_START[GROUP_KEYS.index(i)])), Call("ac-oledsetup")]
-                if i in GROUP_KEYS else [], f)])])])
+                if i in GROUP_KEYS else
+                # aux + C#: MOSAIC - a tap brings it in / out (on its release), held 0.5 s its page (gen_mosaic)
+                [V("acmoskh", "0"), Arm("ac-moshold", "500", stop="ac-mosstop")] if i == 1 else [], f)])])])
     for i, f in enumerate(top):
         kc, inl = window(c, f"topkey{i}", (tsel, i))
         run_steps(kc, (kc.to(inl, "t b"), 0), f)
@@ -275,8 +279,10 @@ def keys():
     run_steps(c, (a, 0), [V("acauxheld", "0"), If("acauxlong", [V("acauxlong", "0"), If("acauxused == 0", [
         V("acsetup", "0"), Send("ac-save"), Call("ac-oledall"), Toast("settings saved")])], [
         If("acauxused == 0", [If("acsetup", [If(f"acsetpg >= {NSET}", [
-        # (a quick page: aux leaves it)
-        V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")], [
+        # (a quick page: aux leaves it - but from a layer's SHAPE page, aux turns to its DRIFT page)
+        If(f"acsetpg >= {_S.SHAPE_PAGE0} && acsetpg < {_S.SHAPE_PAGE0 + len(_S.LAYER_PAGES)}", [
+            V("acsetpg", f"acsetpg - {_S.SHAPE_PAGE0} + {_S.DRIFT_PAGE0}"), Call("ac-oledsetup")], [
+            V("acsetup", "0"), Send("ac-save"), Call("ac-oledall")])], [
         V("acsetpg", f"(acsetpg + 1) % {NSET}"), Call("ac-oledsetup")])], [
         V("acpage", f"(acpage+1) % {NP}"), Call("ac-oledpage")])])])])
     f = c.ch(c.recv("fs"), "sel 0")

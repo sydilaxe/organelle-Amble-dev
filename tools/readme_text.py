@@ -100,7 +100,9 @@ THE COMPOSER LISTENS
 THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   Low octave
   (the white keys C-F: the playing pages; the black keys: the levels)
-  C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells)
+  C   SHAPE page      C#  MIX 1 page (drone, sub, pads, bells);
+                          aux + C#: MOSAIC in / out (a layer a bar),
+                          held: the MOSAIC page
   D   SPACE page      D#  MIX 2 page (motion, textures, cloud, atmos)
   E   PIECE page
   F   PERFORM page    F#  SENDS 1 page (drone, pads, bells, motion)
@@ -124,7 +126,9 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
   Top octave
   C..G  layers: drone, sub, pads, bells, motion, textures, atmosphere,
         cloud - tap: in (if silent) / out (if playing); hold: its SHAPE
-        page (sound, tone, and the sound's own two); aux + tap: the
+        page (sound, tone, and the sound's own two; then aux: its DRIFT
+        page - sound drift, tone drift, speed, lock: free / clock);
+        aux + tap: the
         layer's page - knob 1 its sound (or auto), 2 out / auto / in,
         3 its level, 4 its reverb send; aux leaves. E (motion) or D#
         (bells) held + low keys: C random, C# the piece's own, D/D# rotate,
@@ -237,6 +241,9 @@ and let go, without knob 1, to leave and save)
   Pads carry (the motif), Drone level (subtle), Ending (by phrase)
   LINES: Melody (arp, 1/f, grow, mutate, motif), Mutate,
   Canon (8va, 5th, 15ma, or by the motion), Canon delay
+  PAD LINES: Lines (0-100 %: the pad voices move between the chords,
+  in counterpoint; 0 = held), Voices (top / top two / all four),
+  Moves (neighbour, passing, free), Pace (half beat, beat, two beats)
   HARMONY: Moves (mediants, tonnetz), How often, Dominants
   (secondary), New types (a piece's picks take the later types too)
   PHRASE: Phrases (4 / 8 chords, open then closed), Voicing
@@ -287,6 +294,19 @@ and let go, without knob 1, to leave and save)
     Entry fade 2-40 s: a section's layer coming in or going out
   GROOVE: Pump (off / 4 bars .. beat), Pump depth, Duck (the
   piece dips while you play), Duck release
+  MOSAIC (aux + C#: in / out, held: this page): Pace (16ths / 8ths
+  / beat), Hits (its own pattern: 3, 5, 7 of 8, 5 of 16, every
+  step, or the motion's), Cascade (steps between layers), Accent
+  MOSAIC ROLES: Bells (off / echo / high), Pads (held, pulse,
+  arpeggio, lines: the pad lines on the pattern, arpeggiated where
+  they rest), Sub (held, bass, pulse), Drone (held, pulse, pedal,
+  pulse+pedal)
+  MOSAIC RATES: Bells, Pads, Sub, Tex+atmos (held, or gated): each
+  layer's step, 1/4x .. 2x the Pace, all on one grid
+  MOSAIC FORM: Sections (the piece brings it in by itself: off,
+  climax, develop+climax, all but calm), Develop (2-5 layers; a
+  climax all), Joins (a layer a bar, or at once), Sparkle (off, or
+  its rate). A layer fades in over two bars; out over 1.5 s
   MACRO A / B: four macros (CC targets macro 1-4), each
   moving two knobs with a depth (-100..+100 %), offset or latch
   - SAVES -
