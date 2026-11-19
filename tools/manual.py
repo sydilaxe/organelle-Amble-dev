@@ -681,7 +681,9 @@ def story():
                "shows that the sound has changed since the slot. Empty slots 1-6 hold factory pieces: "
                + esc(", ".join(n for n, _, _ in DT.FACTORY)) + "."),
           para("<b>JOURNEY</b> (SETUP JOURNEY) lets the pad voices, the drone and the bells' and motion's engines travel "
-               "through their engines, slowly crossfaded; a CC (journey step) moves them on by hand. <b>PUMP</b> and "
+               "through their engines, slowly crossfaded; a CC (journey step) moves them on by hand. A sound you pick (SOUNDS, "
+               "VOICES, a SHAPE page) plays at once and the journey goes on from it: the drone, bells and motion a whole "
+               "Speed later, the pad voices one by one from the picked type's place. <b>PUMP</b> and "
                "<b>DUCK</b> (SETUP GROOVE) make the bed breathe on the grid and the piece dip under your playing. Four "
                "<b>macros</b> (SETUP MACRO A and B, CC targets macro 1-4) each move two knobs, offset or latched. <b>CC OUT</b> "
                "(SETUP CC OUT) sends what moves inside to your other instruments.")]

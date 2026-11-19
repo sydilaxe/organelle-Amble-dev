@@ -583,7 +583,7 @@ def section():
     steps += [SendL("ac-lvtype", ["if(acvtsel >= 0, acvtsel, if(acspe>=2, acspe-2, if(acspe==1, 5, acpal1)))"])]
     # (a custom section's pad type wins over SETUP SOUNDS)
     proc(c, "ac-padpick", [V("acspe", "if(acsform == 6 && acmode == 1 && acssp[int(acsec)] > 0, acssp[int(acsec)], acspad)"),
-                           If("acjpad == 0", steps), V("acflstag", "4200")])
+                           If("acjpad == 0 || acjforce", steps), V("acflstag", "4200")])
     # SETUP SOUNDS overrides on what the section chose (auto = the section's own choice)
     proc(c, "ac-sndovr", [
         V("acdcur", "if(acjdi >= 0, acjdi, if(acsdrone > 0, acsdrone - 1, acdauto))"),
