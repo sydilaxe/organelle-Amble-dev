@@ -102,7 +102,8 @@ FKEY_DESC = {
     "Root (hold)": "Hold it and press an Organelle key, play a MIDI note or turn knob 1: that note is the next key "
                    "(it arrives with the next chord change). While it is not held, MIDI notes play as usual.",
     "Resolve": "The harmony moves to the tonic as open fifths (root, 5th, octave, 12th) and stays there - no "
-               "modulation, no dissonant chords - until you press it again. A CC mapped to resolve does it too.",
+               "modulation, no dissonant chords - until you press it again, or pick a chord on the CHORD page (the "
+               "pick releases it). A CC mapped to resolve does it too.",
     "chord change now (hold: CHORD page)": "Tap: move to the next chord (the one the screen shows) at once - the "
                         "footswitch does the same. Hold half a second: the CHORD page (the key and scale on top). "
                         "Knob 1 picks the next chord from the key's chords, row 2 shows the chord now, knob 3 turned "

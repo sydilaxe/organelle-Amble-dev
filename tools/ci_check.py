@@ -1990,5 +1990,22 @@ log, _ = run(ev, 5, extra=lambda c: (chgtimes(c), jprobe(c)), prints=("ac-keytoa
 ct = [int(float(l.split()[1])) for l in log.splitlines() if l.startswith("h-chg")]
 check(len([t for t in ct if t > 3000]) == 1, f"MUSIC Key turned through 12 steps: one chord change once it rests ({ct})")
 
+# 90. a chord picked on the CHORD page wins over Resolve: Resolve (low A#) on holds the tonic; a pick releases it and plays
+def resprobe(c):
+    e = c.obj("expr acres; acdeg", 1400, 50)
+    c.c(c.obj("r h-q", 1400, 20), 0, e, 0)
+    p = c.obj("pack f f", 1400, 80)
+    c.c(e, 0, p, 0)
+    c.c(e, 1, p, 1)
+    c.c(p, 0, c.obj("print h-rs", 1400, 110), 0)
+
+
+log, _ = run([(50, "ac-setseed 7"), (2000, "notesRaw 70 100"), (2100, "notesRaw 70 0"), (3000, "h-q bang"),
+              (3500, "notesRaw 69 100"), (4300, "notesRaw 69 0"), (4500, "knob1 0.1"), (4600, "knob1 0.6"),
+              (5200, "h-q bang")], 6, extra=resprobe, prints=("ac-toast",))
+rs = [[int(float(v)) for v in l.split()[1:]] for l in log.splitlines() if l.startswith("h-rs")]
+check(len(rs) == 2 and rs[0] == [1, 0] and rs[1][0] == 0 and rs[1][1] != 0 and "resolve released" in log,
+      f"Resolve on holds the tonic ({rs[:1]}); a CHORD page pick releases it and plays ({rs[1:]})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

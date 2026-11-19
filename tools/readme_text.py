@@ -117,8 +117,8 @@ THE ORGANELLE KEYS (functions; aux + a white low key = a SETUP group)
       the piece picks another, knob 4 On pick: now (the default: it
       plays once knob 1 rests) / next change; aux leaves
   A#  RESOLVE: the tonic as open fifths, held - no modulation, no
-      dissonant chords - until pressed again (a CC mapped to resolve
-      holds it from a pedal)
+      dissonant chords - until pressed again, or a chord is picked on
+      the CHORD page (a CC mapped to resolve holds it from a pedal)
   B   tap: next section; hold: hold section (stays past its length;
       hold again: moves on)
   Top octave

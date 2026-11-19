@@ -737,7 +737,10 @@ def quick_knobs(item):
         If(at(CHORD_PAGE, 1), [V("acsnew", "int(acsv*(acn - 0.01))"), If("acxk == -2", [V("acxk", "acsnew")], [
             If("acsnew != acxk", [
                 X("acsnew; acsnew; actonic; 0; 1", "v acxk", "v acxdeg", "v acxt", "v acxscf", "v acxpick"),
-                Call("ac-chordshow"), settle("chordpick", [If("acchpick && acxpick", [Call("ac-chordnow")])])])])]),
+                Call("ac-chordshow"),
+                # (a chord picked by hand wins over Resolve, which would hold the tonic: released)
+                settle("chordpick", [If("acres", [V("acres", "0"), Toast("resolve released")]),
+                                     If("acchpick && acxpick", [Call("ac-chordnow")])])])])]),
         If(at(CHORD_PAGE, 3), [If("acsv > 0.9 && acchsurp <= 0.9", [Call("ac-chordnext")]), V("acchsurp", "acsv")]),
         If(at(CHORD_PAGE, 4), [V("acchpick", "acsv > 0.5")]),
     ]

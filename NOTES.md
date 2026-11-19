@@ -28,7 +28,7 @@ Working memory for this project: read it first in a new session.
   acts once the knob rests 150 ms (`ac-act-<name>`).
 - **CHORD page:** knob 1 picks when the knob moves to another chord (`acxk`, its own last pick; the first value
   after the page opens only notes where it is), not when the piece's next chord differs from the knob - after each
-  change it does, and the screen snapped back to the piece's choice. On pick defaults to now.
+  change it does, and the screen snapped back to the piece's choice. On pick defaults to now. A pick releases Resolve (it would hold the tonic).
 - **Tide** acts on the playing chord: `ac-tideupd` rescales its length (new pace over `actidec`, the one it began
   with) and re-arms the next change (`ac-chgarm`, the one [delay] that schedules it) for what is left.
 - **Logs:** a perf log part is written every 30 s and never empty; a profile is written after every part and says

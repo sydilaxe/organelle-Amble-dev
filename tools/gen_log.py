@@ -25,7 +25,7 @@ FIELDS = [
     ("journey", "acjour*1000 + acjpad*100 + acjdrone*10 + acjstrike"),
     ("sink", "int(100*acsink)"), ("blur", "int(100*acblur)"), ("swell", "int(100*acswell)"), ("harm", "int(100*acharmx)"),
     ("pump", "acpump"), ("duck", "int(100*acduck)"), ("spark", "int(100*acspark)"), ("ccout", "acccout"),
-    ("input", "int(100*acinput)"), ("inmode", "acinmode"), ("held", "acheld"), ("verb", "acvtype"), ("page", "acpage"),
+    ("res", "acres"), ("input", "int(100*acinput)"), ("inmode", "acinmode"), ("held", "acheld"), ("verb", "acvtype"), ("page", "acpage"),
     ("setup", "acsetup*100 + acsetpg"), ("morph", "acmph"),
     # the sound (audiometer(), before the output's clip~ at 0.98): its level (dBFS), loudest sample, the levels
     # under 200 Hz, over 4 kHz and under 40 Hz, the DC offset (x1000), samples the output cut, 100 ms windows near
