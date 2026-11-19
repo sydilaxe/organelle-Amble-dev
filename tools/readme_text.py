@@ -273,7 +273,8 @@ and let go, without knob 1, to leave and save)
   Sparkle (GLINT: small FM bells high on the chord tones), its octave
   JOURNEY: Speed, Pads (off / soft / bright / all), Drone,
   Bells (off / bells / motion / both) - they travel through their
-  engines, slowly crossfaded
+  engines, slowly crossfaded. A sound you pick (SOUNDS, VOICES, a
+  SHAPE page) plays at once; the journey goes on from it
   - LIVE -
   PLAYING: Follow you (how much chords follow what you play), MPE bend
   range (12/24/48/96), MIDI out base channel, breath curve.

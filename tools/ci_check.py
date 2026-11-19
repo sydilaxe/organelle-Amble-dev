@@ -1933,5 +1933,43 @@ for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pa
 win = sorted(win + stack, key=lambda w: -w[1])
 check(win[0][1] <= 600, f"no window over 600 connections (largest: {win[0][0]} {win[0][1]})")
 
+# 88. a sound picked by hand wins over JOURNEY, and the journey goes on from it: with JOURNEY on for everything (fast),
+#     picking pads / drone / bells / motion (SOUNDS, VOICES) sounds at once; the drone, bells and motion hold the pick
+#     a whole turn (15 s) and then step on from it, the pad voices step on one by one from the picked type
+from data import FLAVOURS, DRONES, STRIKES
+_jv = ["acflav[0]", "acflav[1]", "acflav[2]", "acflav[3]", "acdcur",
+       "if(acjbi >= 0, acjbi, if(acsbell > 0, acsbell - 1, acbela))", "if(acjmi >= 0, acjmi, if(acsmot > 0, acsmot - 1, acmota))"]
+
+
+def jprobe(c):
+    e = c.obj("expr " + "; ".join(_jv), 1400, 50)
+    c.c(c.obj("r h-q", 1400, 20), 0, e, 0)
+    pk = c.obj("pack " + " ".join("f" * len(_jv)), 1400, 80)
+    for i in range(len(_jv)):
+        c.c(e, i, pk, i)
+    c.c(pk, 0, c.obj("print h-jv", 1400, 110), 0)
+
+
+def _sk(t, page, k, v):
+    return [(t, "acsetup 1"), (t + 1, f"acsetpg {GS.SETUP_NAMES.index(page)}"), (t + 2, f"ac-setknob {k} {v}")]
+
+
+_pad, _dr, _be, _mo = FLAVOURS.index("glass"), DRONES.index("organ"), STRIKES.index("metal"), STRIKES.index("pluck")
+ev = [(50, "ac-setseed 7")] + _sk(2000, "JOURNEY", 0, 0.99) + _sk(2100, "JOURNEY", 1, 0.3) + _sk(2200, "JOURNEY", 2, 0.9) \
+    + _sk(2300, "JOURNEY", 3, 0.99) + [(4000, "h-q bang")] \
+    + _sk(5000, "SOUNDS", 0, (_pad + 2.5) / len(GS.SPADS)) + _sk(5100, "SOUNDS", 1, (_dr + 1.5) / len(GS.SDRONES)) \
+    + _sk(5200, "VOICES", 0, (_be + 1.5) / len(GS.SBELLS)) + _sk(5300, "VOICES", 1, (_mo + 1.5) / len(GS.SMOTS)) \
+    + [(6000, "h-q bang"), (17000, "h-q bang"), (23000, "h-q bang")]
+log, _ = run(ev, 24, extra=jprobe)
+jr = [[int(float(v)) for v in l.split()[1:]] for l in log.splitlines() if l.startswith("h-jv")]
+ok = len(jr) == 4
+check(ok and jr[1] == [_pad] * 4 + [_dr, _be, _mo] and jr[0][4:] != jr[1][4:],
+      f"JOURNEY on: a sound picked by hand sounds at once (before {jr[:1]}, after the picks {jr[1:2]})")
+check(ok and jr[2][4:] == jr[1][4:], f"the drone, bells and motion hold the pick for the turn (11 s later: {jr[2:3]})")
+check(ok and jr[3][5] == (_be + 1) % len(STRIKES) and jr[3][6] == (_mo + 1) % len(STRIKES) and jr[3][4] != _dr
+      and any(f != _pad for f in jr[3][:4]),
+      f"then the journey goes on from the pick (bells {STRIKES[_be]} -> {STRIKES[jr[3][5]] if ok else '?'}, motion "
+      f"{STRIKES[_mo]} -> {STRIKES[jr[3][6]] if ok else '?'}, pads {[FLAVOURS[f] for f in jr[3][:4]] if ok else '?'})")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

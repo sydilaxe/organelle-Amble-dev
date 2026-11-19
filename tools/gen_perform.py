@@ -15,7 +15,7 @@ L8 = ["acmdrone", "acmsub", "acmpad", "acmbell", "acmmotion", "acmtex", "acmatm"
 
 GLOBALS = dict(acmph=0, acmt0=0, acmdur=0, acmtt=0, acmorphing=0, acancs=0, acbases=0, acchanged=0, acchd=0,
                acmacrok=0, acmdd=0, acplay=0, acdgt=1, acdgl=1, acjk=0, acjnext=0, acjall=0, acjdi=-1, acjbi=-1,
-               acjmi=-1, acjt=0, acjpadw=0, acjon=0, acccnext=0, acccv=0, acchk=0, acslotcur=-1)
+               acjmi=-1, acjt=0, acjpadw=0, acjon=0, acjforce=0, acccnext=0, acccv=0, acchk=0, acslotcur=-1)
 ARRAYS = dict(acmfrom=NK, acmto=NK, acmtouch=NK, acanc=NK, acbase=NK, accur=NK, acancm=8, acbasem=8, accurm=8,
               acmtk=len(S.MTARGETS), acjpi=4, acjpt=12 * len(S.JPAD_SETS), acjpn=len(S.JPAD_SETS), acccl=16)
 DATA_TABLES = dict(acmtk=[-1] + S.MT_KNOBS,
@@ -210,6 +210,19 @@ def perform():
         V("acjon", "acjpad > 0 || acjdrone || acjstrike > 0"),
         If("acjon", [Call("ac-jstepall"), V("acjnext", f"acnow + {jt}/4")]),
     ])
+    # a sound picked by hand (SOUNDS, VOICES, a SHAPE page) wins over JOURNEY: the journey moves to it and carries on
+    # from there - the drone, bells and motion a whole turn later (their step comes with every 4th), the pad voices
+    # one by one as always, each from the picked type's place in the journey's set (if it is in it)
+    restart = [V("acjk", "1"), V("acjnext", f"acnow + {jt}/4")]
+    proc(c, "ac-jpick-pad", [If("acjpad > 0", [
+        X("1; 0", "v acjforce", "v acflstag"), Call("ac-padpick"), V("acjforce", "0"),   # (all voices at once, as a pick)
+        *[Loop("acjpn[int(acjpad)]", "aci", [If(f"acjpt[int(acjpad*12 + aci)] == acflav[{k}]", [T("acjpi", k, "aci")])])
+          for k in range(4)],
+        V("acjnext", f"acnow + {jt}/4")])])
+    proc(c, "ac-jpick-drone", [If("acjdrone", [V("acjdi", "if(acsdrone > 0, acsdrone - 1, acdauto)")] + restart)])
+    proc(c, "ac-jpick-bell", [If("acjstrike == 1 || acjstrike == 3",
+                                 [V("acjbi", "if(acsbell > 0, acsbell - 1, acbela)")] + restart)])
+    proc(c, "ac-jpick-mot", [If("acjstrike >= 2", [V("acjmi", "if(acsmot > 0, acsmot - 1, acmota)")] + restart)])
     # ---- the 100 ms tick (from ac-now): the morph's step, DUCK, the journey, CC OUT, and once a second the check
     lvl = [("drone", "acmxd"), ("sub", "acmxs"), ("pad", "acmxp"), ("bell", "acmxb"), ("motion", "acmxm"),
            ("tex", "acmxt"), ("atm", "acmxa"), ("cloud", "acmxc")]

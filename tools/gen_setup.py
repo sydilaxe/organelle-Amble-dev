@@ -649,11 +649,13 @@ def type_act(var):
     """a layer's sound chosen (SOUNDS, VOICES, FORM or its quick page), from acsv: acts only when it changes"""
     opts = dict(acspad=SPADS, acsdrone=SDRONES, acstex=STEXS, acschar=SCHARS, acsbell=SBELLS, acsmot=SMOTS,
                 acssub=SSUBS, acsatm=SATMS, acsubt=SUBTYPES)[var]
+    # (a pick by hand wins over JOURNEY, which carries on from it: gen_perform ac-jpick-*)
+    jpick = dict(acspad="ac-jpick-pad", acsdrone="ac-jpick-drone", acsbell="ac-jpick-bell", acsmot="ac-jpick-mot")
     if var in ("acspad", "acsdrone", "acstex", "acschar"):
-        then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + [
-            Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
+        then = [V(var, "acsnew")] + ([V("acflstag", "0"), Call("ac-padpick")] if var == "acspad" else []) + (
+            [Call(jpick[var])] if var in jpick else []) + [Call("ac-sndovr"), V("acfade", "1500"), Call("ac-layers")]
     elif var in ("acsbell", "acsmot"):
-        then = [V(var, "acsnew"), V("acfade", "600"), Call("ac-layers")]
+        then = [V(var, "acsnew"), Call(jpick[var]), V("acfade", "600"), Call("ac-layers")]
     elif var == "acssub":
         then = [V(var, "acsnew")]
     elif var == "acsubt":
