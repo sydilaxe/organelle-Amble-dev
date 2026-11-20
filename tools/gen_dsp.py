@@ -404,6 +404,44 @@ def flav_pulsar():
     return s
 
 
+def voice_mod():
+    """A pad voice's slow movement at 1/16 of the rate (block 4 = one parent block), linearly interpolated back up:
+    - a smooth random wander (value noise: a new random target every 2.5-4 s, smoothed twice - as Perlin noise
+      moves), its own per voice; with the cycle it drifts the pitch (by Mot) and the orbit around the voice's home
+    - the breathing (ac-v$1-lfo: its rate, and the drift, sweep and orbit rates for the types: $0-ld, $0-la, $0-lb)
+    - stereo: the composition gives each voice a home (ac-v$1-home "pos ms", by section scene); it orbits around it
+      on its own slow cycle, as far as ac-pandepth. The voice's own stereo is kept (balance pan).
+    Outlets: 1 + drift, the breath level, the left and right gains."""
+    v = Canvas("mod", w=1400)
+    v.obj("block~ 4 1 0.0625")
+    wrate = v.to(v.ch(v.obj("loadbang"), "f $1", "expr 0.25 + 0.04*$f1"), "phasor~")
+    wsh = v.obj("samphold~")
+    v.c(v.obj("noise~"), 0, wsh, 0)
+    v.c(wrate, 0, wsh, 1)
+    wander = v.ch(wsh, "lop~ 0.3", "lop~ 0.3", "*~ 1.6")
+    drift = v.to(add(v, v.to(v.recv("$0-ld"), "osc~"), v.to(wander, "*~ 0.7")), "*~ 0")
+    ctl(v, drift, "ac-motion", "0.005*$f1")
+    v.c(v.to(drift, "+~ 1"), 0, v.obj("outlet~ hold", 20, 600), 0)
+    lu = v.to(v.recv("ac-v$1-lfo"), "unpack f f f f")
+    breath = v.ch((lu, 0), "osc~", "*~ 0.5", "+~ 0.5", "*~ -0.4")
+    ctl(v, breath, "ac-motion", "-0.75*(0.25+0.75*$f1)")
+    v.c(v.to(breath, "+~ 1"), 0, v.obj("outlet~ hold", 220, 600), 0)
+    for i, n in ((1, "$0-ld"), (2, "$0-la"), (3, "$0-lb")):
+        v.c(lu, i, v.obj("s " + n), 0)
+    home = v.ch(v.recv("ac-v$1-home"), "line~")
+    v.c(v.m(v.ch(v.obj("loadbang"), "f $1", "expr 0.08 + 0.28*$f1"), "$1 10"), 0, home, 0)
+    orb = add(v, v.to(v.to((lu, 0), "* 0.37"), "osc~"), v.to(wander, "*~ 0.8"))
+    dep = v.to(orb, "*~ 0.2")
+    v.c(v.recv("ac-pandepth"), 0, dep, 1)
+    posn = v.to(add(v, dep, home), "clip~ 0.02 0.98")
+    q = v.to(posn, "*~ 0.25")
+    gl = v.ch(q, "cos~", "*~ 1.414", "clip~ 0 1")
+    gr = v.ch(q, "-~ 0.25", "cos~", "*~ 1.414", "clip~ 0 1")
+    v.c(gl, 0, v.obj("outlet~ hold", 420, 600), 0)
+    v.c(gr, 0, v.obj("outlet~ hold", 620, 600), 0)
+    return v
+
+
 def voice():
     v = Canvas(w=1800, h=1000)
     v.comment("Pad voice $1: pitch glides (delayed, so chords change one voice at a time), 5 synthesis "
@@ -421,29 +459,18 @@ def voice():
     tf = v.ch(pk2, "line 0 40", "t f f")
     dsig = v.ch(v.m(v.to((tf, 1), "expr 1000/mtof($f1) - 0.012"), "$1 40"), "line~")
     fsig = v.ch(v.m(v.to((tf, 0), "mtof"), "$1 40"), "line~")
-    # a smooth random wander (value noise: a new random target every 2.5-4 s, smoothed twice - as Perlin noise
-    # moves), its own per voice; with the cycle it drifts the pitch (by Mot) and the orbit around the voice's home
-    wrate = v.to(v.ch(v.obj("loadbang"), "f $1", "expr 0.25 + 0.04*$f1"), "phasor~")
-    wsh = v.obj("samphold~")
-    v.c(v.obj("noise~"), 0, wsh, 0)
-    v.c(wrate, 0, wsh, 1)
-    wander = v.ch(wsh, "lop~ 0.3", "lop~ 0.3", "*~ 1.6")
-    drift = v.to(add(v, v.to(v.recv("$0-ld"), "osc~"), v.to(wander, "*~ 0.7")), "*~ 0")
-    ctl(v, drift, "ac-motion", "0.005*$f1")
-    f2 = mul(v, v.to(drift, "+~ 1"), fsig)
+    # the voice's slow movement - its pitch drift, its breathing, its orbit in the stereo field - computed at 1/16
+    # of the rate (a few Hz at most, smoothed back up): [pd mod], outlets: drift (x the pitch), breath (x the
+    # level), the left and right pan gains
+    md = v.sub(voice_mod(), 20, 120)
+    f2 = mul(v, (md, 0), fsig)
     v.col()
     br = v.ch(v.recv("ac-bright"), "line~")
     bsig = v.ch(add(v, br, v.obj("r~ ac-envb")), "clip~ 0 1")
-    lu = v.to(v.recv("ac-v$1-lfo"), "unpack f f f f")
-    breath = v.ch((lu, 0), "osc~", "*~ 0.5", "+~ 0.5", "*~ -0.4")
-    ctl(v, breath, "ac-motion", "-0.75*(0.25+0.75*$f1)")
-    amp = v.to(breath, "+~ 1")
     vacc = v.obj("vline~")             # (MOSAIC: this voice's accent, 1 unless it plays)
     v.c(v.m(v.obj("loadbang"), "1"), 0, vacc, 0)
     v.c(v.recv("ac-v$1-acc"), 0, vacc, 0)
-    amp = mul(v, amp, vacc)
-    for i, n in ((1, "$0-ld"), (2, "$0-la"), (3, "$0-lb")):
-        v.c(lu, i, v.obj("s " + n), 0)
+    amp = mul(v, (md, 1), vacc)
     v.col()
     # the whole voice computes only while the pad layer plays: on at once, off 200 ms after it has faded out
     gp = v.ch(v.recv("ac-g-pad"), "unpack f f")
@@ -483,19 +510,8 @@ def voice():
             v.c(dsig, 0, sp, 2)
             v.c((sp, 0), 0, bodyL, 0)
             v.c((sp, 1), 0, bodyR, 0)
-    # stereo: the composition gives each voice a home (ac-v$1-home "pos ms", by section scene); it orbits
-    # around it on its own slow cycle, as far as ac-pandepth. The voice's own stereo is kept (balance pan).
-    home = v.ch(v.recv("ac-v$1-home"), "line~")
-    v.c(v.m(v.ch(v.obj("loadbang"), "f $1", "expr 0.08 + 0.28*$f1"), "$1 10"), 0, home, 0)
-    orb = add(v, v.to(v.to((lu, 0), "* 0.37"), "osc~"), v.to(wander, "*~ 0.8"))
-    dep = v.to(orb, "*~ 0.2")
-    v.c(v.recv("ac-pandepth"), 0, dep, 1)
-    posn = v.to(add(v, dep, home), "clip~ 0.02 0.98")
-    q = v.to(posn, "*~ 0.25")
-    gl = v.ch(q, "cos~", "*~ 1.414")
-    gr = v.ch(q, "-~ 0.25", "cos~", "*~ 1.414")
-    L = mul(v, v.to(bodyL, "*~ 0.2"), v.to(gl, "clip~ 0 1"))
-    R = mul(v, v.to(bodyR, "*~ 0.2"), v.to(gr, "clip~ 0 1"))
+    L = mul(v, v.to(bodyL, "*~ 0.2"), (md, 2))
+    R = mul(v, v.to(bodyR, "*~ 0.2"), (md, 3))
     for sig, bus in ((L, "ac-padL"), (R, "ac-padR")):
         v.c(sig, 0, v.obj("throw~ " + bus), 0)
     return v
