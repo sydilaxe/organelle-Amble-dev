@@ -268,6 +268,7 @@ def piece():
         X("0; -1; 0; 1; 0; 0; 1; 0; 0; 0", "v acdeg", "v acpend", "v acchg", "v acfirst", "v acended", "v accapt",
           "v acrun", "v acsec", "v acprogn", "v acstopped"),
         Send("ac-master", "1 3000"),
+        Call("ac-wakeup"),                      # (asleep after a FIN: the layers and the reverb back on)
         V("acel", "0"), Call("ac-clockstop"),
         X("-1; 0; -1; 0; 0; 0; 0; -1; 1; 0", "v acphc", "v acphn", "v acsdg", "v acsdret", "v acsdnow", "v acrestb",
           "v acrestp", "v acmgi", "v acmgn", "v acpsd"),
@@ -297,8 +298,11 @@ def piece():
     # asleep: stopped, and the fade (8 s) and the reverb's tail are done - the layers, the pads' character and the
     # reverb switch off, so nothing computes in the silence (a performance log showed the same 36 % load stopped as
     # playing); Start wakes them under its fade-in. (Not during the profile, which plays parts while stopped.)
-    proc(c, "ac-sleep", [If("acstopped && acprof == 0 && acsleep == 0", [
-        V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel")])])
+    # (and after a FIN, once its fade is done; the log is written as it falls asleep - silent, so an SD write on
+    #  Pd's audio thread can't make it crackle)
+    proc(c, "ac-sleep", [If("(acstopped || (acended && acrun == 0)) && acprof == 0 && acsleep == 0", [
+        V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel"),
+        If("aclogon", [Send("ac-logwrite")])])])
     proc(c, "ac-wakeup", [Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
                                                            Call("ac-verbsel")])])
     # (a new piece: its own memory, empty)
@@ -311,7 +315,7 @@ def piece():
         V("acmode", "1-acmode"), V("acmodesel", "1-acmode"), Send("ac-dirty"),
         If("acstopped", [V("acready", "1"), SendL("ac-setseed", ["acseed"]),
                          If("acmode", [Toast("COMPOSE - A# start")], [Toast("DRIFT - A# start")])],
-           [V("acended", "0"), Send("ac-master", "1 3000"),
+           [V("acended", "0"), Call("ac-wakeup"), Send("ac-master", "1 3000"),
             If("acmode==1", [V("acsec", "0"), Call("ac-plan"), Call("ac-section"), Call("ac-change"),
                              Toast("COMPOSE new arc")],
                [Call("ac-section"), Call("ac-change"), Toast("DRIFT endless")])]),
@@ -633,12 +637,9 @@ def section():
         Send("ac-master", "0 8000"),            # a long fade: the sound and its reverb die away slowly
         Send("ac-chgstop"), Send("ac-secstop"), Call("ac-clockstop"),
         Toast("stopped - A# to start"), Call("ac-scr"), Send("ac-led"),
-        # (the log is written once the fade is over and the output silent - an SD write on Pd's audio thread
-        #  during the fade could make it crackle - unless it has started again by then)
-        If("aclogon", [Later("ac-logquiet", 9000)]),
+        # (asleep 12 s on, the fade done: the log is written then - unless it has started again by then)
         Arm("ac-sleep", "12000", stop="ac-wake"),
     ])])
-    proc(c, "ac-logquiet", [If("acstopped", [Send("ac-logwrite")])])
     proc(c, "ac-start", [If("acstopped", [
         If("acready", [Toast("start - playing")], [Toast("playing again")]),
         Call("ac-wakeup"),
@@ -654,7 +655,7 @@ def section():
                                 [If("acended || acrun == 0", [Call("ac-reseed"), Toast("new piece")],
                                     [Call("ac-stop")])])])])
     proc(c, "ac-finoff", [If("acrun==0", [V("acended", "1"), V("acfade", "2000"), Call("ac-layers"),
-                                          Call("ac-scr"), Send("ac-led")])])
+                                          Call("ac-scr"), Send("ac-led"), Arm("ac-sleep", "6000", stop="ac-wake")])])
     return c
 
 
