@@ -120,7 +120,9 @@ def perflog():
     run_steps(c, (up, 0), [If("acprof", [V("acprsum", "acprsum + aclgw"), V("acprn", "acprn + 1"),
                                          V("acprmax", "max(acprmax, aclgw)")],
                               [V("aclgsum", "aclgsum + aclgw"), V("aclgn", "aclgn + 1"), V("aclgmax", "max(aclgmax, aclgw)"),
-                               If("aclgn >= 50", [Call("ac-logline")])])])
+                               # (asleep - stopped, the fade and the tail done - nothing is logged: a piece left
+                               #  ended once logged silence for half an hour, a file every 10 minutes)
+                               If("aclgn >= 50", [If("acsleep", [Call("ac-logreset")], [Call("ac-logline")])])])])
     c.col()
     # a line: the fields into the buffer, the buffer appended to the text
     # (right to left: the fields, the line appended, then the sums reset - one trigger, so in that order; two
@@ -131,12 +133,15 @@ def perflog():
     add = c.obj("text set aclog 1e+06")
     c.c(c.to((line, 1), "array get aclogbuf"), 0, add, 0)
     c.c(line, 0, c.obj("s ac-logafter"), 0)
-    proc(c, "ac-logafter", [V("aclgsum", "0"), V("aclgn", "0"), V("aclgmax", "0"), V("aclgl", "aclgl + 1"),
+    proc(c, "ac-logreset", [V("aclgsum", "0"), V("aclgn", "0"), V("aclgmax", "0"),
                             X("0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0", *[f"v {n}" for n in (
                                 "aclgpk", "aclgdcs", "aclgmn", "aclgclip", "aclgq", "aclglate", "aclgrs", "aclgrn",
-                                "aclglo", "aclghi", "aclgsub")]),
-                            If("aclgl % 12 == 0", [Send("ac-logwrite")]),     # (every minute: few writes while it plays)
-                            If("aclgl >= 120", [Send("ac-logwrite"), Call("ac-lognew")])])
+                                "aclglo", "aclghi", "aclgsub")])])
+    # every minute the part is written (few writes while it plays); at its end once, then a new part (it was
+    # written twice there - the minute's and the end's: the scheduler 20-24 ms late at every part, near the buffer)
+    proc(c, "ac-logafter", [Call("ac-logreset"), V("aclgl", "aclgl + 1"),
+                            If("aclgl >= 120", [Send("ac-logwrite"), Call("ac-lognew")],
+                               [If("aclgl % 12 == 0", [Send("ac-logwrite")])])])
     c.col()
     # the file: logs/perf-BBBBPP.txt; a new part every 120 lines (10 minutes)
     proc(c, "ac-lognew", [V("aclgpart", "aclgpart + 1"), V("aclgl", "0"), V("aclgfile", "(account % 10000)*100 + aclgpart % 100"),

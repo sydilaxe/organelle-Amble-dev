@@ -603,6 +603,13 @@ check(len(lv) >= 2 and lv[0] == 4 and lv[-1] == 0 and log.count("ac-toast: list 
 lv, log = lite_at([(40, "acguard 0"), (50, "ac-setseed 7"), (5000, "acloadtest 0.9")], 15, [14000])
 check(lv and lv[-1] == 0 and "CPU high" not in log, "CPU guard off: never sheds")
 import glob
+# (asleep - stopped 12 s on - nothing is logged: lines up to the sleep, none after; the part written once at Stop)
+d = build_tmp()
+run([(50, "ac-setseed 7"), (100, "acguard 3"), (110, "ac-logupd bang"), (20000, "ac-stop bang")], 75, d=d)
+pf = sorted(glob.glob(os.path.join(d, "logs", "perf-*.txt")))
+L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
+ts = [float(r[0]) for r in L[1:]]
+check(ts and max(ts) <= 36 and max(ts) >= 25, f"perf log: nothing logged asleep (stopped at 20 s, last line at {ts[-1:] } s)")
 # (what it sheds, from the perf log's layers: textures, cloud, bells, motion, atmosphere - never pads, drone, sub)
 d = build_tmp()
 run([(40, "acdens 1"), (50, "ac-setseed 7"), (100, "acguard 3"), (110, "ac-logupd bang"), (20000, "acloadtest 0.9"),
@@ -627,6 +634,12 @@ check(fade[0] > fade[1] > fade[2] > -100 and rms_db(a[17 * SR:21 * SR, 0]) < -10
       and "ac-txt1: list STOPPED - A# start" in t1 and "ac-txt1: list COMP 1 of 6 emerge" in t1,
       f"A# stops (an 8 s fade, then silent, STOPPED) and starts again in the same section ({rms_db(a[17 * SR:21 * SR, 0]):.0f} dB "
       f"stopped, {rms_db(a[19 * SR:23 * SR, 0]):.0f} dB playing)")
+# after a FIN the patch falls asleep too (its fade done); A# then starts a new piece, awake and sounding
+log, a = run([(50, "ac-setseed 7"), (5000, "ac-fin bang"), (50000, "notesRaw 82 100"), (50050, "notesRaw 82 0")], 60,
+             prints=("ac-g-rvb",))
+check(rms_db(a[44 * SR:49 * SR, 0]) < -100 and rms_db(a[55 * SR:59 * SR, 0]) > -40,
+      f"FIN: silent and asleep after its fade ({rms_db(a[44 * SR:49 * SR, 0]):.0f} dB), A# a new piece "
+      f"({rms_db(a[55 * SR:59 * SR, 0]):.0f} dB)")
 def toasts(ev, secs=6):
     log, _ = run([(50, "ac-setseed 7")] + ev, secs)
     return [l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast")]
@@ -1371,8 +1384,8 @@ check(calm and loud and all(-45 < col("rms", r) < -8 and col("pk", r) < 0 and co
 # logging switched on mid-piece: the meter's first block held all the sound thrown at it while it was off
 # (the device logged +32 dBFS and 126 samples cut on its first line), and its first read counted a quiet window
 d = build_tmp()
-run([(50, "ac-setseed 7"), (20000, "acguard 3"), (20010, "ac-logupd bang"), (36000, "ac-stop bang")], 47, d=d)
-# (at Stop the log is written once the fade is silent, 9 s on - an SD write on Pd's audio thread)
+run([(50, "ac-setseed 7"), (20000, "acguard 3"), (20010, "ac-logupd bang"), (36000, "ac-stop bang")], 50, d=d)
+# (at Stop the log is written as it falls asleep, the fade silent, 12 s on - an SD write on Pd's audio thread)
 pf = glob.glob(os.path.join(d, "logs", "perf-*.txt"))
 L = [l.split() for l in open(pf[0]).read().split(";") if l.strip()] if pf else [[]]
 first = L[1] if len(L) > 1 else None
