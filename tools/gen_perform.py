@@ -45,9 +45,9 @@ def apply_cut(arr):
 
 
 def sink():
-    """SINK's filter (both sides): a gently resonant low-pass whose cutoff glides (ac-sink, Hz); on only while
-    SINK is up"""
-    from gen_dsp import switched
+    """SINK (both sides): a gently resonant low-pass whose cutoff glides (ac-sink, Hz), crossfaded in - each outlet
+    is (filtered - dry) x the fade, added to the dry outside; on only while SINK is up (off, it gives 0)"""
+    from gen_dsp import switched, mul
     s, ln = switched("sink", "ac-g-sink")
     s.comment("Sink: everything under a gently resonant low-pass, 12 kHz down to 120 Hz")
     cf = s.ch(s.m(s.recv("ac-sink"), "$1 150"), "line~")
@@ -56,7 +56,10 @@ def sink():
         v = s.obj("vcf~ 1.3")
         s.c(i, 0, v, 0)
         s.c(cf, 0, v, 1)
-        s.c((v, 1), 0, s.obj("outlet~", 20 + 200 * j, 300), 0)
+        dif = s.obj("-~")
+        s.c(v, 1, dif, 0)
+        s.c(i, 0, dif, 1)
+        s.c(mul(s, dif, ln), 0, s.obj("outlet~", 20 + 200 * j, 300), 0)
     return s
 
 

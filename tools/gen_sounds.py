@@ -1210,6 +1210,9 @@ def vocoder():
     o.comment("Vocoder: the input's 10 band envelopes shape a carrier - a synth choir on the chord (vocode) or "
               "the pads themselves (morph). The work runs at half rate inside.")
     core = o.sub(_vocoder_core())
+    # (this outer canvas - its filters and throws - switches with the core: off, none of the vocoder computes)
+    from gen_dsp import gate
+    gate(o, "ac-sw-vocoder-core", 0)
     o.c(o.ch(o.obj("r~ ac-in"), "lop~ 8000"), 0, core, 0)
     o.c(o.ch(o.obj("r~ ac-padsig"), "lop~ 8000"), 0, core, 1)
     throws_to("ac-sendi")(o, (core, 0), (core, 1), mix=1.0, send=0.6, src=0.3)
