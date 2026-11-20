@@ -140,8 +140,18 @@ def flav_sine():
     for d, oddeven in ((1.0, (1.0, 0.75)), (1.0009, (0.75, 1.0))):
         sm = s.obj("*~ 0.42")
         fd = mul(s, f, s.ch(Q, f"*~ {2 * (d - 1):.4f}", "+~ 1")) if d != 1.0 else f
+        # the harmonics from one cosine (Chebyshev: cos(n w) = T_n(cos w), T_n+1 = 2x T_n - T_n-1) - the same as
+        # an osc~ per harmonic, all starting in phase, at a sixth of the cost
+        x = s.to(fd, "osc~")
+        x2 = s.to(x, "*~ 2")
+        T = [None, x, s.to(mul(s, x2, x), "-~ 1")]
+        for n in range(3, 7):
+            t = s.obj("-~")
+            s.c(mul(s, x2, T[n - 1]), 0, t, 0)
+            s.c(T[n - 2], 0, t, 1)
+            T.append(t)
         for n in range(1, 7):
-            o = s.ch(s.to(fd, f"*~ {n}"), "osc~", f"*~ {1 / n * (oddeven[0] if n % 2 else oddeven[1]):.4f}")
+            o = s.to(T[n], f"*~ {1 / n * (oddeven[0] if n % 2 else oddeven[1]):.4f}")
             s.c(mul(s, mul(s, o, tilt[n - 1]), P2) if tilt[n - 1] is not None else o, 0, sm, 0)
         outs.append(sm)
     # mono-safe: the right side keeps part of the left
@@ -298,24 +308,42 @@ def flav_choir():
     P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     expo = mul(s, s.ch(b, "*~ -8", "+~ 12"), s.ch(Q, "*~ -1", "+~ 1.5"))   # pulse narrowness: 12 (dark) .. 4 (bright)
     outs = []
-    for side, (d, r1, r2) in enumerate(((1.0, 0.031, 0.047), (1.0025, 0.037, 0.043))):
-        vib = s.ch(s.obj(f"osc~ {5.1 + 0.4 * side}"), "*~ 0.004", f"+~ {d}")
-        ph = s.ch(mul(s, f, vib), "phasor~", "-~ 0.5", "*~ 2", "abs~")
+    # (the vibrato and the vowels' drift - slow - at 1/16 of the rate: [pd choir-mod], 4 outlets a side)
+    cm = s.sub(_choir_mod(P), 20, 200)
+    for side, d in enumerate((1.0, 1.0025)):
+        ph = s.ch(mul(s, f, (cm, 4 * side)), "phasor~", "-~ 0.5", "*~ 2", "abs~")
         src = s.obj("pow~")
         s.c(ph, 0, src, 0)
         s.c(expo, 0, src, 1)
-        drift = add(s, s.obj(f"osc~ {r1}"), s.ch(s.obj(f"osc~ {r2}"), "*~ 0.7"))
-        idx = s.to(add(s, s.ch(drift, "*~ 0.294", "+~ 0.5", f"*~ {len(VOWELS) - 1}", "+~ 1"), s.ch(P, "-~ 0.5", "*~ 8")),
-                   f"clip~ 1 {len(VOWELS)}")
         sm = s.obj("*~ 1")
         for j, (q, a) in enumerate(((7, 1.0), (10, 0.55), (14, 0.25))):
-            fm = s.to(idx, f"tabread4~ $0-vf{j}")
+            fm = (cm, 4 * side + 1 + j)
             v = s.obj(f"vcf~ {q}")
             s.c(s.to(src, "hip~ 60"), 0, v, 0)
             s.c(fm, 0, v, 1)
             s.c(s.to(v, f"*~ {a}"), 0, sm, 0)
         outs.append(s.to(sm, "*~ 1.6"))
     _out(s, outs[0], ln, outs[1])
+    return s
+
+
+def _choir_mod(_P):
+    """the choir's slow parts at 1/16 of the rate (block 4 = one parent block), held up: per side the vibrato
+    (x the pitch) and the three formants' frequencies, the vowel drifting with two unrelated cycles (and SHAPE P)"""
+    s = Canvas("choir-mod", w=1600)
+    s.obj("block~ 4 1 0.0625")
+    P = prm(s, "p", 0)
+    x = 20
+    for side, (d, r1, r2) in enumerate(((1.0, 0.031, 0.047), (1.0025, 0.037, 0.043))):
+        vib = s.ch(s.obj(f"osc~ {5.1 + 0.4 * side}"), "*~ 0.004", f"+~ {d}")
+        s.c(vib, 0, s.obj("outlet~ hold", x, 600), 0)
+        x += 150
+        drift = add(s, s.obj(f"osc~ {r1}"), s.ch(s.obj(f"osc~ {r2}"), "*~ 0.7"))
+        idx = s.to(add(s, s.ch(drift, "*~ 0.294", "+~ 0.5", f"*~ {len(VOWELS) - 1}", "+~ 1"), s.ch(P, "-~ 0.5", "*~ 8")),
+                   f"clip~ 1 {len(VOWELS)}")
+        for j in range(3):
+            s.c(s.to(idx, f"tabread4~ $0-vf{j}"), 0, s.obj("outlet~ hold", x, 600), 0)
+            x += 150
     return s
 
 
@@ -330,14 +358,25 @@ def flav_vosim():
     P, Q = prm(s, "p", 0), prm(s, "p", 1)        # (PADS SHAPE knobs 3 and 4: data.PAD_PARAMS)
     fmt = mul(s, mul(s, s.ch(b, "*~ 1600", "+~ 500"), sweep), s.to(P, "+~ 0.5"))
     outs = []
+    # (the pulses as plain arithmetic - it was an expr~ with pow and sin per sample, the heaviest pad): x = the
+    # phase in formant periods, sin^2(pi x) = (1 - cos(2 pi x))/2, q^n for the n-th pulse (n = 0, 1, 2) as
+    # 1 + n(q-1) + n(n-1)/2 (q-1)^2, and nothing from the 3rd period on
+    fmax = s.to(f, "max~ 1")
+    qm1 = s.ch(Q, "*~ 0.7", "+~ -0.7")                 # (q - 1, q = 0.3 + 0.7 Q)
+    qm1h = s.to(mul(s, qm1, qm1), "*~ 0.5")
     for k in (1.0, 1.26):
         fx = s.to(fmt, f"*~ {k}")
-        vs = s.obj("expr~ if($v1*$v2/max($v3, 1) < 3, pow(sin(3.14159*$v1*$v2/max($v3, 1)), 2)*"
-                   "pow($v4, floor($v1*$v2/max($v3, 1))), 0)")
-        s.c(s.ch(Q, "*~ 0.7", "+~ 0.3"), 0, vs, 3)
-        s.c(ph, 0, vs, 0)
-        s.c(fx, 0, vs, 1)
-        s.c(f, 0, vs, 2)
+        rat = s.obj("/~")
+        s.c(fx, 0, rat, 0)
+        s.c(fmax, 0, rat, 1)
+        x = mul(s, ph, rat)
+        n = s.obj("-~")
+        s.c(x, 0, n, 0)
+        s.c(s.to(x, "wrap~"), 0, n, 1)
+        s2 = s.ch(x, "cos~", "*~ -0.5", "+~ 0.5")
+        gate = s.ch(n, "*~ -1", "+~ 3", "clip~ 0 1")
+        amp = s.to(add(s, mul(s, n, qm1), mul(s, mul(s, n, s.to(n, "-~ 1")), qm1h)), "+~ 1")
+        vs = mul(s, mul(s, s2, gate), amp)
         outs.append(s.ch(vs, "hip~ 40", "*~ 0.9"))
     _out(s, outs[0], ln, outs[1])
     return s

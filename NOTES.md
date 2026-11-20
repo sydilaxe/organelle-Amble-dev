@@ -52,6 +52,11 @@ Working memory for this project: read it first in a new session.
 - **SETUP redraws:** a whole SETUP screen is sent every 300 ms only on MIDI IN and CC MAP (they show what comes
   in); other pages from LINES on once a second, and the CHORD page when its next chord changes. (It was every
   300 ms on every page from LINES on - on the Organelle each redraw costs the display.)
+- **Pad CPU** (device profile: choir and vosim +37 %, sine +15 %): sine's harmonics by Chebyshev from one osc~ a side
+  (T_n+1 = 2x T_n - T_n-1; -80 dB from the 12 osc~); vosim's pulses as plain arithmetic (cos~, wrap~, a polynomial
+  for q^n; -80 dB from the expr~ with pow and sin); the voice's slow movement (drift, breath, orbit) and the choir's
+  vibrato and vowel drift at 1/16 rate (block~ 4 1 0.0625, `outlet~ hold`: `lin` upsampling cost more than it
+  saved). callgrind, 4 pads: sine 147 -> 100, vosim 251 -> ~110, lissa 97 -> 74, choir 296 -> 219 M instr/s.
 - **Nothing always on:** every signal object sits under a [switch~]. The master bus and the cloud's recorder
   stop 1.5 s after the sleep (`ac-awake` 0, `ac-sleep2`; not with the input up or a note in the last 8 s) and
   wake first (`ac-wakeup`, a live note, the input, the profile); the memory recorder runs with the input stage
