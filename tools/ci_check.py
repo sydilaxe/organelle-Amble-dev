@@ -640,6 +640,26 @@ log, a = run([(50, "ac-setseed 7"), (5000, "ac-fin bang"), (50000, "notesRaw 82 
 check(rms_db(a[44 * SR:49 * SR, 0]) < -100 and rms_db(a[55 * SR:59 * SR, 0]) > -40,
       f"FIN: silent and asleep after its fade ({rms_db(a[44 * SR:49 * SR, 0]):.0f} dB), A# a new piece "
       f"({rms_db(a[55 * SR:59 * SR, 0]):.0f} dB)")
+# nothing always on: every signal object sits in a canvas a [switch~] (its own or a parent's) can stop - asleep
+# the patch computes next to nothing (it was 37M instructions a second: the master bus, recorders, vocoder routing)
+def _always_on(path):
+    stack, n = [], []
+    for l in open(path).read().split(";\n"):
+        t = l.strip().split()
+        if l.strip().startswith("#N canvas"):
+            stack.append([False, []])
+        elif t[:2] == ["#X", "restore"]:
+            sw, objs = stack.pop()
+            if not sw:
+                stack[-1][1].extend(objs)
+        elif t[:2] == ["#X", "obj"] and len(t) > 4:
+            if t[4] == "switch~":
+                stack[-1][0] = True
+            elif t[4].endswith("~"):
+                stack[-1][1].append(t[4])
+    return stack[0][1]
+ao = _always_on(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches", "Amble", "main.pd"))
+check(ao == [], f"nothing always on: signal objects outside any switch~ {ao[:12]}")
 def toasts(ev, secs=6):
     log, _ = run([(50, "ac-setseed 7")] + ev, secs)
     return [l.split("list ", 1)[-1] for l in log.splitlines() if l.startswith("ac-toast")]
