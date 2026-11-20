@@ -869,9 +869,9 @@ def story():
     s += [Paragraph("11  CPU", H1),
           para("Amble runs on one core. Only what sounds runs; the reverbs, vocoder and pitch tracker run at half "
                "rate; heavy changes are spread over a few milliseconds. The <b>CPU guard</b> measures the load "
-               "each second: above 78 % it gets lighter in steps - 1 cloud and atmosphere off, 2 textures and the "
-               "pad character off, 3 the automatic vocoder off - and steps back after 20 s below 50 %. The pads, "
-               "drone, sub, bells, motion and reverb are never changed. SETUP NOTES OUT shows the load and the "
+               "each second: above 78 % it gets lighter in steps, the spare layers first - 1 textures, cloud, the pad "
+               "character and the automatic vocoder off, 2 bells off, 3 motion off, 4 atmosphere off - and steps "
+               "back after 20 s below 50 %. The pads, drone, sub and reverb are never changed. SETUP NOTES OUT shows the load and the "
                "guard's level and can turn the guard off. The CPU reading is an average over a second; short spikes "
                "inside it are absorbed by the audio buffer, which Amble sets to 25 ms in <b>pd-opts.txt</b> "
                "(the Organelle starts Pd with 6 ms)."),

@@ -359,10 +359,10 @@ and let go, without knob 1, to leave and save)
   was playing).
 
 CPU GUARD: Amble measures its own load each second. Above 78 % it gets
-lighter in steps ("CPU high - lighter"): 1 cloud and atmosphere off,
-2 textures and the pad character off, 3 the automatic vocoder off. Below
-50 % for 20 s it steps back. Nothing else changes: the pads, drone, sub,
-bells, motion and reverb always keep their full sound. SETUP NOTES OUT can
+lighter in steps ("CPU high - lighter"), the spare layers first:
+1 textures, cloud, the pad character and the automatic vocoder off,
+2 bells off, 3 motion off, 4 atmosphere off. Below 50 % for 20 s it steps
+back. The pads, drone, sub and reverb always keep their full sound. SETUP NOTES OUT can
 turn it off. pd-opts.txt asks the Organelle for a 25 ms audio buffer (its
 default is 6 ms), so brief spikes don't crackle; lower the number for less
 delay when playing live, raise it if you still hear crackles. Heavy changes (a new piece, a new section, a chord) are

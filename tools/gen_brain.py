@@ -681,12 +681,12 @@ def layers():
         # each layer: acm<layer> 0 = off, 1 = auto (the section and density decide), 2 = on (always, full level)
         ("drone", "(acedrone>0)*(1-acended)*max(max(acfdrone, acedrone==2)*(0.55+0.45*min(1, acdeff*3)), (acroute==2)*0.9)"),
         ("pad", f"(acepad>0)*(1-acended)*max(acfpad*{th(0.06)}, acepad==2)"),
-        ("tex", f"(acshed < 2)*(acetex>0)*(1-acended)*max(acftex*{th(0.28)}, acetex==2)"),
+        ("tex", f"(acshed < 1)*(acetex>0)*(1-acended)*max(acftex*{th(0.28)}, acetex==2)"),
         ("cloud", f"(acshed < 1)*(acecloud>0)*(1-acended)*max(max(acfcloud*{th(0.42)}, acecloud==2), max(((acinmode==2) || (acinmode==0)*(acinclass>=1))"
                   f"*min(1, acinput*2)*0.8, (acroute==4)*0.85))"),
         # (while moving, the bells need less density: 0.25 for 0.45 - they carry the motif)
-        ("bell", f"(acebell>0)*(1-acended)*max(max(acfbell*{th('if(acwrite, 0.25, 0.45)')}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
-        ("motion", f"(acemotion>0)*(1-acended)*max(acfmotion*{th(0.3)}*min(1, acrhythm*2.5), acemotion==2)"),
+        ("bell", f"(acshed < 2)*(acebell>0)*(1-acended)*max(max(acfbell*{th('if(acwrite, 0.25, 0.45)')}, acebell==2), max((acinmode==4)*min(1, acinput*2), (acroute==3)*0.9))"),
+        ("motion", f"(acshed < 3)*(acemotion>0)*(1-acended)*max(acfmotion*{th(0.3)}*min(1, acrhythm*2.5), acemotion==2)"),
     ]
     # the effective state of each layer: your key (off / on) wins; on auto, a custom section's own (SETUP SECTION MIX)
     steps = [V(f"ace{n}", f"if(acm{n} != 1, acm{n}, if(acsx{n} == 1, 0, if(acsx{n} == 2, 2, 1)))") for n in SEC_LAYERS]
@@ -717,19 +717,19 @@ def layers():
                    if name == "pad" else "")
             steps += [SendL("ac-g-" + name, [f"acmg{mx[-1]}*acsl{name}*acg{name}{dip}", "acfade"])]
     # the atmosphere: auto = the section's, and off with the textures (as before); on = always
-    steps += [V("acgatm", "(acshed < 1)*(aceatm>0)*(1-acended)*if(aceatm==2, 1, acfatm*(acetex>0))*(0.55 + 0.45*min(1, acdeff*2))")]
+    steps += [V("acgatm", "(acshed < 4)*(aceatm>0)*(1-acended)*if(aceatm==2, 1, acfatm*(acetex>0))*(0.55 + 0.45*min(1, acdeff*2))")]
     steps += [SendL(f"ac-g-atm{i}", [f"acmga*acslatm*acgatm*(acatmcur=={i})", "acfade*1.5"]) for i in range(len(ATMOS_NAMES))]
     # the pad character: SETUP SOUNDS, else none for raw pads, else the piece's
     steps += [V("accheff", "if(acschar > 0, acschar - 1, if(acspad == 1, 0, acchar))")]
-    steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 2)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)*(1 - acsleep)", "acfade"])
+    steps += [SendL(f"ac-g-ch{i}", [f"(acshed < 1)*(accheff=={i})*min(1, acchamt*if(acrole==4, 1.3, 1))*min(1, acgpad*4)*(1 - acsleep)", "acfade"])
               for i in range(1, len(CHARACTERS))]
     # (tape, crush and the rotor take the dry pads' place; chorus, ring and dimension add to them)
-    steps += [SendL("ac-chdry", ["1 - (acshed < 2)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt + (accheff==5)*0.9*acchamt)", "acfade"])]
+    steps += [SendL("ac-chdry", ["1 - (acshed < 1)*((accheff==2)*0.9*acchamt + (accheff==4)*0.6*acchamt + (accheff==5)*0.9*acchamt)", "acfade"])]
     for i in range(len(TEXTURES)):
         steps += [V(f"acgt{i}", f"acgtex*((actex1=={i}) || (actex2=={i}))" if i != 15 else
           # (the song's voice also sings the counter-melody: ARC Counter, while the pads play)
           # (and only while the textures are in: their key out silences it too)
-          "max(acgtex*((actex1==15) || (actex2==15)), (acctr*acwrite)*(acetex > 0)*0.8*min(1, acgpad*3)*(1 - acended)*(acshed < 2))"),
+          "max(acgtex*((actex1==15) || (actex2==15)), (acctr*acwrite)*(acetex > 0)*0.8*min(1, acgpad*3)*(1 - acended)*(acshed < 1))"),
                   SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
     proc(c, "ac-layers", steps)
     # a MIX knob: the levels follow while it turns - an update 20 ms after the first change, each gliding over 25 ms
@@ -757,7 +757,7 @@ def layers():
         If("acinput <= 0.01", [X("-1; 0", "v acinp", "v acinclr")]),
         If("acinput <= 0", [X("0; 0", "v acinlvl", "v acinhf")]),
         V("acgres", f"acinput * if(acinmode==1, 1, {A}*if(acinclass==1, if(acavoc, 0.3, 0.8), if(acinclass==2, 0.4, 0)))"),
-        V("acgvoc", f"acinput * ((acinmode==6) || (acinmode==7) || {A}*(acinclass==1)*acavoc*(acshed < 3))"),
+        V("acgvoc", f"acinput * ((acinmode==6) || (acinmode==7) || {A}*(acinclass==1)*acavoc*(acshed < 1))"),
         SendL("ac-g-voc", ["acgvoc", "1500"]),
         SendL("ac-vcsyn", [f"(acinmode==6) || {A}", "800"]),
         SendL("ac-vcpad", ["acinmode==7", "800"]),
