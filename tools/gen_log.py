@@ -165,7 +165,7 @@ def perflog():
            [SendL("ac-livenote", [str(2 + k), str(55 + 5 * k), "0"]) for k in range(4)] + \
            [Call("ac-shpupd")]          # (SHAPE and the sub's sound back to the piece's: a part may have set them)
     proc(c, "ac-profile", [If("acprof == 0", [
-        If("acstopped == 0", [Call("ac-stop")]), Send("ac-master", "0 300"),
+        If("acstopped == 0", [Call("ac-stop")]), Send("ac-master", "0 300"), Send("ac-awake", "1"),
         Send("ac-chgstop"), Send("ac-secstop"), V("acsetup", "0"), Call("ac-oledall"),
         X("1; 0; aclogon", "v acprof", "v acprst", "v aclogwas"), Send("ac-logrun", "1"), V("acflxf", "50"),
         Loop("4", "aci", [T("acprfl", "aci", "acflav[int(aci)]")]),

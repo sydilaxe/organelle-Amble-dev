@@ -52,6 +52,12 @@ Working memory for this project: read it first in a new session.
 - **SETUP redraws:** a whole SETUP screen is sent every 300 ms only on MIDI IN and CC MAP (they show what comes
   in); other pages from LINES on once a second, and the CHORD page when its next chord changes. (It was every
   300 ms on every page from LINES on - on the Organelle each redraw costs the display.)
+- **Nothing always on:** every signal object sits under a [switch~]. The master bus and the cloud's recorder
+  stop 1.5 s after the sleep (`ac-awake` 0, `ac-sleep2`; not with the input up or a note in the last 8 s) and
+  wake first (`ac-wakeup`, a live note, the input, the profile); the memory recorder runs with the input stage
+  (`ac-insw`), the vocoder's outer canvas with its core (`ac-sw-vocoder-core`), Output split's stems while split
+  is on or fading, Sink's blend inside its own switch (`gen_dsp.gate`). Asleep cost: 37M -> 0.7M instructions/s.
+  (A switched-off subpatch's outlet~ gives 0.)
 - **Logs:** nothing is logged while asleep (stopped, fade and tail done); a part is written once at its end (it was
   twice: the scheduler 20-24 ms late at each part). A perf log part is written every minute (and as it falls asleep, 12 s after Stop or after a FIN's fade: an SD write runs on
   Pd's audio thread) and never empty; a profile is written after every part and says

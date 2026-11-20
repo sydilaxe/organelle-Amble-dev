@@ -2,7 +2,7 @@
 voices' allocation, the CC MAP and LIVE Mix CC targets, listening (the pitch you hold steers the chords, a held
 note becomes the key, breath raises the energy and holds a section), audio analysis into a class (quiet /
 pitched / plucked / textural), memories, and the 100 ms clock (ac-now) that drives the timed checks."""
-from pdlib import Canvas, proc, X, V, T, Call, SendL, If, Loop, run_steps, Line, Arm, Toast, RNG
+from pdlib import Canvas, proc, X, V, T, Call, Send, SendL, If, Loop, run_steps, Line, Arm, Toast, RNG
 from data import NOTE_NAMES, SEND_BUS, FLAVOURS
 
 NV = 4                                    # live voices
@@ -194,6 +194,7 @@ def live():
         T("aclvn", "acvi", "aclnote"), T("aclvc", "acvi", "aclch"), T("aclva", "acvi", "aclage"), T("aclsus", "acvi", "0"),
         Call("ac-lvctl"),
         SendL("ac-lvbr", ["acvi", "if(acbrmode, max(acbrch[int(aclch)], acbrch[1]), 1)"]),
+        If("acsleep", [Send("ac-awake", "1")]),       # (asleep, the master is off: a note wakes it to sound)
         If("acroute == 0", [SendL("ac-lvon", ["acvi", "aclnote + acbendt[int(aclch)]", "aclvel/127"])]),
         V("aclnt", "acnow"),
         If("(acans*acwrite) == 2", [V("acyrn", "aclnote"), Call("ac-yrec"),

@@ -302,8 +302,11 @@ def piece():
     #  Pd's audio thread can't make it crackle)
     proc(c, "ac-sleep", [If("(acstopped || (acended && acrun == 0)) && acprof == 0 && acsleep == 0", [
         V("acsleep", "1"), V("acfade", "300"), Call("ac-layers"), Call("ac-verbsel"),
-        If("aclogon", [Send("ac-logwrite")])])])
-    proc(c, "ac-wakeup", [Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
+        If("aclogon", [Send("ac-logwrite")]), Later("ac-sleep2", 1500)])])
+    # (1.5 s on, the layers and the reverb faded out and off: the master bus and the cloud's recorder stop too -
+    #  unless the input is up or you played a note in the last 8 s, which sound through the master)
+    proc(c, "ac-sleep2", [If("acsleep && acinput == 0 && acnow - aclnt > 8000", [Send("ac-awake", "0")])])
+    proc(c, "ac-wakeup", [Send("ac-awake", "1"), Send("ac-wake"), If("acsleep", [V("acsleep", "0"), V("acfade", "300"), Call("ac-layers"),
                                                            Call("ac-verbsel")])])
     # (a new piece: its own memory, empty)
     proc(c, "ac-newkey", [Call("ac-memclearall"),
@@ -755,6 +758,7 @@ def layers():
         # the pitch tracker runs only while there is input to hear
         # (the input stage runs at any In above 0; the pitch tracker from 1 %)
         SendL("ac-trk", ["acinput > 0.01"]), SendL("ac-insw", ["acinput > 0"]),
+        If("acinput > 0", [Send("ac-awake", "1")]),           # (the input sounds through the master: awake)
         If("acinput <= 0.01", [X("-1; 0", "v acinp", "v acinclr")]),
         If("acinput <= 0", [X("0; 0", "v acinlvl", "v acinhf")]),
         V("acgres", f"acinput * if(acinmode==1, 1, {A}*if(acinclass==1, if(acavoc, 0.3, 0.8), if(acinclass==2, 0.4, 0)))"),

@@ -62,6 +62,25 @@ def switched(name, gain, block=None, hook=None):
     return s, ln
 
 
+def gate(s, recv, init, off_ms=0):
+    """a [switch~] for canvas s following [r recv] (a float, or a list whose first element counts): on at once,
+    off at 0 - after off_ms (a fade's time) when given, a later 'on' cancelling it; init at load"""
+    sw = s.obj("switch~")
+    s.c(s.m(s.obj("loadbang"), str(init)), 0, sw, 0)
+    first = s.ch(s.recv(recv), "list split 1")
+    if not off_ms:
+        s.c(first, 0, sw, 0)
+        return sw
+    sel = s.to(first, "sel 0")
+    d = s.obj(f"delay {off_ms}")
+    s.c(sel, 0, d, 0)
+    s.c(s.m(d, "0"), 0, sw, 0)
+    on = s.to((sel, 1), "t b b")
+    s.c(s.m((on, 1), "stop"), 0, d, 0)
+    s.c(s.m((on, 0), "1"), 0, sw, 0)
+    return sw
+
+
 def mul(c, a, b):
     """signal a * signal b (a, b: obj or (obj, outlet))"""
     m = c.obj("*~")
@@ -660,6 +679,7 @@ def cloud():
 def cloud_write():
     s = Canvas("cloud-write", w=1200)
     s.comment("Fills the cloud buffer: the composer's own sound, or the input (cloud mode, capture). Freeze stops it.")
+    gate(s, "ac-awake", 1)          # (asleep, the master off, there is nothing to record)
     tw = s.obj("tabwrite~ acbuf")
     s.c(mul(s, s.obj("r~ ac-in"), s.ch(s.recv("ac-incl"), "line~")), 0, tw, 0)
     s.c(mul(s, s.obj("r~ ac-resamp"), s.ch(s.recv("ac-inclr"), "line~")), 0, tw, 0)
@@ -760,6 +780,9 @@ def tape():
 def master():
     s = Canvas("master", w=2400, h=1200)
     s.comment("Pad bus, character, the send buses into the reverbs (Bloom, Hall), master fade, compressor, clip")
+    # asleep - stopped, everything faded and switched off - the whole bus stops too (ac-awake 0, gen_brain
+    # ac-sleep2); Start, a live note or the input wakes it first
+    gate(s, "ac-awake", 1)
     pg = s.ch(s.recv("ac-g-pad"), "line~")
     pL, pR = shaped(s, mul(s, s.obj("catch~ ac-padL"), pg), mul(s, s.obj("catch~ ac-padR"), pg), "p")
     # the piece's character on the pads (chorus, tape, ring, crush) - dry scaled by ac-chdry
@@ -873,9 +896,35 @@ def master():
     s.c(mid, 0, oR, 0)
     s.c(sw, 0, oR, 1)
     s.col()
-    # SETUP Output split: two mono stems - left the harmony bed (pads with their character, drone, sub), right
-    # everything else (bells, motion, textures, cloud, atmosphere, live voices, input). One reverb serves both:
-    # each stem takes one side of it (summing its two sides to mono would partly cancel).
+    # SETUP Output split: two mono stems (a subpatch computing only while split is on, or fading)
+    spl = s.ch(s.recv("ac-split"), "line~")
+    nrm = s.ch(spl, "*~ -1", "+~ 1")
+    st = s.sub(split_stems())
+    for k, x in enumerate((cbL, cbR, pdL, pdR, cmL, cmR, clL, clR, wL, wR, mg, comp, spl)):
+        s.c(*(x if isinstance(x, tuple) else (x, 0)), st, k)
+    # SINK: everything under a low-pass (12 kHz down to 120 Hz), crossfaded in; the filter and its blend run only
+    # while it's up (switched off it adds 0)
+    import gen_perform
+    sk = s.sub(gen_perform.sink())
+    for j, (o, bus) in enumerate(((add(s, mid, sw), "outL"), (oR, "outR"))):
+        fin = add(s, mul(s, o, nrm), (st, j))
+        s.c(fin, 0, sk, j)
+        out = add(s, fin, (sk, j))
+        s.c(s.ch(out, "clip~ -0.98 0.98"), 0, s.obj("throw~ " + bus), 0)
+        s.c(out, 0, s.obj(f"throw~ ac-mtr{'LR'[j]}"), 0)      # (to the log's audio meter, gen_log)
+        s.c(out, 0, s.obj(f"s~ ac-scp{'LR'[j]}"), 0)         # (to the OLED scope, gen_oled.scope)
+    return s
+
+def split_stems():
+    """SETUP Output split: two mono stems - left the harmony bed (pads with their character, drone, sub), right
+    everything else (bells, motion, textures, cloud, atmosphere, live voices, input). One reverb serves both: each
+    stem takes one side of it (summing its two sides to mono would partly cancel). Computes only while split is on
+    or fading (ac-split): switched off, its outlets give 0. Inlets: bed L, R, pads L, R, mix L, R, live L, R, wet L,
+    R, the master gain, the compressor, the split crossfade."""
+    s = Canvas("split-stems", w=1400)
+    gate(s, "ac-split", 0, 400)
+    ins = [s.obj("inlet~", 20 + 90 * k, 5) for k in range(13)]
+    cbL, cbR, pdL, pdR, cmL, cmR, clL, clR, wL, wR, mg, comp, spl = ins
     bed = s.obj("*~ 0.5")
     for x in (cbL, cbR, pdL, pdR):
         s.c(x, 0, bed, 0)
@@ -883,24 +932,11 @@ def master():
     for x in (cmL, cmR, clL, clR):
         s.c(x, 0, rest, 0)
     gain = mul(s, mg, comp)
-    stems = [mul(s, s.ch(add(s, st, s.to(w, "*~ 0.7")), "hip~ 8"), gain) for st, w in ((bed, wL), (rest, wR))]
-    spl = s.ch(s.recv("ac-split"), "line~")
-    nrm = s.ch(spl, "*~ -1", "+~ 1")
-    # SINK: everything under a low-pass (12 kHz down to 120 Hz), crossfaded in; the filter runs only while it's up
-    import gen_perform
-    sk = s.sub(gen_perform.sink())
-    sg = s.ch(s.recv("ac-g-sink"), "line~")
-    for j, (o, stem, bus) in enumerate(((add(s, mid, sw), stems[0], "outL"), (oR, stems[1], "outR"))):
-        fin = add(s, mul(s, o, nrm), mul(s, stem, spl))
-        s.c(fin, 0, sk, j)
-        dif = s.obj("-~")
-        s.c((sk, j), 0, dif, 0)
-        s.c(fin, 0, dif, 1)
-        out = add(s, fin, mul(s, dif, sg))
-        s.c(s.ch(out, "clip~ -0.98 0.98"), 0, s.obj("throw~ " + bus), 0)
-        s.c(out, 0, s.obj(f"throw~ ac-mtr{'LR'[j]}"), 0)      # (to the log's audio meter, gen_log)
-        s.c(out, 0, s.obj(f"s~ ac-scp{'LR'[j]}"), 0)         # (to the OLED scope, gen_oled.scope)
+    for j, (st, w) in enumerate(((bed, wL), (rest, wR))):
+        stem = mul(s, s.ch(add(s, st, s.to(w, "*~ 0.7")), "hip~ 8"), gain)
+        s.c(mul(s, stem, spl), 0, s.obj("outlet~", 20 + 400 * j, 400), 0)
     return s
+
 
 def motion_fm():
     from data import STRIKES
@@ -1220,6 +1256,7 @@ def bands():
 def mem_rec():
     s = Canvas("memory-rec", w=1000)
     s.comment("Records 8 s of ac-in into memory slot N")
+    gate(s, "ac-insw", 0, 300)      # (only while the input stage runs: In above 0)
     tw = s.obj("tabwrite~ acmem0")
     s.c(s.obj("r~ ac-in"), 0, tw, 0)
     sel = s.to(s.recv("ac-memrecslot"), "sel 0 1 2 3")
