@@ -1072,7 +1072,7 @@ def change():
                   #  half of it this, near the 25 ms audio buffer)
                   V("acfade", "acchsec*400*actime"), Later("ac-layers", 7)]),
               If("acbrq", [V("acbrq", "0"), Arm("ac-breathgo", "acchsec*500*actime", stop="ac-chgstop")]),
-              Later("ac-chordnext", 19)]              # (the next chord and its name on the screen: a tick of their own)
+              Call("ac-chordnext")]
     steps += [Later("ac-grains", 13), Later("ac-change2", 29, stop="ac-chgstop")]
     # the next chord: a key move (pending root, or by chance in DRIFT), a chance scale change, the next degree
     # (or the opening progression in a return section); then its name for the screen.

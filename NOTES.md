@@ -53,9 +53,10 @@ Working memory for this project: read it first in a new session.
   in); other pages from LINES on once a second, and the CHORD page when its next chord changes. (It was every
   300 ms on every page from LINES on - on the Organelle each redraw costs the display.)
 - **No long ticks:** a chord change's synchronous work was 0.47 ms here (0.84 worst) - about 12-25 ms on the
-  device, near the 25 ms buffer (perf logs: late 11-22 ms every ~10 s at 55 % load). Now `ac-layers` (7 ms on) and
-  `ac-chordnext` (19 ms on) have ticks of their own, and `ac-layers` hands the atmosphere, pad character and
-  textures to `ac-layers2` 3 ms on: change 0.13 (0.16), layers 0.11 + 0.05 ms.
+  device, near the 25 ms buffer (perf logs: late 11-22 ms every ~10 s at 55 % load). Now `ac-layers` runs 7 ms on,
+  in a tick of its own, and hands the atmosphere, pad character and textures to `ac-layers2` 3 ms on: change 0.18
+  (0.22), layers 0.11 + 0.05 ms. (`ac-chordnext` stays in the change: deferred, a section's re-plan and a key move
+  crossed it and the screen showed a next chord that didn't come.)
 - **Pad CPU** (device profile: choir and vosim +37 %, sine +15 %): sine's harmonics by Chebyshev from one osc~ a side
   (T_n+1 = 2x T_n - T_n-1; -80 dB from the 12 osc~); vosim's pulses as plain arithmetic (cos~, wrap~, a polynomial
   for q^n; -80 dB from the expr~ with pow and sin); the voice's slow movement (drift, breath, orbit) and the choir's
