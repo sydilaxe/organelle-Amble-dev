@@ -720,6 +720,9 @@ def layers():
             dip = (f"*(1 - 0.7*acrestp)*(1 + (acphpos >= 0)*(0.2*(acphpos == 4*(acphr*acwrite) - 2) - 0.12*(acphpos == 4*(acphr*acwrite) - 1)))"
                    if name == "pad" else "")
             steps += [SendL("ac-g-" + name, [f"acmg{mx[-1]}*acsl{name}*acg{name}{dip}", "acfade"])]
+    # (the atmosphere, the pad character and the textures 3 ms on, in a tick of their own: the whole was the
+    #  heaviest single tick a chord change or a knob made - about 6 ms on the device)
+    first, steps = steps, []
     # the atmosphere: auto = the section's, and off with the textures (as before); on = always
     steps += [V("acgatm", "(acshed < 4)*(aceatm>0)*(1-acended)*if(aceatm==2, 1, acfatm*(acetex>0))*(0.55 + 0.45*min(1, acdeff*2))")]
     steps += [SendL(f"ac-g-atm{i}", [f"acmga*acslatm*acgatm*(acatmcur=={i})", "acfade*1.5"]) for i in range(len(ATMOS_NAMES))]
@@ -735,7 +738,8 @@ def layers():
           # (and only while the textures are in: their key out silences it too)
           "max(acgtex*((actex1==15) || (actex2==15)), (acctr*acwrite)*(acetex > 0)*0.8*min(1, acgpad*3)*(1 - acended)*(acshed < 1))"),
                   SendL(f"ac-g-tex{i}", [f"acmgt*acsltex*acgt{i}", "acfade"])]
-    proc(c, "ac-layers", steps)
+    proc(c, "ac-layers", first + [Later("ac-layers2", 3)])
+    proc(c, "ac-layers2", steps)
     # a MIX knob: the levels follow while it turns - an update 20 ms after the first change, each gliding over 25 ms
     # into the next (a [delay] restarted by every knob message waited for the knob to stop, then jumped; 50 + 60 ms
     # felt laggy)
@@ -1064,9 +1068,11 @@ def change():
               If("(acphr*acwrite) > 0", [
                   If("acsecdue && acphpos == 4*(acphr*acwrite) - 1", [V("acsecdue", "0"), Arm("ac-secgo", "acchsec*900*actime", stop="ac-secstop")]),
                   If("(acans*acwrite) == 1", [V("acansm", "acphpos >= 2*(acphr*acwrite) || acphpos < 0"), Call("ac-ansturn")]),
-                  V("acfade", "acchsec*400*actime"), Call("ac-layers")]),
+                  # (the layers in a tick of their own: on the device the chord change was 12-25 ms in one tick,
+                  #  half of it this, near the 25 ms audio buffer)
+                  V("acfade", "acchsec*400*actime"), Later("ac-layers", 7)]),
               If("acbrq", [V("acbrq", "0"), Arm("ac-breathgo", "acchsec*500*actime", stop="ac-chgstop")]),
-              Call("ac-chordnext")]
+              Later("ac-chordnext", 19)]              # (the next chord and its name on the screen: a tick of their own)
     steps += [Later("ac-grains", 13), Later("ac-change2", 29, stop="ac-chgstop")]
     # the next chord: a key move (pending root, or by chance in DRIFT), a chance scale change, the next degree
     # (or the opening progression in a return section); then its name for the screen.
